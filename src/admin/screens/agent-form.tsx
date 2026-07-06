@@ -131,12 +131,12 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
           variant="outline"
           value={state.category}
           onValueChange={(value) => value && dispatch({ type: 'SET_CATEGORY', value: value as AgentCategory })}
-          className="justify-start"
+          className="w-full"
         >
-          <ToggleGroupItem value="sealed" className="px-4">
+          <ToggleGroupItem value="sealed" className="flex-1 px-4">
             Sealed
           </ToggleGroupItem>
-          <ToggleGroupItem value="extensible" className="px-4">
+          <ToggleGroupItem value="extensible" className="flex-1 px-4">
             Extensible
           </ToggleGroupItem>
         </ToggleGroup>
