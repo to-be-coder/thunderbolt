@@ -120,7 +120,7 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
             onChange={(event) => dispatch({ type: 'SET', field: 'acpUrl', value: event.target.value })}
           />
           <Button variant="secondary" onClick={handleTest} disabled={testing || state.acpUrl.trim() === ''}>
-            {testing ? 'Testing…' : 'Test'}
+            {testing ? 'Connecting…' : 'Connect'}
           </Button>
         </div>
         {testResult && (
