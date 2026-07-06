@@ -9,6 +9,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useReducer } from 'react'
 import { useAdminApi, useCreateAgent, useUpdateAgent } from '../api/hooks'
 import type { AgentCategory, AgentInput, TeamAgentWithCapabilities } from '../api/types'
+import { CategoryInfoTooltip } from './category-info'
 
 /**
  * v1 admin agent form (PRD Rev 3.2). Company agents are ACP endpoints that
@@ -125,7 +126,10 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label>Category</Label>
+        <div className="flex items-center gap-1.5">
+          <Label>Category</Label>
+          <CategoryInfoTooltip />
+        </div>
         <ToggleGroup
           type="single"
           variant="outline"

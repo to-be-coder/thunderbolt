@@ -22,6 +22,7 @@ import { useReducer, useState } from 'react'
 import { useAgentEndpointDetail, useDeleteAgent, useUpdateAgent } from '../api/hooks'
 import type { AgentCategory, TeamAgentWithCapabilities } from '../api/types'
 import { AgentConnectionIndicator } from './connection-status'
+import { CategoryInfoTooltip } from './category-info'
 
 type EditorState = {
   name: string
@@ -166,7 +167,7 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
           </div>
         </Field>
 
-        <Field label="Category">
+        <Field label="Category" labelExtra={<CategoryInfoTooltip />}>
           <Select
             value={state.category}
             onValueChange={(value) => dispatch({ type: 'SET_CATEGORY', value: value as AgentCategory })}
@@ -254,9 +255,12 @@ const AdminWiring = ({ acpUrl }: { acpUrl: string }) => {
   )
 }
 
-const Field = ({ label, children }: { label: string; children: ReactNode }) => (
+const Field = ({ label, labelExtra, children }: { label: string; labelExtra?: ReactNode; children: ReactNode }) => (
   <div className="flex flex-col gap-1">
-    <p className="text-sm font-medium text-muted-foreground">{label}</p>
+    <div className="flex items-center gap-1.5">
+      <p className="text-sm font-medium text-muted-foreground">{label}</p>
+      {labelExtra}
+    </div>
     {children}
   </div>
 )
