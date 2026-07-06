@@ -12,7 +12,7 @@ import { buildDeps, fakeUser } from '../test-utils/harness'
 import { createTestDb } from '../test-utils/db'
 import { createDiscoveryRoutes } from './routes'
 
-const orgPolicyKeys = ['personalAgentPolicy', 'userModelsAllowed', 'mcpPolicy', 'mcpAllowlist'].sort()
+const orgPolicyKeys = ['personalAgentPolicy', 'userModelsAllowed', 'mcpPolicy', 'mcpAllowlist', 'blockedExtensions'].sort()
 const agentCardKeys = [
   'id',
   'name',
@@ -90,7 +90,13 @@ describe('GET /admin/discovery', () => {
 
     expect(Object.keys(body).sort()).toEqual(['agents', 'policy'])
     expect(Object.keys(body.policy).sort()).toEqual(orgPolicyKeys)
-    expect(body.policy).toEqual({ personalAgentPolicy: 'all', userModelsAllowed: true, mcpPolicy: 'allow', mcpAllowlist: [] })
+    expect(body.policy).toEqual({
+      personalAgentPolicy: 'all',
+      userModelsAllowed: true,
+      mcpPolicy: 'allow',
+      mcpAllowlist: [],
+      blockedExtensions: [],
+    })
 
     expect(body.agents).toHaveLength(1)
     const card: AgentCard = body.agents[0]

@@ -198,6 +198,7 @@ describe('clearLocalData — agent-access cache clearing (T2)', () => {
       userModelsAllowed: false,
       mcpPolicy: 'allow',
       mcpAllowlist: [],
+      blockedExtensions: [],
     })
 
     // Sanity: both caches are populated before the wipe.

@@ -45,6 +45,7 @@ const demoPolicy: OrgPolicy = {
   userModelsAllowed: true,
   mcpPolicy: 'allow',
   mcpAllowlist: [],
+  blockedExtensions: [],
 }
 
 /**

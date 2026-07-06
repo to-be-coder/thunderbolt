@@ -112,6 +112,8 @@ export type OrgPolicy = {
   /** P0-8: allow / allowlist (launch default) / block for user-added MCP servers. */
   mcpPolicy: McpPolicyMode
   mcpAllowlist: string[]
+  /** Built-in extension ids blocked org-wide (empty = all allowed). */
+  blockedExtensions: string[]
 }
 
 export type AuditEvent = {

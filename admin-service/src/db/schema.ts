@@ -149,6 +149,8 @@ export const orgPolicy = pgTable('org_policy', {
     .notNull()
     .default('allowlist'),
   mcpAllowlist: jsonb('mcp_allowlist').$type<string[]>().notNull().default([]),
+  // Built-in extension ids blocked org-wide (empty = all allowed).
+  blockedExtensions: jsonb('blocked_extensions').$type<string[]>().notNull().default([]),
   updatedAt: timestamp('updated_at')
     .defaultNow()
     .$onUpdate(() => new Date())

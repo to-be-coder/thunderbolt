@@ -9,6 +9,8 @@ import { Switch } from '@/components/ui/switch'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { X } from 'lucide-react'
 import { useReducer, useState } from 'react'
+import { builtInExtensions } from '@/extensions/registry'
+import { isExtensionAllowed } from '@/dal/extension-policy'
 import { usePolicy, useSavePolicy } from '../api/hooks'
 import type { McpPolicyMode, OrgPolicy, PersonalAgentPolicy } from '../api/types'
 
@@ -19,6 +21,7 @@ type PolicyAction =
   | { type: 'SET_MCP_POLICY'; payload: McpPolicyMode }
   | { type: 'ADD_MCP'; payload: string }
   | { type: 'REMOVE_MCP'; payload: string }
+  | { type: 'SET_EXTENSION_ALLOWED'; payload: { id: string; allowed: boolean } }
 
 const policyReducer = (state: OrgPolicy, action: PolicyAction): OrgPolicy => {
   switch (action.type) {
@@ -36,6 +39,15 @@ const policyReducer = (state: OrgPolicy, action: PolicyAction): OrgPolicy => {
         : { ...state, mcpAllowlist: [...state.mcpAllowlist, action.payload] }
     case 'REMOVE_MCP':
       return { ...state, mcpAllowlist: state.mcpAllowlist.filter((entry) => entry !== action.payload) }
+    case 'SET_EXTENSION_ALLOWED':
+      return {
+        ...state,
+        blockedExtensions: action.payload.allowed
+          ? state.blockedExtensions.filter((id) => id !== action.payload.id)
+          : state.blockedExtensions.includes(action.payload.id)
+            ? state.blockedExtensions
+            : [...state.blockedExtensions, action.payload.id],
+      }
     default:
       return state
   }
@@ -46,6 +58,7 @@ const emptyPolicy: OrgPolicy = {
   userModelsAllowed: true,
   mcpPolicy: 'allowlist',
   mcpAllowlist: [],
+  blockedExtensions: [],
 }
 
 /** S5 — Policy. User models allow/deny, personal-agent policy, MCP allowlist. */
@@ -199,6 +212,36 @@ export const PolicyPage = () => {
                 </ul>
               </div>
             )}
+          </section>
+
+          <section className="flex flex-col gap-3 rounded-lg border border-border p-4">
+            <div>
+              <h2 className="text-sm font-semibold">Extensions</h2>
+              <p className="text-sm text-muted-foreground">
+                Built-in tool providers that ship with Thunderbolt. Turn one off to block it org-wide — members can't
+                enable it and it won't apply to any agent.
+              </p>
+            </div>
+            <ul className="flex flex-col gap-1">
+              {builtInExtensions.map((extension) => (
+                <li
+                  key={extension.id}
+                  className="flex items-center justify-between gap-4 rounded-md bg-muted/40 px-3 py-2"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{extension.name}</p>
+                    <p className="text-sm text-muted-foreground">{extension.description}</p>
+                  </div>
+                  <Switch
+                    checked={isExtensionAllowed(extension.id, draft.blockedExtensions)}
+                    onCheckedChange={(allowed) =>
+                      dispatch({ type: 'SET_EXTENSION_ALLOWED', payload: { id: extension.id, allowed } })
+                    }
+                    aria-label={`Allow ${extension.name}`}
+                  />
+                </li>
+              ))}
+            </ul>
           </section>
 
           <div className="flex items-center gap-3">

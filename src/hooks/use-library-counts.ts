@@ -7,6 +7,8 @@ import { useQuery } from '@powersync/tanstack-react-query'
 import { useDatabase } from '@/contexts'
 import { getAllMcpServers } from '@/dal/mcp-servers'
 import { builtInExtensions } from '@/extensions/registry'
+import { isExtensionAllowed } from '@/dal/extension-policy'
+import { useOrgPolicy } from '@/dal/use-org-policy'
 import { useLibrarySkills } from '@/skills/use-skills'
 import { useSettings } from './use-settings'
 import type { McpServer } from '@/types'
@@ -31,8 +33,13 @@ export const useLibraryCounts = (): LibraryCounts => {
     query: toCompilableQuery(getAllMcpServers(db)),
   })
   const { experimentalFeatureTasks } = useSettings({ experimental_feature_tasks: false })
+  const orgPolicy = useOrgPolicy()
 
   const enabledExtensions = builtInExtensions.filter((extension) => {
+    // Org-blocked extensions never apply, even if the member's setting is on.
+    if (!isExtensionAllowed(extension.id, orgPolicy.blockedExtensions)) {
+      return false
+    }
     if (extension.settingKey === 'experimental_feature_tasks') {
       return experimentalFeatureTasks.value
     }

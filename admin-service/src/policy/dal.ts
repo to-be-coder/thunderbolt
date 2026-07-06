@@ -27,6 +27,7 @@ export const getOrgPolicy = async (db: AdminDb): Promise<OrgPolicy> => {
     userModelsAllowed: row.userModelsAllowed,
     mcpPolicy: row.mcpPolicy,
     mcpAllowlist: row.mcpAllowlist,
+    blockedExtensions: row.blockedExtensions,
   }
 }
 
@@ -40,6 +41,7 @@ export const putOrgPolicy = async (db: AdminDb, policy: OrgPolicy): Promise<OrgP
       userModelsAllowed: policy.userModelsAllowed,
       mcpPolicy: policy.mcpPolicy,
       mcpAllowlist: policy.mcpAllowlist,
+      blockedExtensions: policy.blockedExtensions,
     })
     .onConflictDoUpdate({
       target: orgPolicy.id,
@@ -48,6 +50,7 @@ export const putOrgPolicy = async (db: AdminDb, policy: OrgPolicy): Promise<OrgP
         userModelsAllowed: policy.userModelsAllowed,
         mcpPolicy: policy.mcpPolicy,
         mcpAllowlist: policy.mcpAllowlist,
+        blockedExtensions: policy.blockedExtensions,
       },
     })
   return policy

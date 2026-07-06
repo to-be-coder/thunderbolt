@@ -13,6 +13,7 @@ const orgPolicy: OrgPolicy = {
   userModelsAllowed: false,
   mcpPolicy: 'allowlist',
   mcpAllowlist: ['https://mcp.acme.example'],
+  blockedExtensions: [],
 }
 
 beforeAll(async () => {
@@ -51,6 +52,7 @@ describe('org policy DAL', () => {
       userModelsAllowed: true,
       mcpPolicy: 'allow',
       mcpAllowlist: [],
+      blockedExtensions: [],
     })
 
     expect(await getOrgPolicy(getDb())).toEqual({
@@ -58,6 +60,7 @@ describe('org policy DAL', () => {
       userModelsAllowed: true,
       mcpPolicy: 'allow',
       mcpAllowlist: [],
+      blockedExtensions: [],
     })
   })
 

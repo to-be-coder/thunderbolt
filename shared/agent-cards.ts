@@ -63,6 +63,10 @@ export type OrgPolicy = {
    *  `allowlist` mode. */
   mcpPolicy: 'allow' | 'allowlist' | 'block'
   mcpAllowlist: string[]
+  /** Built-in extension ids the org has blocked. Empty = all built-in extensions
+   *  allowed. A blocked extension can't be enabled by members and never applies
+   *  to an agent (the extension half of P0-8). */
+  blockedExtensions: string[]
 }
 
 /** Envelope returned by org agent discovery (Stage 3 endpoint). */
@@ -78,4 +82,5 @@ export const defaultOrgPolicy: OrgPolicy = {
   // No-org / consumer mode is unrestricted; an org's launch default is `allowlist`.
   mcpPolicy: 'allow',
   mcpAllowlist: [],
+  blockedExtensions: [],
 }
