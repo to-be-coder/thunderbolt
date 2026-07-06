@@ -69,7 +69,8 @@ describe('RegistryPage', () => {
     expect(body.name).toBe('Research Bot')
     expect(body.acpUrl).toBe('wss://agent.test/acp')
     expect(body.category).toBe('sealed')
-    expect(body.status).toBe('draft')
+    // v1 has no draft/published control (that's P1-2); new agents register live.
+    expect(body.status).toBe('published')
   })
 
   it('warns admins that instructions are confidential-not-secret (T5)', async () => {

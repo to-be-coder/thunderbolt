@@ -6,73 +6,47 @@ import { AutosizeTextarea } from '@/components/ui/autosize-textarea'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Plus, X } from 'lucide-react'
 import { useMemo, useReducer, useState } from 'react'
 import { useAdminApi, useCreateAgent, useUpdateAgent } from '../api/hooks'
-import type {
-  AgentCategory,
-  AgentInput,
-  AgentStatus,
-  CapabilityInput,
-  ConnectionTestResult,
-  CredentialMode,
-  TeamAgentWithCapabilities,
-} from '../api/types'
+import type { AgentCategory, AgentInput, ConnectionTestResult, TeamAgentWithCapabilities } from '../api/types'
 import { AgentCardPreview } from './agent-card-preview'
 import { buildPreviewCard } from './build-preview-card'
 
+/**
+ * v1 admin agent form (PRD Rev 3.2). Company agents are ACP endpoints that
+ * "arrive pre-configured": their icon, capabilities, and advertised models come
+ * from the agent's own card and are NOT authored here — the admin only chooses
+ * the endpoint, the category (sealed/extensible, admin-set per Rev 3.2), a
+ * display name, and the plain-language description (admin-written, P0-11).
+ *
+ * Deliberately absent: draft/published status (a P1 fast-follow, P1-2), and any
+ * editing of capabilities / advertised models / icon / managed-by — those are
+ * properties of the ACP agent card, shown read-only in the preview.
+ */
+
+/** Fields an admin does NOT author for an ACP agent — they come from its card.
+ *  Defaults for a newly-registered agent until a live card fetch populates them. */
+const DEFAULT_ICON = 'bot'
+const DEFAULT_MANAGED_BY = 'Your organization'
+
 type FormState = {
   name: string
-  icon: string
   acpUrl: string
   description: string
-  managedBy: string
   category: AgentCategory
-  status: AgentStatus
-  advertisedModels: string
-  capabilities: CapabilityInput[]
 }
 
 type FormAction =
-  | { type: 'SET'; field: 'name' | 'icon' | 'acpUrl' | 'description' | 'managedBy' | 'advertisedModels'; value: string }
+  | { type: 'SET'; field: 'name' | 'acpUrl' | 'description'; value: string }
   | { type: 'SET_CATEGORY'; value: AgentCategory }
-  | { type: 'SET_STATUS'; value: AgentStatus }
-  | { type: 'ADD_CAPABILITY' }
-  | { type: 'REMOVE_CAPABILITY'; index: number }
-  | { type: 'SET_CAPABILITY_LABEL'; index: number; value: string }
-  | { type: 'SET_CAPABILITY_MODE'; index: number; value: CredentialMode }
 
-const emptyState: FormState = {
-  name: '',
-  icon: '',
-  acpUrl: '',
-  description: '',
-  managedBy: '',
-  category: 'sealed',
-  status: 'draft',
-  advertisedModels: '',
-  capabilities: [],
-}
+const emptyState: FormState = { name: '', acpUrl: '', description: '', category: 'sealed' }
 
 const initFromAgent = (agent: TeamAgentWithCapabilities | null): FormState =>
   agent === null
     ? emptyState
-    : {
-        name: agent.name,
-        icon: agent.icon,
-        acpUrl: agent.acpUrl,
-        description: agent.description,
-        managedBy: agent.managedBy,
-        category: agent.category,
-        status: agent.status,
-        advertisedModels: agent.advertisedModels.join(', '),
-        capabilities: agent.capabilities.map((capability) => ({
-          label: capability.label,
-          ...(capability.credentialMode ? { credentialMode: capability.credentialMode } : {}),
-        })),
-      }
+    : { name: agent.name, acpUrl: agent.acpUrl, description: agent.description, category: agent.category }
 
 const formReducer = (state: FormState, action: FormAction): FormState => {
   switch (action.type) {
@@ -80,56 +54,14 @@ const formReducer = (state: FormState, action: FormAction): FormState => {
       return { ...state, [action.field]: action.value }
     case 'SET_CATEGORY':
       return { ...state, category: action.value }
-    case 'SET_STATUS':
-      return { ...state, status: action.value }
-    case 'ADD_CAPABILITY':
-      return { ...state, capabilities: [...state.capabilities, { label: '' }] }
-    case 'REMOVE_CAPABILITY':
-      return { ...state, capabilities: state.capabilities.filter((_, index) => index !== action.index) }
-    case 'SET_CAPABILITY_LABEL':
-      return {
-        ...state,
-        capabilities: state.capabilities.map((capability, index) =>
-          index === action.index ? { ...capability, label: action.value } : capability,
-        ),
-      }
-    case 'SET_CAPABILITY_MODE':
-      return {
-        ...state,
-        capabilities: state.capabilities.map((capability, index) =>
-          index === action.index ? { ...capability, credentialMode: action.value } : capability,
-        ),
-      }
     default:
       return state
   }
 }
 
-const parseModels = (raw: string): string[] =>
-  raw
-    .split(',')
-    .map((model) => model.trim())
-    .filter((model) => model !== '')
-
-const toAgentInput = (state: FormState): AgentInput => ({
-  name: state.name.trim(),
-  icon: state.icon.trim(),
-  description: state.description,
-  acpUrl: state.acpUrl.trim(),
-  category: state.category,
-  status: state.status,
-  managedBy: state.managedBy.trim(),
-  advertisedModels: parseModels(state.advertisedModels),
-  capabilities: state.capabilities
-    .filter((capability) => capability.label.trim() !== '')
-    .map((capability) => ({
-      label: capability.label.trim(),
-      ...(capability.credentialMode ? { credentialMode: capability.credentialMode } : {}),
-    })),
-})
-
-/** S1 register/edit form. Owns the connection-test call, the draft/published
- *  control, the capability editor, and the live read-only member-card preview. */
+/** S1 register/edit form. Owns the connection-test call and the live read-only
+ *  member-card preview; the card's own fields (capabilities/models/icon) are
+ *  read-only, shown from the agent's card. */
 export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities | null; onDone: () => void }) => {
   const [state, dispatch] = useReducer(formReducer, agent, initFromAgent)
   const api = useAdminApi()
@@ -138,18 +70,28 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
   const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null)
   const [testing, setTesting] = useState(false)
 
+  // The card fields the admin can't author come from the agent's card (on edit)
+  // or defaults (on create), and render read-only in the preview.
+  const cardFields = {
+    icon: agent?.icon ?? DEFAULT_ICON,
+    managedBy: agent?.managedBy ?? DEFAULT_MANAGED_BY,
+    advertisedModels: agent?.advertisedModels ?? [],
+    capabilities:
+      agent?.capabilities.map((c) => ({
+        label: c.label,
+        ...(c.credentialMode ? { credentialMode: c.credentialMode } : {}),
+      })) ?? [],
+  }
+
   const previewCard = useMemo(
     () =>
       buildPreviewCard({
         name: state.name,
-        icon: state.icon,
         description: state.description,
         category: state.category,
-        managedBy: state.managedBy,
-        advertisedModels: parseModels(state.advertisedModels),
-        capabilities: state.capabilities,
+        ...cardFields,
       }),
-    [state],
+    [state, cardFields],
   )
 
   const handleTest = async () => {
@@ -163,10 +105,30 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
   }
 
   const handleSave = async () => {
-    const input = toAgentInput(state)
     if (agent) {
-      await updateAgent.mutateAsync({ id: agent.id, patch: input })
+      // Patch only the admin-authored fields; the card's own fields are left as-is.
+      await updateAgent.mutateAsync({
+        id: agent.id,
+        patch: {
+          name: state.name.trim(),
+          acpUrl: state.acpUrl.trim(),
+          category: state.category,
+          description: state.description,
+        },
+      })
     } else {
+      const input: AgentInput = {
+        name: state.name.trim(),
+        acpUrl: state.acpUrl.trim(),
+        category: state.category,
+        description: state.description,
+        // Non-authored card fields: defaults until a live card fetch populates them.
+        icon: DEFAULT_ICON,
+        managedBy: DEFAULT_MANAGED_BY,
+        advertisedModels: [],
+        status: 'published',
+        capabilities: [],
+      }
       await createAgent.mutateAsync(input)
     }
     onDone()
@@ -180,26 +142,14 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
       <div className="flex flex-col gap-4">
         <h2 className="text-sm font-semibold">{agent ? 'Edit agent' : 'Register agent'}</h2>
 
-        <div className="flex gap-3">
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="agent-icon">Icon</Label>
-            <Input
-              id="agent-icon"
-              className="w-16 text-center"
-              placeholder="🤖"
-              value={state.icon}
-              onChange={(event) => dispatch({ type: 'SET', field: 'icon', value: event.target.value })}
-            />
-          </div>
-          <div className="flex flex-1 flex-col gap-1">
-            <Label htmlFor="agent-name">Name</Label>
-            <Input
-              id="agent-name"
-              placeholder="Research Assistant"
-              value={state.name}
-              onChange={(event) => dispatch({ type: 'SET', field: 'name', value: event.target.value })}
-            />
-          </div>
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="agent-name">Name</Label>
+          <Input
+            id="agent-name"
+            placeholder="Research Assistant"
+            value={state.name}
+            onChange={(event) => dispatch({ type: 'SET', field: 'name', value: event.target.value })}
+          />
         </div>
 
         <div className="flex flex-col gap-1">
@@ -246,16 +196,6 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
         </div>
 
         <div className="flex flex-col gap-1">
-          <Label htmlFor="agent-managed-by">Managed by</Label>
-          <Input
-            id="agent-managed-by"
-            placeholder="Platform Team"
-            value={state.managedBy}
-            onChange={(event) => dispatch({ type: 'SET', field: 'managedBy', value: event.target.value })}
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
           <Label htmlFor="agent-description">Description</Label>
           <AutosizeTextarea
             id="agent-description"
@@ -274,74 +214,10 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
           </p>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="agent-models">Advertised models</Label>
-          <Input
-            id="agent-models"
-            placeholder="gpt-5, claude-opus-4 (comma separated)"
-            value={state.advertisedModels}
-            onChange={(event) => dispatch({ type: 'SET', field: 'advertisedModels', value: event.target.value })}
-          />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <Label>Capabilities</Label>
-            <Button variant="ghost" size="sm" onClick={() => dispatch({ type: 'ADD_CAPABILITY' })}>
-              <Plus className="size-4" /> Add
-            </Button>
-          </div>
-          {state.capabilities.map((capability, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <Input
-                placeholder="Search Confluence"
-                aria-label={`Capability ${index + 1} label`}
-                value={capability.label}
-                onChange={(event) => dispatch({ type: 'SET_CAPABILITY_LABEL', index, value: event.target.value })}
-              />
-              <Select
-                value={capability.credentialMode ?? ''}
-                onValueChange={(value) =>
-                  dispatch({ type: 'SET_CAPABILITY_MODE', index, value: value as CredentialMode })
-                }
-              >
-                <SelectTrigger className="w-40" aria-label={`Capability ${index + 1} credential mode`}>
-                  <SelectValue placeholder="Credentials" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="as_you">Runs as you</SelectItem>
-                  <SelectItem value="service_account">Service account</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={`Remove capability ${index + 1}`}
-                onClick={() => dispatch({ type: 'REMOVE_CAPABILITY', index })}
-              >
-                <X className="size-4" />
-              </Button>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <Label>Status</Label>
-          <ToggleGroup
-            type="single"
-            variant="outline"
-            value={state.status}
-            onValueChange={(value) => value && dispatch({ type: 'SET_STATUS', value: value as AgentStatus })}
-            className="justify-start"
-          >
-            <ToggleGroupItem value="draft" className="px-4">
-              Draft
-            </ToggleGroupItem>
-            <ToggleGroupItem value="published" className="px-4">
-              Published
-            </ToggleGroupItem>
-          </ToggleGroup>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          This agent's icon, capabilities, and models come from its own card (ACP agents arrive pre-configured) and
+          aren't edited here — see the preview.
+        </p>
 
         <div className="flex items-center gap-3">
           <Button onClick={handleSave} disabled={!canSave || saving}>
