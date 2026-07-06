@@ -7,7 +7,15 @@ import type { ServiceDeps } from '../lib/context'
 import { authorizeAdmin } from '../lib/context'
 import { writeAudit } from '../audit/audit'
 import { getLiveMemberById } from '../members/dal'
-import { addMemberToGroup, getLiveGroupById, insertGroup, listLiveGroups, removeMemberFromGroup, softDeleteGroup } from './dal'
+import {
+  addMemberToGroup,
+  getLiveGroupById,
+  insertGroup,
+  listGroupMembers,
+  listLiveGroups,
+  removeMemberFromGroup,
+  softDeleteGroup,
+} from './dal'
 
 /**
  * Group management — the containers grants target.
@@ -74,6 +82,23 @@ export const createGroupsRoutes = (deps: ServiceDeps) =>
           })
         })
         return { success: true }
+      },
+      { params: t.Object({ id: t.String() }) },
+    )
+    .get(
+      '/:id/members',
+      async ({ params, request, set }) => {
+        const authz = await authorizeAdmin(deps, request.headers)
+        if (!authz.ok) {
+          set.status = authz.status
+          return authz.body
+        }
+        const group = await getLiveGroupById(deps.db, params.id)
+        if (!group) {
+          set.status = 404
+          return { error: 'Group not found' }
+        }
+        return listGroupMembers(deps.db, params.id)
       },
       { params: t.Object({ id: t.String() }) },
     )

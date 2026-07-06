@@ -11,6 +11,8 @@ import { createAgentsRoutes, type ConnectionProbe } from './agents/routes'
 import { createGrantsRoutes } from './grants/routes'
 import { createPolicyRoutes } from './policy/routes'
 import { createDiscoveryRoutes } from './discovery/routes'
+import { createMeRoutes } from './me/routes'
+import { createAuditRoutes } from './audit/routes'
 
 export type { AdminDb } from './db/types'
 export type { AdminAuth, ServiceDeps, SessionRevoker, GrantRevocationNotifier } from './lib/context'
@@ -51,10 +53,12 @@ export const createAdminServiceRoutes = (options: AdminServiceOptions) => {
   }
 
   return new Elysia({ name: 'admin-service' })
+    .use(createMeRoutes(deps))
     .use(createMembersRoutes(deps))
     .use(createGroupsRoutes(deps))
     .use(createAgentsRoutes(deps, options.connectionProbe))
     .use(createGrantsRoutes(deps))
     .use(createPolicyRoutes(deps))
+    .use(createAuditRoutes(deps))
     .use(createDiscoveryRoutes(deps))
 }

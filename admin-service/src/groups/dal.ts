@@ -4,7 +4,8 @@
 
 import { and, eq, isNull } from 'drizzle-orm'
 import type { AdminDb } from '../db/types'
-import { groupMembers, groups } from '../db/schema'
+import { groupMembers, groups, members } from '../db/schema'
+import type { Member } from '../members/dal'
 
 export type Group = typeof groups.$inferSelect
 export type GroupMember = typeof groupMembers.$inferSelect
@@ -36,6 +37,22 @@ export const softDeleteGroup = async (db: AdminDb, id: string): Promise<void> =>
     .set({ deletedAt: now })
     .where(and(eq(groupMembers.groupId, id), isNull(groupMembers.deletedAt)))
 }
+
+/** Live members belonging to a group (join `group_members` → `members`). Excludes
+ *  soft-deleted edges and soft-deleted members. Powers the S3 membership view. */
+export const listGroupMembers = async (db: AdminDb, groupId: string): Promise<Member[]> =>
+  db
+    .select({
+      id: members.id,
+      email: members.email,
+      status: members.status,
+      isAdmin: members.isAdmin,
+      createdAt: members.createdAt,
+      deletedAt: members.deletedAt,
+    })
+    .from(groupMembers)
+    .innerJoin(members, eq(groupMembers.memberId, members.id))
+    .where(and(eq(groupMembers.groupId, groupId), isNull(groupMembers.deletedAt), isNull(members.deletedAt)))
 
 /** Live membership edge for a (group, member) pair, or null. */
 export const getLiveEdge = async (db: AdminDb, groupId: string, memberId: string): Promise<GroupMember | null> =>

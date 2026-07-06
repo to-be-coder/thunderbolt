@@ -24,6 +24,12 @@ const makeHttpClient = (resolve: { blob?: Blob; error?: Error }): HttpClient =>
     post: () => {
       throw new Error('not used')
     },
+    put: () => {
+      throw new Error('not used')
+    },
+    patch: () => {
+      throw new Error('not used')
+    },
     delete: () => {
       throw new Error('not used')
     },

@@ -44,6 +44,7 @@ import { UpgradeRequired } from './components/upgrade-required'
 import { useConfigStore } from '@/api/config-store'
 import { compareSemver } from '@/lib/compare-semver'
 import { AuthGate } from './components/auth-gate'
+import { AdminGate } from '@/admin/gate/admin-gate'
 import { useBootstrapReadiness } from '@/lib/post-auth-bootstrap'
 import { OnboardingDialog } from './components/onboarding/onboarding-dialog'
 import { WelcomeDialog } from './components/welcome-dialog'
@@ -87,6 +88,12 @@ const SkillsPage = lazy(() => import('@/settings/skills'))
 const AgentsSettingsPage = lazy(() => import('@/routes/settings/agents'))
 const AgentDetailPage = lazy(() => import('@/routes/settings/agents/detail'))
 const IntegrationsPage = lazy(() => import('@/settings/integrations'))
+
+// Admin console: LAZY — /admin is not on the chat critical path. The console code
+// lives inside the admin package boundary (`@/admin/*`) and speaks only HTTP to
+// `/v1/admin`, so extracting the admin-service later is a deployment change. Only
+// the tiny `AdminGate` is static (imported above); everything else is in this chunk.
+const AdminConsole = lazy(() => import('@/admin/admin-console'))
 
 // Lazily import SSO components so non-enterprise deployments don't pay
 // for the extra bundle size and attack surface.
@@ -219,6 +226,12 @@ const AppRoutes = ({ initData }: { initData: InitData }) => {
             completes — keeps DAL reads/writes from firing between
             authentication and the DB being ready. */}
         <Route element={<AuthGate require="authenticated" />}>
+          {/* Admin console — authenticated + admin-gated. Kept OUTSIDE BootstrapGate:
+              admin data is not in PowerSync, so it needn't wait on the DB bootstrap.
+              `path="/admin/*"` lets the lazy console own its own descendant routes. */}
+          <Route path="/admin/*" element={<AdminGate />}>
+            <Route path="*" element={<AdminConsole />} />
+          </Route>
           <Route element={<BootstrapGate />}>
             <Route
               path="/"
