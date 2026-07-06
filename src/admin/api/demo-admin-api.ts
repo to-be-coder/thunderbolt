@@ -165,170 +165,174 @@ const seedStore = (): DemoStore => {
   }
 }
 
-const store = seedStore()
-
-const writeAudit = (action: string, target: string, diff: Record<string, unknown> = {}) => {
-  store.audit.unshift({ id: id(), actor: 'admin@demo.thunderbolt', action, target, diff, ts: now() })
-}
-
 const live = <T extends { deletedAt: string | null }>(rows: T[]): T[] => rows.filter((r) => r.deletedAt === null)
 
-/** Build the in-memory admin API. Shape-identical to `createAdminApi`. */
-export const createDemoAdminApi = (): AdminApi => ({
-  getMe: async (): Promise<AdminIdentity> => ({
-    id: 'demo-admin',
-    email: 'admin@demo.thunderbolt',
-    status: 'active',
-    isAdmin: true,
-  }),
+/** Build the in-memory admin API over a FRESH store instance. The app holds one
+ *  memoized instance (so mutations persist across renders); each call here is
+ *  otherwise independent, which also keeps tests isolated. Shape-identical to
+ *  `createAdminApi`. */
+export const createDemoAdminApi = (): AdminApi => {
+  const store = seedStore()
+  const writeAudit = (action: string, target: string, diff: Record<string, unknown> = {}) => {
+    store.audit.unshift({ id: id(), actor: 'admin@demo.thunderbolt', action, target, diff, ts: now() })
+  }
 
-  listMembers: async () => live(store.members),
-  inviteMember: async (input) => {
-    const member: Member = {
-      id: id(),
-      email: input.email,
-      status: 'invited',
-      isAdmin: input.isAdmin ?? false,
-      createdAt: now(),
-      deletedAt: null,
-    }
-    store.members.push(member)
-    writeAudit('member.invite', input.email)
-    return member
-  },
-  removeMember: async (memberId) => {
-    const member = store.members.find((m) => m.id === memberId)
-    if (member) {
-      member.deletedAt = now()
-      writeAudit('member.remove', member.email)
-    }
-    return { success: true } as const
-  },
+  return {
+    getMe: async (): Promise<AdminIdentity> => ({
+      id: 'demo-admin',
+      email: 'admin@demo.thunderbolt',
+      status: 'active',
+      isAdmin: true,
+    }),
 
-  listGroups: async () => live(store.groups),
-  createGroup: async (name) => {
-    const group: Group = { id: id(), name, createdAt: now(), deletedAt: null }
-    store.groups.push(group)
-    writeAudit('group.create', name)
-    return group
-  },
-  deleteGroup: async (groupId) => {
-    const group = store.groups.find((g) => g.id === groupId)
-    if (group) {
-      group.deletedAt = now()
-      writeAudit('group.delete', group.name)
-    }
-    return { success: true } as const
-  },
-  listGroupMembers: async (groupId) => {
-    const memberIds = new Set(store.groupMembers.filter((gm) => gm.groupId === groupId).map((gm) => gm.memberId))
-    return live(store.members).filter((m) => memberIds.has(m.id))
-  },
-  addGroupMember: async (groupId, memberId) => {
-    if (!store.groupMembers.some((gm) => gm.groupId === groupId && gm.memberId === memberId)) {
-      store.groupMembers.push({ groupId, memberId })
-      writeAudit('group.member.add', `${memberId} → ${groupId}`)
-    }
-    return { success: true } as const
-  },
-  removeGroupMember: async (groupId, memberId) => {
-    store.groupMembers = store.groupMembers.filter((gm) => !(gm.groupId === groupId && gm.memberId === memberId))
-    writeAudit('group.member.remove', `${memberId} ✕ ${groupId}`)
-    return { success: true } as const
-  },
-
-  listAgents: async (): Promise<TeamAgentWithCapabilities[]> => live(store.agents),
-  createAgent: async (input: AgentInput): Promise<TeamAgent> => {
-    const agentId = id()
-    const agent: TeamAgentWithCapabilities = {
-      id: agentId,
-      name: input.name,
-      icon: input.icon ?? 'bot',
-      description: input.description ?? '',
-      acpUrl: input.acpUrl,
-      category: input.category,
-      status: input.status ?? 'draft',
-      managedBy: input.managedBy ?? 'Demo IT',
-      advertisedModels: input.advertisedModels ?? [],
-      createdAt: now(),
-      deletedAt: null,
-      capabilities: (input.capabilities ?? []).map((c, i) => ({
+    listMembers: async () => live(store.members),
+    inviteMember: async (input) => {
+      const member: Member = {
         id: id(),
-        agentId,
-        label: c.label,
-        credentialMode: c.credentialMode ?? null,
-        position: String.fromCharCode(97 + i),
+        email: input.email,
+        status: 'invited',
+        isAdmin: input.isAdmin ?? false,
         createdAt: now(),
         deletedAt: null,
-      })),
-    }
-    store.agents.push(agent)
-    writeAudit('agent.create', input.name)
-    return agent
-  },
-  updateAgent: async (agentId: string, patch: AgentPatch): Promise<TeamAgent> => {
-    const agent = store.agents.find((a) => a.id === agentId)
-    if (!agent) {
-      throw new Error('demo: agent not found')
-    }
-    Object.assign(agent, {
-      name: patch.name ?? agent.name,
-      description: patch.description ?? agent.description,
-      acpUrl: patch.acpUrl ?? agent.acpUrl,
-      category: patch.category ?? agent.category,
-      status: patch.status ?? agent.status,
-    })
-    writeAudit('agent.update', agent.name)
-    return agent
-  },
-  deleteAgent: async (agentId) => {
-    const agent = store.agents.find((a) => a.id === agentId)
-    if (agent) {
-      agent.deletedAt = now()
-      writeAudit('agent.delete', agent.name)
-    }
-    return { success: true } as const
-  },
-  testConnection: async (acpUrl: string) =>
-    acpUrl.startsWith('wss://')
-      ? ({ reachable: true } as const)
-      : ({ reachable: false, error: 'Demo: only wss:// URLs are reachable' } as const),
+      }
+      store.members.push(member)
+      writeAudit('member.invite', input.email)
+      return member
+    },
+    removeMember: async (memberId) => {
+      const member = store.members.find((m) => m.id === memberId)
+      if (member) {
+        member.deletedAt = now()
+        writeAudit('member.remove', member.email)
+      }
+      return { success: true } as const
+    },
 
-  listGrants: async () => live(store.grants),
-  createGrant: async (input: GrantInput): Promise<Grant> => {
-    const grant: Grant = {
-      id: id(),
-      agentId: input.agentId,
-      targetType: input.targetType,
-      targetId: input.targetId ?? null,
-      createdAt: now(),
-      deletedAt: null,
-    }
-    store.grants.push(grant)
-    writeAudit(
-      input.targetType === 'member' ? 'grant.create.exception' : 'grant.create',
-      `${input.agentId} → ${input.targetType}`,
-    )
-    return grant
-  },
-  revokeGrant: async (grantId) => {
-    const grant = store.grants.find((g) => g.id === grantId)
-    if (grant) {
-      grant.deletedAt = now()
-      writeAudit('grant.revoke', grant.agentId)
-    }
-    return { success: true } as const
-  },
+    listGroups: async () => live(store.groups),
+    createGroup: async (name) => {
+      const group: Group = { id: id(), name, createdAt: now(), deletedAt: null }
+      store.groups.push(group)
+      writeAudit('group.create', name)
+      return group
+    },
+    deleteGroup: async (groupId) => {
+      const group = store.groups.find((g) => g.id === groupId)
+      if (group) {
+        group.deletedAt = now()
+        writeAudit('group.delete', group.name)
+      }
+      return { success: true } as const
+    },
+    listGroupMembers: async (groupId) => {
+      const memberIds = new Set(store.groupMembers.filter((gm) => gm.groupId === groupId).map((gm) => gm.memberId))
+      return live(store.members).filter((m) => memberIds.has(m.id))
+    },
+    addGroupMember: async (groupId, memberId) => {
+      if (!store.groupMembers.some((gm) => gm.groupId === groupId && gm.memberId === memberId)) {
+        store.groupMembers.push({ groupId, memberId })
+        writeAudit('group.member.add', `${memberId} → ${groupId}`)
+      }
+      return { success: true } as const
+    },
+    removeGroupMember: async (groupId, memberId) => {
+      store.groupMembers = store.groupMembers.filter((gm) => !(gm.groupId === groupId && gm.memberId === memberId))
+      writeAudit('group.member.remove', `${memberId} ✕ ${groupId}`)
+      return { success: true } as const
+    },
 
-  getPolicy: async () => store.policy,
-  putPolicy: async (policy: OrgPolicy) => {
-    store.policy = policy
-    writeAudit('policy.update', 'org policy')
-    return policy
-  },
+    listAgents: async (): Promise<TeamAgentWithCapabilities[]> => live(store.agents),
+    createAgent: async (input: AgentInput): Promise<TeamAgent> => {
+      const agentId = id()
+      const agent: TeamAgentWithCapabilities = {
+        id: agentId,
+        name: input.name,
+        icon: input.icon ?? 'bot',
+        description: input.description ?? '',
+        acpUrl: input.acpUrl,
+        category: input.category,
+        status: input.status ?? 'draft',
+        managedBy: input.managedBy ?? 'Demo IT',
+        advertisedModels: input.advertisedModels ?? [],
+        createdAt: now(),
+        deletedAt: null,
+        capabilities: (input.capabilities ?? []).map((c, i) => ({
+          id: id(),
+          agentId,
+          label: c.label,
+          credentialMode: c.credentialMode ?? null,
+          position: String.fromCharCode(97 + i),
+          createdAt: now(),
+          deletedAt: null,
+        })),
+      }
+      store.agents.push(agent)
+      writeAudit('agent.create', input.name)
+      return agent
+    },
+    updateAgent: async (agentId: string, patch: AgentPatch): Promise<TeamAgent> => {
+      const agent = store.agents.find((a) => a.id === agentId)
+      if (!agent) {
+        throw new Error('demo: agent not found')
+      }
+      Object.assign(agent, {
+        name: patch.name ?? agent.name,
+        description: patch.description ?? agent.description,
+        acpUrl: patch.acpUrl ?? agent.acpUrl,
+        category: patch.category ?? agent.category,
+        status: patch.status ?? agent.status,
+      })
+      writeAudit('agent.update', agent.name)
+      return agent
+    },
+    deleteAgent: async (agentId) => {
+      const agent = store.agents.find((a) => a.id === agentId)
+      if (agent) {
+        agent.deletedAt = now()
+        writeAudit('agent.delete', agent.name)
+      }
+      return { success: true } as const
+    },
+    testConnection: async (acpUrl: string) =>
+      acpUrl.startsWith('wss://')
+        ? ({ reachable: true } as const)
+        : ({ reachable: false, error: 'Demo: only wss:// URLs are reachable' } as const),
 
-  listAudit: async (params) => {
-    const rows = params?.action ? store.audit.filter((e) => e.action === params.action) : store.audit
-    return params?.limit ? rows.slice(0, params.limit) : rows
-  },
-})
+    listGrants: async () => live(store.grants),
+    createGrant: async (input: GrantInput): Promise<Grant> => {
+      const grant: Grant = {
+        id: id(),
+        agentId: input.agentId,
+        targetType: input.targetType,
+        targetId: input.targetId ?? null,
+        createdAt: now(),
+        deletedAt: null,
+      }
+      store.grants.push(grant)
+      writeAudit(
+        input.targetType === 'member' ? 'grant.create.exception' : 'grant.create',
+        `${input.agentId} → ${input.targetType}`,
+      )
+      return grant
+    },
+    revokeGrant: async (grantId) => {
+      const grant = store.grants.find((g) => g.id === grantId)
+      if (grant) {
+        grant.deletedAt = now()
+        writeAudit('grant.revoke', grant.agentId)
+      }
+      return { success: true } as const
+    },
+
+    getPolicy: async () => store.policy,
+    putPolicy: async (policy: OrgPolicy) => {
+      store.policy = policy
+      writeAudit('policy.update', 'org policy')
+      return policy
+    },
+
+    listAudit: async (params) => {
+      const rows = params?.action ? store.audit.filter((e) => e.action === params.action) : store.audit
+      return params?.limit ? rows.slice(0, params.limit) : rows
+    },
+  }
+}

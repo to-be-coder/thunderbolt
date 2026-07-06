@@ -34,7 +34,6 @@ import { AlertCircle, Loader2 } from 'lucide-react'
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { useLocation as useLocation_default, useNavigate as useNavigate_default } from 'react-router'
 import { ChatSkillsBar } from './chat-skills-bar'
-import { ChatAgentSelector } from './chat-agent-selector'
 import { ComposerBlock, resolveComposerBlock } from './composer-block'
 import { SealedSlashHint } from './sealed-slash-hint'
 import { useSealedSlashHint } from './use-sealed-slash-hint'
@@ -380,7 +379,6 @@ export const ChatPromptInput = forwardRef<ChatPromptInputRef, ChatPromptInputPro
 
     const footerStartElements = (
       <div className="flex items-center gap-2">
-        <ChatAgentSelector readOnly={hasMessages} />
         {isConnecting ? (
           <div
             role="status"
