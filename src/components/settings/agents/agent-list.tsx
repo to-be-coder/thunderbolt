@@ -6,6 +6,7 @@ import { Building2, Zap } from 'lucide-react'
 import type { AgentCard, OrgPolicy } from '@shared/agent-cards'
 import { builtInAgent } from '@/defaults/agents'
 import type { useAcpAgentStatus as useAcpAgentStatus_default } from '@/hooks/use-acp-agent-status'
+import { useNewlyGrantedTeamAgents as useNewlyGrantedTeamAgents_default } from '@/hooks/use-newly-granted-agents'
 import type { Agent } from '@/types/acp'
 import { AgentRow } from './agent-row'
 import { PersonalAgentRow } from './personal-agent-row'
@@ -29,6 +30,8 @@ type AgentListProps = {
   onOpenAgent: (agentId: string) => void
   /** Injectable status probe for the personal rows (tests inject a stub). */
   useAcpAgentStatus?: typeof useAcpAgentStatus_default
+  /** Injectable newly-granted diff (tests drive fixtures without the DB). */
+  useNewlyGrantedTeamAgents?: typeof useNewlyGrantedTeamAgents_default
 }
 
 /**
@@ -43,10 +46,18 @@ type AgentListProps = {
  *  - `company_only` → the entire YOURS section is absent.
  *  - consumer / nothing granted → the ORG section is absent.
  */
-export const AgentList = ({ teamCards, personalAgents, policy, onOpenAgent, useAcpAgentStatus }: AgentListProps) => {
+export const AgentList = ({
+  teamCards,
+  personalAgents,
+  policy,
+  onOpenAgent,
+  useAcpAgentStatus,
+  useNewlyGrantedTeamAgents = useNewlyGrantedTeamAgents_default,
+}: AgentListProps) => {
   const showOrgSection = teamCards.length > 0
   const showYoursSection = policy.personalAgentPolicy !== 'company_only'
   const showNativeRow = policy.personalAgentPolicy !== 'no_native'
+  const newlyGranted = useNewlyGrantedTeamAgents()
 
   return (
     <div className="flex flex-col gap-6" data-testid="agent-list">
@@ -61,6 +72,7 @@ export const AgentList = ({ teamCards, personalAgents, policy, onOpenAgent, useA
                 icon={Building2}
                 name={card.name}
                 provenanceLine={companyProvenanceLine(card)}
+                isNewlyGranted={newlyGranted.has(card.id)}
                 onOpen={() => onOpenAgent(card.id)}
               />
             ))}

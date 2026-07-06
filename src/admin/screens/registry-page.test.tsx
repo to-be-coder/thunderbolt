@@ -71,4 +71,19 @@ describe('RegistryPage', () => {
     expect(body.category).toBe('sealed')
     expect(body.status).toBe('draft')
   })
+
+  it('warns admins that instructions are confidential-not-secret (T5)', async () => {
+    const { client } = createRecordingClient(() => [])
+    renderAdmin(<RegistryPage />, client)
+    await flush()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Register agent' }))
+
+    // No technical countermeasures in v1 — just the admin-facing posture warning
+    // sitting with the card/description editor.
+    const warning = screen.getByTestId('prompt-confidentiality-warning')
+    expect(warning).toBeInTheDocument()
+    expect(warning).toHaveTextContent(/confidential, not secret/i)
+    expect(warning).toHaveTextContent(/extract its underlying prompt/i)
+  })
 })

@@ -6,22 +6,32 @@ import { test, expect } from '@playwright/test'
 import { collectPageErrors, loginViaOidc } from './helpers'
 
 /**
- * E2E for backend-driven system agent discovery.
+ * E2E for the backend-driven system-agent discovery bootstrap.
  *
- * On bootstrap (`useBootstrapSystemAgents` in `src/app.tsx`) the app calls
- * `GET {cloudUrl}/agents` once the user has a non-anonymous session. We
- * intercept that call with a synthetic Haystack entry and verify that:
+ * On bootstrap (`useBootstrapSystemAgents` in `src/app.tsx`) the app still calls
+ * `GET {cloudUrl}/agents` once the user has a non-anonymous session and
+ * reconciles the response into the device-local `agents_system` table
+ * (`refreshSystemAgents`). We intercept that call with a synthetic Haystack
+ * entry and verify the bootstrap path is exercised.
  *
- * 1. The row materialises in `/settings/agents` with the "System" badge.
- * 2. The delete affordance is hidden — system agents are managed by the
- *    backend, not the user.
+ * NOTE — the Stage 5 read-only rewrite of the Agents page (agents-page-spec §1)
+ * intentionally removed the user-visible system-agent row, its "System" badge,
+ * and the per-row delete affordance. In v1 agent-access a managed/company agent
+ * reaches a member ONLY through org discovery as a read-only team card
+ * (`team_agents_cache`); the member-facing "appears / read-only / revocable"
+ * behaviour is covered end-to-end by `e2e/acp-team-agents.spec.ts`. The
+ * `agents_system` bootstrap path below is still live, so this spec guards that
+ * it (1) fires and reconciles without surfacing page errors and (2) leaves the
+ * rewritten Agents page fully read-only — no delete/remove affordance anywhere.
+ * That read-only assertion is the faithful v1 replacement for the old
+ * per-system-agent "not removable" check.
  *
  * Route registration happens before `page.goto` so the very first bootstrap
  * fetch is intercepted; otherwise the real backend's (empty) response would
  * race with the mock.
  */
-test.describe('ACP system agent discovery', () => {
-  test('discovered system agent appears with System badge and is not removable', async ({ page }) => {
+test.describe('ACP system agent discovery bootstrap', () => {
+  test('bootstrap discovery fires and the read-only Agents page exposes no delete affordance', async ({ page }) => {
     const errors = collectPageErrors(page)
 
     let discoveryHits = 0
@@ -55,15 +65,12 @@ test.describe('ACP system agent discovery', () => {
     await expect(page.getByTestId('agent-list')).toBeVisible({ timeout: 10_000 })
 
     // The discovery endpoint should have been called at least once during
-    // bootstrap. PowerSync's live query then surfaces the upserted row.
+    // bootstrap — the `useBootstrapSystemAgents` → `refreshSystemAgents` path.
     await expect.poll(() => discoveryHits, { timeout: 10_000 }).toBeGreaterThan(0)
 
-    const systemRow = page.getByTestId('agent-row-haystack-rag')
-    await expect(systemRow).toBeVisible({ timeout: 10_000 })
-    await expect(systemRow.getByTestId('agent-badge-haystack-rag')).toHaveText('System')
-
-    // Delete affordance must be absent for system agents.
-    await expect(systemRow.getByTestId('agent-delete-haystack-rag')).toHaveCount(0)
+    // The read-only rewrite exposes NO delete/remove control anywhere on the
+    // page: every row opens a read-only detail view, nothing is user-managed.
+    await expect(page.getByRole('button', { name: /delete|remove/i })).toHaveCount(0)
 
     expect(errors).toHaveLength(0)
   })

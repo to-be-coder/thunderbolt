@@ -7,7 +7,9 @@ import { agentCardToAgent, useAgentDescriptor } from '@/chats/agent-descriptor'
 import { SearchableMenu, type SearchableMenuGroup, type SearchableMenuItem } from '@/components/ui/searchable-menu'
 import { useAgents as useAgents_default } from '@/dal/agents'
 import { useTeamAgents as useTeamAgents_default } from '@/dal/use-team-agents'
+import { useNewlyGrantedTeamAgents as useNewlyGrantedTeamAgents_default } from '@/hooks/use-newly-granted-agents'
 import type { AgentRef } from '@/dal/chat-threads'
+import { NewGrantBadge } from '@/components/settings/agents/new-grant-badge'
 import { builtInAgent } from '@/defaults/agents'
 import { useHaptics } from '@/hooks/use-haptics'
 import { cn } from '@/lib/utils'
@@ -27,16 +29,18 @@ type ChatAgentSelectorProps = {
   readOnly: boolean
   useTeamAgents?: typeof useTeamAgents_default
   useAgents?: typeof useAgents_default
+  useNewlyGrantedTeamAgents?: typeof useNewlyGrantedTeamAgents_default
   useNavigate?: typeof useNavigate_default
 }
 
 const IconForYours = (agent: Agent): ComponentType<{ className?: string }> => (agent.type === 'built-in' ? Zap : Globe)
 
-const cardItem = (card: AgentCard): SearchableMenuItem<AgentSelectItemData> => ({
+const cardItem = (card: AgentCard, isNewlyGranted: boolean): SearchableMenuItem<AgentSelectItemData> => ({
   id: card.id,
   label: card.name,
   description: card.description,
   icon: <Building2 className="size-3.5 text-muted-foreground" />,
+  ...(isNewlyGranted ? { badge: <NewGrantBadge /> } : {}),
   data: { kind: 'card', card },
 })
 
@@ -59,11 +63,16 @@ const agentItem = (agent: Agent): SearchableMenuItem<AgentSelectItemData> => {
 export const buildAgentSelectorGroups = (
   teamCards: AgentCard[],
   personalAgents: Agent[],
+  newlyGranted: Set<string> = new Set(),
 ): SearchableMenuGroup<AgentSelectItemData>[] => {
   const groups: SearchableMenuGroup<AgentSelectItemData>[] = []
 
   if (teamCards.length > 0) {
-    groups.push({ id: 'org', label: 'From your organization', items: teamCards.map(cardItem) })
+    groups.push({
+      id: 'org',
+      label: 'From your organization',
+      items: teamCards.map((card) => cardItem(card, newlyGranted.has(card.id))),
+    })
   }
 
   groups.push({
@@ -103,6 +112,7 @@ export const ChatAgentSelector = ({
   readOnly,
   useTeamAgents = useTeamAgents_default,
   useAgents = useAgents_default,
+  useNewlyGrantedTeamAgents = useNewlyGrantedTeamAgents_default,
   useNavigate = useNavigate_default,
 }: ChatAgentSelectorProps) => {
   const { id: chatThreadId } = useCurrentChatSession()
@@ -110,11 +120,12 @@ export const ChatAgentSelector = ({
   const descriptor = useAgentDescriptor(useTeamAgents)
   const teamCards = useTeamAgents()
   const personalAgents = useAgents()
+  const newlyGranted = useNewlyGrantedTeamAgents(useTeamAgents)
   const navigate = useNavigate()
   const { triggerSelection } = useHaptics()
   const [open, setOpen] = useState(false)
 
-  const groups = buildAgentSelectorGroups(teamCards, personalAgents)
+  const groups = buildAgentSelectorGroups(teamCards, personalAgents, newlyGranted)
 
   const triggerIcon: LucideIcon =
     descriptor.kind === 'team' ? Building2 : descriptor.kind === 'thunderbolt' ? Zap : Globe

@@ -227,6 +227,7 @@ export const hydrateStore = (state: {
       retryCount: 0,
       retriesExhausted: false,
       selectedAgent: builtInAgent,
+      selectedAgentKind: 'thunderbolt' as const,
       selectedMode: state.selectedMode ?? defaultTestMode,
       selectedModel: state.selectedModel ?? defaultTestModel,
       triggerData: state.triggerData,

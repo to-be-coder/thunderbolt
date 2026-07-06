@@ -172,14 +172,19 @@ export const updateChatThread = async (
  * Gets a specific chat thread by ID or creates a new one with the provided ID.
  *
  * Pass `agentId` so the thread row stores the user's currently-selected agent
- * on creation. Existing threads are returned untouched — caller is responsible
- * for any subsequent updates via `updateChatThread`.
+ * on creation. Pass `agentKind` to complete the agentRef pair — required for
+ * TEAM agents, which have no `Agent` row for `agentRefForAgentId` to map from
+ * (a team card id would otherwise default to the 'personal' kind and the thread
+ * would resolve to a revoked descriptor on reload). Existing threads are
+ * returned untouched — caller is responsible for any subsequent updates via
+ * `updateChatThread`.
  */
 export const getOrCreateChatThread = async (
   db: AnyDrizzleDatabase,
   id: string,
   modelId: string,
   agentId: string | null = null,
+  agentKind?: AgentKind,
 ): Promise<ChatThread> => {
   const thread = await getChatThread(db, id)
 
@@ -201,6 +206,7 @@ export const getOrCreateChatThread = async (
       triggeredBy: null,
       wasTriggeredByAutomation: 0,
       agentId,
+      agentKind,
     },
     model,
   )

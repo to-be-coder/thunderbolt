@@ -34,6 +34,18 @@ Events follow the pattern: `<feature>_<action>`
 
 - `agent_select` - User selects a different agent for a chat thread
 - `agent_seal_hit` - User pressed `/` in a thread bound to a sealed company agent or a personal ACP agent (which have no skills surface). A P2 demand signal for extensibility on sealed agents; fired once alongside the one-time educational note.
+- `agent_grant_received` - Fired once (per app session) per newly-granted team agent id the first time the member sees it — the one-time "grant received" highlight rendered in BOTH the composer agent selector and the Agents page. Payload: `{ agentId }`. Health/demand signal for grant delivery.
+- `agent_manage_library_tap` - Member tapped "Manage in Library →" from an agent context (agents-page-spec §6). Payload: `{ agentKind, agentId }`. Demand signal for reintroducing per-agent config.
+
+#### Model Usage (server-side, `$ai_generation`)
+
+Per-user model-usage attribution (T4) is captured server-side by the `@posthog/ai`
+wrapper as its auto-emitted `$ai_generation` event, carrying token **usage** plus
+`posthogDistinctId` = the invoking user's id (set in
+`backend/src/inference/routes.ts` via `buildInferenceTelemetry`). Conversation
+content is stripped by the wrapper's privacy mode. This feeds the future v2
+token/usage dashboard; there is no v1 UI. No capture occurs when PostHog is not
+configured.
 
 #### Settings (`settings_*`)
 
@@ -141,7 +153,7 @@ All event names are typed using the `EventType` union type, ensuring:
 
 To add a new event:
 
-1. Add the event name to the `EventType` union in `src/lib/analytics.tsx`
+1. Add the event name to the `EventType` union in `src/lib/posthog.tsx`
 2. Use the `<feature>_<action>` naming convention
 3. Add the tracking call in the appropriate component
 4. Include relevant properties for analytics insights

@@ -111,6 +111,16 @@ export const openTransport = async (inputs: OpenTransportInputs): Promise<AcpTra
 const resolveWebSocketFactory = (inputs: OpenTransportInputs): WebSocketFactory => {
   // Granted team agent: address the relay by id and let it grant-check + resolve
   // the ACP URL server-side (service identity — the bearer is stripped upstream).
+  //
+  // T3 — DESKTOP TOOL-TRAFFIC ATTRIBUTION (see docs/architecture/desktop-tool-attribution.md):
+  // this branch is taken UNCONDITIONALLY for team agents on every platform (the
+  // proxy toggle below only governs personal `remote-acp` routing). That is what
+  // guarantees P0-7 invoker attribution (the relay stamps `user_id` — see
+  // backend/src/proxy/ws-team-agent.ts) even on the Tauri desktop build: company
+  // agents can never bypass the audited egress relay. The direct
+  // `nativeWebSocketFactory` fallback below is reachable only for PERSONAL agents
+  // in Tauri-standalone (a deliberate no-backend mode with no audit sink) — that
+  // traffic is out-of-scope for v1 egress audit per the T3 decision.
   if (inputs.teamAgentId) {
     const teamWs = createTeamAgentProxyWebSocket({
       cloudUrl: cloudWsUrl(),

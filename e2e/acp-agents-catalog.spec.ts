@@ -12,6 +12,12 @@ test.describe('Agents catalog', () => {
 
     await page.goto('/settings/agents')
 
+    // Since the Stage 5 read-only rewrite (agents-page-spec §1), the browseable
+    // ACP registry lives inside the "Connect an agent" dialog (`catalogSlot`),
+    // not directly on the page. Open it before asserting the catalogue.
+    await page.getByTestId('connect-an-agent').click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+
     // The bundled ACP registry snapshot renders immediately — no live network needed.
     // Assert a few known registry cards by id.
     const geminiCard = page.getByTestId('agent-catalog-card-gemini')

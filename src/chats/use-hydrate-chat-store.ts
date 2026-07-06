@@ -15,11 +15,19 @@ import {
   getDefaultModelForThread,
   getSelectedMode,
   getSettings,
+  getTeamAgentsCache,
   getTriggerPromptForThread,
   isChatThreadDeleted,
   saveMessagesWithContextUpdate,
 } from '@/dal'
-import { getOrCreateChatThread, updateChatThread } from '@/dal/chat-threads'
+import { agentCardToAgent } from '@/chats/agent-descriptor'
+import {
+  type AgentKind,
+  agentRefForAgentId,
+  getAgentRef,
+  getOrCreateChatThread,
+  updateChatThread,
+} from '@/dal/chat-threads'
 import { selectBuiltInAgentEnabled, useConfigStore } from '@/api/config-store'
 import { builtInAgent } from '@/defaults/agents'
 import { markChatReady } from '@/lib/init-timing'
@@ -90,8 +98,17 @@ export const useHydrateChatStore = ({ id, isNew }: UseHydrateChatStoreParams) =>
     // Fetch thread info to check if we need to generate a title.
     // Pass `selectedAgent.id` so a brand-new thread is created with the user's
     // currently-selected agent — otherwise the row would default to `null`
-    // and a reload would silently fall back to the built-in agent.
-    const thread = await getOrCreateChatThread(db, id, session.selectedModel.id, session.selectedAgent.id)
+    // and a reload would silently fall back to the built-in agent. Pass the
+    // session's `selectedAgentKind` too so a TEAM agent (no `Agent` row to
+    // derive the kind from) persists `agentKind: 'team'` rather than the
+    // 'personal' default that would resolve to a revoked descriptor.
+    const thread = await getOrCreateChatThread(
+      db,
+      id,
+      session.selectedModel.id,
+      session.selectedAgent.id,
+      session.selectedAgentKind,
+    )
 
     // Save messages and update context size using DAL
     await saveMessagesWithContextUpdate(db, id, messages)
@@ -138,7 +155,11 @@ export const useHydrateChatStore = ({ id, isNew }: UseHydrateChatStoreParams) =>
     }
 
     // If the session does not exist, create it below
-    const settings = await getSettings(db, { selected_model: String, selected_agent: String })
+    const settings = await getSettings(db, {
+      selected_model: String,
+      selected_agent: String,
+      selected_agent_kind: String,
+    })
 
     const [
       defaultModel,
@@ -150,6 +171,7 @@ export const useHydrateChatStore = ({ id, isNew }: UseHydrateChatStoreParams) =>
       triggerData,
       customAgentRows,
       systemAgentRows,
+      teamCards,
     ] = await Promise.all([
       getDefaultModelForThread(db, id, settings.selectedModel ?? undefined),
       getSelectedMode(db),
@@ -160,6 +182,7 @@ export const useHydrateChatStore = ({ id, isNew }: UseHydrateChatStoreParams) =>
       getTriggerPromptForThread(db, id),
       getAllAgents(db),
       getAllSystemAgents(db),
+      getTeamAgentsCache(db),
     ])
 
     // Built-in is implicit (lives in code); the DB rows are only customs + system.
@@ -204,8 +227,27 @@ export const useHydrateChatStore = ({ id, isNew }: UseHydrateChatStoreParams) =>
     // is the last-resort safety net for the degenerate zero-agent deployment.
     const findAgent = (agentId: string | null | undefined) =>
       agentId ? allAgents.find((a) => a.id === agentId) : undefined
-    const selectedAgent =
-      findAgent(chatThread?.agentId) ?? findAgent(settings.selectedAgent) ?? allAgents[0] ?? builtInAgent
+
+    // Resolve the (agent, kind) pair. TEAM agents are NOT `Agent` rows — they
+    // live in `team_agents_cache` as cards — so a team binding is driven by the
+    // thread's agentRef (existing threads) or the `selected_agent_kind` crumb
+    // (a brand-new chat opened from a company agent's "Start a chat"). Only when
+    // the kind is 'team' do we look the id up in the team cache and synthesize
+    // the card-agent; every other kind trusts the `Agent`-row resolution above.
+    const threadRef = chatThread ? getAgentRef(chatThread) : null
+    const settingsKind = (settings.selectedAgentKind ?? undefined) as AgentKind | undefined
+    const teamId =
+      threadRef?.kind === 'team'
+        ? threadRef.agentId
+        : !chatThread && settingsKind === 'team'
+          ? settings.selectedAgent
+          : null
+    const teamCard = teamId ? teamCards.find((c) => c.id === teamId) : undefined
+
+    const selectedAgent = teamCard
+      ? agentCardToAgent(teamCard)
+      : (findAgent(chatThread?.agentId) ?? findAgent(settings.selectedAgent) ?? allAgents[0] ?? builtInAgent)
+    const selectedAgentKind: AgentKind = teamCard ? 'team' : agentRefForAgentId(selectedAgent.id).kind
 
     // If chat doesn't exist and this isn't a new chat, redirect to 404
     if (!chatThread && !isNew) {
@@ -248,6 +290,7 @@ export const useHydrateChatStore = ({ id, isNew }: UseHydrateChatStoreParams) =>
       // Persisted via `chatThreads.agentId`; resolved above (first available
       // agent when the persisted id no longer matches).
       selectedAgent,
+      selectedAgentKind,
       selectedMode,
       selectedModel: defaultModel,
       triggerData,

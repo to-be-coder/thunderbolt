@@ -60,6 +60,8 @@ const renderList = (props: Partial<Parameters<typeof AgentList>[0]> = {}) =>
       policy={props.policy ?? allPolicy}
       onOpenAgent={props.onOpenAgent ?? (() => {})}
       useAcpAgentStatus={stubStatus}
+      // Default: nothing newly granted (no DB). Individual tests override.
+      useNewlyGrantedTeamAgents={props.useNewlyGrantedTeamAgents ?? (() => new Set<string>())}
     />,
   )
 
@@ -124,5 +126,21 @@ describe('AgentList — policy variants (spec §5, absent never disabled)', () =
     renderList({ teamCards: [] })
     expect(screen.queryByTestId('agent-section-org')).not.toBeInTheDocument()
     expect(screen.getByTestId('agent-section-yours')).toBeInTheDocument()
+  })
+})
+
+describe('AgentList — grant-received highlight (T2)', () => {
+  it('shows the one-time "New" badge only on newly-granted org cards', () => {
+    renderList({ useNewlyGrantedTeamAgents: () => new Set(['sales']) })
+    // The newly-granted card carries the highlight; the already-seen one doesn't.
+    const badges = screen.getAllByTestId('new-grant-badge')
+    expect(badges).toHaveLength(1)
+    expect(screen.getByTestId('agent-row-sales')).toContainElement(badges[0])
+    expect(screen.getByTestId('agent-row-finance')).not.toContainElement(badges[0])
+  })
+
+  it('shows no badge when nothing is newly granted', () => {
+    renderList()
+    expect(screen.queryByTestId('new-grant-badge')).not.toBeInTheDocument()
   })
 })

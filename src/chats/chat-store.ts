@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { updateSettings } from '@/dal'
-import { type AgentRef, agentRefForAgentId, updateChatThread } from '@/dal/chat-threads'
+import { type AgentKind, type AgentRef, agentRefForAgentId, updateChatThread } from '@/dal/chat-threads'
 import { getDb } from '@/db/database'
 import { type NamedMCPClient, type ReconnectClient } from '@/lib/mcp-provider'
 import { trackEvent } from '@/lib/posthog'
@@ -38,6 +38,11 @@ export type ChatSession = {
   retryCount: number
   retriesExhausted: boolean
   selectedAgent: Agent
+  /** Discriminant for `selectedAgent`'s kind. Team agents have no `Agent` row,
+   *  so their kind can't be derived from `selectedAgent` — it's carried here so
+   *  a brand-new thread (created lazily on first send) persists `agentKind:
+   *  'team'` rather than defaulting to 'personal' and resolving to revoked. */
+  selectedAgentKind: AgentKind
   selectedMode: Mode
   selectedModel: Model
   triggerData: AutomationRun | null
@@ -188,14 +193,16 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
 
     const nextSessions = new Map(sessions)
     const nextChatThread = session.chatThread ? { ...session.chatThread, agentId, agentKind } : session.chatThread
-    nextSessions.set(id, { ...session, chatThread: nextChatThread, selectedAgent: agent })
+    nextSessions.set(id, { ...session, chatThread: nextChatThread, selectedAgent: agent, selectedAgentKind: agentKind })
 
     set({ sessions: nextSessions })
 
     // Persist the global last-used agent so new chats default to it (mirrors
     // `setSelectedModel`/`setSelectedMode`). The per-thread write above keeps
-    // existing chats pinned to their own agent.
-    await updateSettings(db, { selected_agent: agent.id })
+    // existing chats pinned to their own agent. `selected_agent_kind` travels
+    // with the id so a brand-new thread (no `chatThread` row yet) hydrates back
+    // to a TEAM agent rather than defaulting to 'personal' → revoked.
+    await updateSettings(db, { selected_agent: agent.id, selected_agent_kind: agentKind })
 
     trackEvent('agent_select', { agent: agent.id })
   },

@@ -15,7 +15,9 @@ import { modelsTable, modesTable } from '@/db/tables'
 import { v7 as uuidv7 } from 'uuid'
 import { createChatThread, getChatThread as getThread } from '@/dal/chat-threads'
 import { createAgent } from '@/dal/agents'
+import { replaceTeamAgentsCache } from '@/dal/team-agents-cache'
 import { updateSettings } from '@/dal/settings'
+import type { AgentCard } from '@shared/agent-cards'
 import { getModel } from '@/dal/models'
 import { saveMessagesWithContextUpdate } from '@/dal/chat-messages'
 import type { ThunderboltUIMessage } from '@/types'
@@ -354,6 +356,52 @@ describe('useHydrateChatStore', () => {
 
       const session = getCurrentSession()
       expect(session?.selectedAgent.id).toBe('custom-last-used')
+    })
+
+    it('binds a TEAM agent on a brand-new chat from the selected_agent_kind crumb', async () => {
+      // Regression (Stage 5 → Stage 7 T1): "Start a chat" on a company agent
+      // detail leaves a `selected_agent` + `selected_agent_kind='team'` crumb.
+      // Team cards are NOT `Agent` rows, so resolving `selected_agent` against
+      // the agent set alone loses the binding. Hydration must consult the team
+      // cache when the kind is 'team' and synthesize the card-agent.
+      const card: AgentCard = {
+        id: 'company-research',
+        name: 'Research Assistant',
+        icon: '🔎',
+        description: 'Company research agent',
+        category: 'sealed',
+        capabilities: [],
+        advertisedModels: ['gpt-5'],
+        managedBy: 'Platform Team',
+        grantedVia: 'Everyone',
+      }
+      await replaceTeamAgentsCache(getDb(), [card])
+      await updateSettings(getDb(), { selected_agent: 'company-research', selected_agent_kind: 'team' })
+
+      const threadId = uuidv7()
+      const { result } = renderHook(() => useHydrateChatStore({ id: threadId, isNew: true }), {
+        wrapper: TestWrapper,
+      })
+
+      await act(async () => {
+        await result.current.hydrateChatStore()
+      })
+
+      const session = getCurrentSession()
+      expect(session?.selectedAgent.id).toBe('company-research')
+      expect(session?.selectedAgentKind).toBe('team')
+
+      // The team binding must survive to the thread row created on first send.
+      await act(async () => {
+        await result.current.saveMessages({
+          id: threadId,
+          messages: [createTestMessage({ role: 'user', parts: [{ type: 'text', text: 'First message' }] })],
+        })
+      })
+
+      const stored = await getThread(getDb(), threadId)
+      expect(stored?.agentId).toBe('company-research')
+      expect(stored?.agentKind).toBe('team')
     })
   })
 

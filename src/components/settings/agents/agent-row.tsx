@@ -6,6 +6,7 @@ import { ChevronRight, type LucideIcon } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type { AcpAgentStatus } from '@/hooks/use-acp-agent-status'
+import { NewGrantBadge } from './new-grant-badge'
 
 /** Live status dot for a personal ACP row (agents-page-spec §1: ● online /
  *  ○ offline). `checking` renders a muted pulsing dot with no label; `unknown`
@@ -38,6 +39,8 @@ export type AgentRowProps = {
   provenanceLine: string
   /** Personal ACP live status; omit for team / native rows. */
   status?: AcpAgentStatus
+  /** One-time "grant received" highlight — a ring + "New" badge (Stage 7 T2). */
+  isNewlyGranted?: boolean
   /** Opens the read-only detail view. Every row has a chevron and opens. */
   onOpen: () => void
 }
@@ -49,8 +52,19 @@ export type AgentRowProps = {
  * NO edit / toggle / delete affordance anywhere; the whole row is the tap
  * target that opens the detail.
  */
-export const AgentRow = ({ agentId, icon: Icon, name, provenanceLine, status, onOpen }: AgentRowProps) => (
-  <Card data-testid={`agent-row-${agentId}`} className="border border-border p-0">
+export const AgentRow = ({
+  agentId,
+  icon: Icon,
+  name,
+  provenanceLine,
+  status,
+  isNewlyGranted,
+  onOpen,
+}: AgentRowProps) => (
+  <Card
+    data-testid={`agent-row-${agentId}`}
+    className={cn('border border-border p-0', isNewlyGranted && 'ring-2 ring-primary/40')}
+  >
     <button
       type="button"
       onClick={onOpen}
@@ -59,7 +73,10 @@ export const AgentRow = ({ agentId, icon: Icon, name, provenanceLine, status, on
     >
       <Icon className="size-5 text-muted-foreground shrink-0" aria-hidden="true" />
       <div className="min-w-0 flex-1">
-        <div className="text-[length:var(--font-size-body)] font-medium truncate">{name}</div>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-[length:var(--font-size-body)] font-medium truncate">{name}</span>
+          {isNewlyGranted && <NewGrantBadge />}
+        </div>
         <div
           className="flex items-center gap-1.5 text-[length:var(--font-size-sm)] text-muted-foreground truncate"
           data-testid={`agent-provenance-${agentId}`}

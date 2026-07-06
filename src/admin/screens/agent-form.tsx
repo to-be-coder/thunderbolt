@@ -263,6 +263,15 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
             value={state.description}
             onChange={(event) => dispatch({ type: 'SET', field: 'description', value: event.target.value })}
           />
+          {/* T5 — prompt-extraction posture (v1: admin-facing warning only, no
+              technical countermeasures). The card + description are display copy
+              anyone granted the agent can read; the agent's INSTRUCTIONS are
+              confidential-not-secret — never rely on secrecy for security. */}
+          <p className="text-xs text-muted-foreground" data-testid="prompt-confidentiality-warning">
+            Treat this agent's instructions as <strong>confidential, not secret</strong>. Anyone granted the agent can
+            read its behavior, and a determined user may be able to extract its underlying prompt — never put passwords,
+            keys, or other secrets in the instructions or card copy.
+          </p>
         </div>
 
         <div className="flex flex-col gap-1">

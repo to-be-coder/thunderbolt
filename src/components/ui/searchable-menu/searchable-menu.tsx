@@ -44,7 +44,10 @@ const ItemButton = memo(<T,>({ item, isSelected, onClick, renderItem }: ItemButt
     >
       {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-        <span className="font-medium truncate">{item.label}</span>
+        <span className="flex items-center gap-1.5 min-w-0">
+          <span className="font-medium truncate">{item.label}</span>
+          {item.badge && <span className="flex-shrink-0">{item.badge}</span>}
+        </span>
         {item.description && <span className="text-sm text-muted-foreground truncate">{item.description}</span>}
       </div>
     </button>

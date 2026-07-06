@@ -121,6 +121,7 @@ describe('chat-store', () => {
               id: 'test-id',
               pendingPermission: null,
               selectedAgent: builtInAgent,
+              selectedAgentKind: 'thunderbolt' as const,
               selectedMode: null as unknown as Mode,
               retryCount: 0,
               retriesExhausted: false,

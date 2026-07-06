@@ -198,6 +198,50 @@ describe('Inference Routes', () => {
       isPostHogConfiguredSpy.mockReturnValue(false)
     })
 
+    it('attributes model usage to the invoking user (T4)', async () => {
+      isPostHogConfiguredSpy.mockReturnValue(true)
+      mockCreateCompletion.mockImplementation(() => Promise.resolve(createMockStream()))
+
+      const response = await app.handle(
+        new Request('http://localhost/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(validRequestBody),
+        }),
+      )
+
+      expect(response.status).toBe(200)
+      // The wrapper's auto-captured `$ai_generation` usage event is attributed
+      // per-user via `posthogDistinctId` (mockAuth resolves user id 'test-user').
+      expect(mockCreateCompletion).toHaveBeenCalledWith(
+        expect.objectContaining({
+          posthogDistinctId: 'test-user',
+          posthogProperties: expect.objectContaining({ user_id: 'test-user' }),
+        }),
+      )
+
+      isPostHogConfiguredSpy.mockReturnValue(false)
+    })
+
+    it('omits distinct-id attribution when PostHog is not configured', async () => {
+      isPostHogConfiguredSpy.mockReturnValue(false)
+      mockCreateCompletion.mockImplementation(() => Promise.resolve(createMockStream()))
+
+      const response = await app.handle(
+        new Request('http://localhost/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(validRequestBody),
+        }),
+      )
+
+      expect(response.status).toBe(200)
+      const lastCall = mockCreateCompletion.mock.calls.at(-1) as unknown as [Record<string, unknown>]
+      const callArg = lastCall[0]
+      expect(callArg.posthogDistinctId).toBeUndefined()
+      expect(callArg.posthogProperties).toBeUndefined()
+    })
+
     it('should reject non-streaming requests', async () => {
       const nonStreamingRequest = {
         ...validRequestBody,

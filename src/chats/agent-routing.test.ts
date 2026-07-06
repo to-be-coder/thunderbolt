@@ -16,6 +16,7 @@ import '@/testing-library'
 
 import { describe, expect, it, mock } from 'bun:test'
 import { useChatStore, type ChatSession } from '@/chats/chat-store'
+import { agentRefForAgentId } from '@/dal/chat-threads'
 import { resetStore } from '@/test-utils/chat-store-mocks'
 import { builtInAgent } from '@/defaults/agents'
 import type { HttpClient } from '@/lib/http'
@@ -109,6 +110,7 @@ const hydrateSessionWith = (id: string, agent: Agent, chatThread: ChatThread | n
     retryCount: 0,
     retriesExhausted: false,
     selectedAgent: agent,
+    selectedAgentKind: agentRefForAgentId(agent.id).kind,
     selectedMode: mockMode,
     selectedModel: mockModel,
     triggerData: null,

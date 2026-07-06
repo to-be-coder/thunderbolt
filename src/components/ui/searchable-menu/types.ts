@@ -9,6 +9,8 @@ export type SearchableMenuItem<T = unknown> = {
   label: string
   description?: string
   icon?: ReactNode
+  /** Trailing adornment rendered after the label (e.g. a "New" grant badge). */
+  badge?: ReactNode
   disabled?: boolean
   data?: T
   /** Additional searchable text (not displayed) */

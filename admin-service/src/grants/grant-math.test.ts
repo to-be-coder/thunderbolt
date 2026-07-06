@@ -115,6 +115,32 @@ describe('resolveVisibleAgents (grant math)', () => {
     expect(await resolveVisibleAgents(db, memberId)).toEqual([])
   })
 
+  it('I5: grants target groups + the everyone-group, with individual grants as exceptions', async () => {
+    // One member, all three targeting modes at once — the invariant in one shot.
+    const memberId = await seedMember(db, 'i5@corp.test')
+    const groupId = await seedGroup(db, 'Legal')
+    await db.insert(groupMembers).values({ groupId, memberId })
+
+    const groupAgent = await seedAgent(db, 'Group Agent')
+    const everyoneAgent = await seedAgent(db, 'Everyone Agent')
+    const exceptionAgent = await seedAgent(db, 'Exception Agent')
+
+    await db.insert(grants).values([
+      { id: crypto.randomUUID(), agentId: groupAgent, targetType: 'group', targetId: groupId },
+      { id: crypto.randomUUID(), agentId: everyoneAgent, targetType: 'everyone', targetId: null },
+      // Individual grant — the exception targeting mode.
+      { id: crypto.randomUUID(), agentId: exceptionAgent, targetType: 'member', targetId: memberId },
+    ])
+
+    const visible = await resolveVisibleAgents(db, memberId)
+    const byId = new Map(visible.map((entry) => [entry.agentId, entry.grantedVia]))
+    expect(byId.get(groupAgent)).toBe('Legal')
+    expect(byId.get(everyoneAgent)).toBe('Everyone')
+    // The individual grant resolves via the "Direct grant" label (the exception).
+    expect(byId.get(exceptionAgent)).toBe('Direct grant')
+    expect(visible).toHaveLength(3)
+  })
+
   it('revocation: removing (soft-deleting) a grant excludes the agent on the NEXT resolve', async () => {
     const memberId = await seedMember(db, 'g@corp.test')
     const groupId = await seedGroup(db, 'Legal')

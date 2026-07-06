@@ -40,10 +40,18 @@ test.describe('ACP add custom agent', () => {
 
     await loginViaOidc(page)
 
+    // The "Connect an agent" dialog now embeds the browse catalogue beneath the
+    // form (Stage 5 `catalogSlot`), which makes it taller than the default 720px
+    // e2e viewport — the centered modal has no inner scroll, so give it enough
+    // height for the footer "Add Agent" button to be reachable.
+    await page.setViewportSize({ width: 1280, height: 1600 })
+
     await page.goto('/settings/agents')
     await expect(page.getByTestId('agent-list')).toBeVisible({ timeout: 10_000 })
 
-    await page.getByRole('button', { name: 'Add Custom Agent' }).click()
+    // Stage 5 renamed the entry point and moved the custom-agent form into the
+    // "Connect an agent" dialog (the only add path on the read-only page).
+    await page.getByTestId('connect-an-agent').click()
 
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
@@ -65,9 +73,11 @@ test.describe('ACP add custom agent', () => {
 
     // The new row is rendered by name. PowerSync's live query feeds the list
     // from the synced `agents` table so the row should appear without a manual
-    // reload.
+    // reload. The Stage 5 read-only rewrite shows a `Connected agent · {host}`
+    // provenance line rather than the free-text description — personal ACP agents
+    // are endpoint references only, so the description isn't persisted or shown.
     await expect(page.getByText('Test Agent')).toBeVisible({ timeout: 10_000 })
-    await expect(page.getByText('Test description')).toBeVisible()
+    await expect(page.getByText(/Connected agent ·/)).toBeVisible()
 
     expect(errors).toHaveLength(0)
   })

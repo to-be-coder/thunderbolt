@@ -159,6 +159,10 @@ export type EventType =
   | 'mode_select'
   | 'agent_select'
   | 'agent_seal_hit'
+  // Fired once per newly-granted team agent id when the member first sees it
+  // (the one-time "grant received" highlight in the selector + Agents page).
+  // Payload: { agentId }. Demand/health signal for grant delivery.
+  | 'agent_grant_received'
   | 'acp_mode_changed'
   | 'acp_config_options_changed'
   | 'settings_theme_set'

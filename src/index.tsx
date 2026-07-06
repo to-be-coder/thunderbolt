@@ -22,6 +22,13 @@ const redirecting = handlePostUpdateRedirect()
 if (!redirecting) {
   initializeLinkInterception()
 
+  // DEV-only e2e seam for seeding the device-local agent-access caches (no live
+  // member discovery client exists in v1). `import.meta.env.DEV` lets Vite strip
+  // this entirely from production bundles.
+  if (import.meta.env.DEV) {
+    void import('./devtools/test-seed').then((m) => m.installTestSeed())
+  }
+
   const root = document.getElementById('root') as HTMLElement
 
   ReactDOM.createRoot(root).render(<App />)

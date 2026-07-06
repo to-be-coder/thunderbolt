@@ -29,6 +29,41 @@ type ModelConfig = {
   omitTemperature?: boolean
 }
 
+/**
+ * Build the per-request telemetry options spread into the `@posthog/ai`
+ * `chat.completions.create` call (Stage 7 T4). The wrapper auto-captures a
+ * `$ai_generation` event carrying the model, provider and token USAGE; attaching
+ * `posthogDistinctId` attributes that usage to the invoking user so the future
+ * v2 token dashboard can report per-user consumption. Returns an empty object
+ * when PostHog is not configured (no distinct id, no capture). `posthogTraceId`
+ * groups the multi-step turns of one conversation. Pure + exported for testing.
+ */
+export const buildInferenceTelemetry = (params: {
+  userId: string
+  provider: InferenceProvider
+  hasTools: boolean
+  temperature: number | undefined
+  traceId?: string
+  posthogConfigured?: boolean
+}): Record<string, unknown> => {
+  if (!(params.posthogConfigured ?? isPostHogConfigured())) {
+    return {}
+  }
+  return {
+    posthogDistinctId: params.userId,
+    ...(params.traceId ? { posthogTraceId: params.traceId } : {}),
+    posthogProperties: {
+      // Attributed usage (feeds the v2 token dashboard). No conversation content —
+      // the wrapper's privacy mode strips `$ai_input` / `$ai_output_choices`.
+      user_id: params.userId,
+      model_provider: params.provider,
+      endpoint: '/chat/completions',
+      has_tools: params.hasTools,
+      temperature: params.temperature,
+    },
+  }
+}
+
 export const supportedModels: Record<string, ModelConfig> = {
   'mistral-medium-3.1': {
     provider: 'mistral',
@@ -80,6 +115,16 @@ export const createInferenceRoutes = (auth: Auth, rateLimit?: AnyElysia) => {
 
       console.info(`Routing model "${body.model}" to ${provider} provider`)
 
+      // Per-user model-usage attribution (T4): the invoker resolved by the
+      // `{ auth: true }` macro drives `posthogDistinctId` so the wrapper's
+      // auto-captured `$ai_generation` usage event is attributed per user.
+      const telemetry = buildInferenceTelemetry({
+        userId: ctx.user.id,
+        provider,
+        hasTools: !!body.tools,
+        temperature: body.temperature,
+      })
+
       try {
         const completion = await (client as PostHogOpenAI).chat.completions.create({
           model: internalName,
@@ -88,15 +133,7 @@ export const createInferenceRoutes = (auth: Auth, rateLimit?: AnyElysia) => {
           tools: body.tools,
           tool_choice: body.tool_choice,
           stream: true,
-          ...(isPostHogConfigured() && {
-            posthogProperties: {
-              model_provider: provider,
-              endpoint: '/chat/completions',
-              has_tools: !!body.tools,
-              temperature: body.temperature,
-              // @todo add distinct id and trace id
-            },
-          }),
+          ...telemetry,
         })
 
         const stream = createSSEStreamFromCompletion(completion)

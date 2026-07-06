@@ -78,6 +78,13 @@ export const createMcpTransport = (
   // MCP credential rides separately as `X-Proxy-Passthrough-Authorization` (createProxyFetch
   // promotes the plain `Authorization` we set in buildMcpHeaders). `getProxyEnabled` honours
   // the Tauri standalone toggle; web always proxies (CORS forces it).
+  //
+  // T3 — desktop attribution (docs/architecture/desktop-tool-attribution.md): in
+  // Tauri-standalone `getProxyEnabled` is false and this fetch hits the upstream
+  // directly, so MCP tool traffic is NOT recorded on the proxy observability sink
+  // (P0-7). That is intentional — Standalone is a no-backend mode with no audit
+  // sink. Company-agent traffic is unaffected: it never flows through MCP here, it
+  // is always relayed through the grant-checked, attributed team-agent proxy.
   const proxyFetch = createProxyFetch({
     cloudUrl,
     getProxyAuthToken: getAuthToken,

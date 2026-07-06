@@ -4,6 +4,16 @@
 
 import { expect, type Page } from '@playwright/test'
 
+declare global {
+  interface Window {
+    __thunderboltTestSeed?: {
+      seedTeamAgents: (cards: unknown[]) => Promise<void>
+      seedOrgPolicy: (policy: unknown) => Promise<void>
+      clearTeamAgents: () => Promise<void>
+    }
+  }
+}
+
 /**
  * Navigate to the app root, let the SSO flow complete naturally through
  * the mock identity provider, and wait for the authenticated chat UI to render.
@@ -55,6 +65,40 @@ export const logoutViaSidebar = async (page: Page, option: 'keep' | 'delete' = '
 
   // Should land on the signed-out page
   await expect(page.getByRole('heading', { name: 'Signed Out' })).toBeVisible({ timeout: 10_000 })
+}
+
+/** Shape of a company agent card seeded via the DEV-only test seam. Mirrors
+ *  `shared/agent-cards.ts` `AgentCard` (kept local so the e2e helper has no app
+ *  import). */
+export type SeedAgentCard = {
+  id: string
+  name: string
+  icon: string
+  description: string
+  category: 'sealed' | 'extensible'
+  capabilities: { label: string; credentialMode?: 'as_you' | 'service_account'; connected?: boolean }[]
+  advertisedModels: string[]
+  managedBy: string
+  grantedVia: string
+}
+
+/**
+ * Seed the device-local `team_agents_cache` via the DEV-only window seam
+ * (`src/devtools/test-seed.ts`). There is no live member discovery client in v1,
+ * so this is the only way an e2e spec can make a company agent visible in the
+ * selector / Agents page. Waits for the seam to be installed (it attaches after
+ * the DB registers post-login), then replaces the cache wholesale.
+ */
+export const seedTeamAgents = async (page: Page, cards: SeedAgentCard[]) => {
+  await page.waitForFunction(() => !!window.__thunderboltTestSeed, undefined, { timeout: 15_000 })
+  await page.evaluate((seedCards) => window.__thunderboltTestSeed!.seedTeamAgents(seedCards), cards)
+}
+
+/** Clear the device-local team-agents cache — simulates a TOTAL grant
+ *  revocation (invariant I4) via the DEV-only seam. */
+export const revokeTeamAgents = async (page: Page) => {
+  await page.waitForFunction(() => !!window.__thunderboltTestSeed, undefined, { timeout: 15_000 })
+  await page.evaluate(() => window.__thunderboltTestSeed!.clearTeamAgents())
 }
 
 /**

@@ -2,10 +2,15 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test'
 import { clearLocalData, signOutAndWipe } from './cleanup'
 import { initialLocalSettings, useLocalSettingsStore } from '@/stores/local-settings-store'
 import { useTrustDomainRegistry } from '@/stores/trust-domain-registry'
+import { resetTestDatabase, setupTestDatabase, teardownTestDatabase } from '@/dal/test-utils'
+import { getDb } from '@/db/database'
+import { getTeamAgentsCache, replaceTeamAgentsCache } from '@/dal/team-agents-cache'
+import { getOrgPolicy, setOrgPolicy } from '@/dal/org-policy'
+import type { AgentCard } from '@shared/agent-cards'
 
 const calls: string[] = []
 
@@ -138,6 +143,68 @@ describe('clearLocalData', () => {
     await clearLocalData(deps)
 
     expect(registryAtBroadcast).toBeUndefined()
+  })
+})
+
+describe('clearLocalData — agent-access cache clearing (T2)', () => {
+  // The wipe must drop the device-local agent-access caches on sign-out so no
+  // team-agent grant data survives into the next identity. `resetDatabase` is
+  // mocked to a no-op here, so the real test DB stays open and we can assert
+  // both tables are empty AFTER the wipe (proving the explicit clear ran).
+  const sampleCard: AgentCard = {
+    id: 'company-agent-1',
+    name: 'Company Agent',
+    icon: '🏢',
+    description: 'A granted team agent',
+    category: 'sealed',
+    capabilities: [],
+    advertisedModels: [],
+    managedBy: 'Platform Team',
+    grantedVia: 'Everyone',
+  }
+
+  beforeAll(async () => {
+    await setupTestDatabase()
+  })
+
+  afterAll(async () => {
+    await teardownTestDatabase()
+  })
+
+  beforeEach(async () => {
+    await resetTestDatabase()
+    broadcastDbLifecycle.mockClear()
+    setSyncEnabled.mockClear()
+    resetDatabase.mockClear()
+    deleteDbFile.mockClear()
+    clearAuthToken.mockClear()
+    clearDeviceId.mockClear()
+    handleFullWipe.mockClear()
+    useTrustDomainRegistry.setState({
+      servers: { [serverId]: { serverId, cloudUrl: 'http://test.local' } },
+      activeTrustDomain: { kind: 'server', serverId },
+    })
+  })
+
+  afterEach(async () => {
+    useTrustDomainRegistry.setState({ servers: {}, activeTrustDomain: undefined })
+    await resetTestDatabase()
+  })
+
+  it('clears the team-agents cache and org policy', async () => {
+    await replaceTeamAgentsCache(getDb(), [sampleCard])
+    await setOrgPolicy(getDb(), { personalAgentPolicy: 'company_only', userModelsAllowed: false, mcpAllowlist: [] })
+
+    // Sanity: both caches are populated before the wipe.
+    expect(await getTeamAgentsCache(getDb())).toHaveLength(1)
+    expect((await getOrgPolicy(getDb())).personalAgentPolicy).toBe('company_only')
+
+    await clearLocalData(deps)
+
+    // Both device-local agent-access caches are gone; org policy falls back to
+    // the consumer default (`personalAgentPolicy: 'all'`).
+    expect(await getTeamAgentsCache(getDb())).toHaveLength(0)
+    expect((await getOrgPolicy(getDb())).personalAgentPolicy).toBe('all')
   })
 })
 
