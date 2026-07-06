@@ -14,10 +14,12 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/ui/page-header'
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useInviteMember, useMembers, useRemoveMember } from '../api/hooks'
 import type { Member } from '../api/types'
@@ -33,6 +35,7 @@ export const MembersPage = () => {
   const remove = useRemoveMember()
   const [email, setEmail] = useState('')
   const [asAdmin, setAsAdmin] = useState(false)
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   const handleInvite = async () => {
     const trimmed = email.trim()
@@ -42,40 +45,51 @@ export const MembersPage = () => {
     await invite.mutateAsync({ email: trimmed, isAdmin: asAdmin })
     setEmail('')
     setAsAdmin(false)
+    setDialogOpen(false)
   }
 
   const members = membersQuery.data ?? []
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <PageHeader title="Members" />
+      <PageHeader title="Members">
+        <Button size="icon" className="rounded-lg" onClick={() => setDialogOpen(true)} aria-label="Invite a member">
+          <Plus className="size-4" />
+        </Button>
+      </PageHeader>
 
-      <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
-        <h2 className="text-sm font-semibold">Invite a member</h2>
-        <div className="flex flex-wrap items-center gap-3">
-          <Input
-            type="email"
-            placeholder="teammate@company.com"
-            className="max-w-xs"
-            value={email}
-            aria-label="Member email"
-            onChange={(event) => setEmail(event.target.value)}
-            onKeyDown={(event) => event.key === 'Enter' && handleInvite()}
-          />
-          <label className="flex items-center gap-2 text-sm">
-            <Switch checked={asAdmin} onCheckedChange={setAsAdmin} aria-label="Invite as admin" />
-            Admin
-          </label>
-          <Button onClick={handleInvite} disabled={invite.isPending || !email.trim()}>
-            {invite.isPending ? 'Inviting…' : 'Invite'}
-          </Button>
-        </div>
-        {invite.isError && (
-          <p className="text-sm text-destructive" role="alert">
-            Could not invite this member. They may already exist.
-          </p>
-        )}
-      </div>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invite a member</DialogTitle>
+            <DialogDescription>They'll join your org and activate on first sign-in.</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            <Input
+              type="email"
+              placeholder="teammate@company.com"
+              value={email}
+              aria-label="Member email"
+              onChange={(event) => setEmail(event.target.value)}
+              onKeyDown={(event) => event.key === 'Enter' && handleInvite()}
+            />
+            <label className="flex items-center gap-2 text-sm">
+              <Switch checked={asAdmin} onCheckedChange={setAsAdmin} aria-label="Invite as admin" />
+              Admin
+            </label>
+            {invite.isError && (
+              <p className="text-sm text-destructive" role="alert">
+                Could not invite this member. They may already exist.
+              </p>
+            )}
+            <div className="flex justify-end">
+              <Button onClick={handleInvite} disabled={invite.isPending || !email.trim()}>
+                {invite.isPending ? 'Inviting…' : 'Invite'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="rounded-lg border border-border">
         <Table>
