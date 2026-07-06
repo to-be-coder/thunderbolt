@@ -42,7 +42,7 @@ describe('RegistryPage', () => {
     expect(screen.getByText('Ready')).toBeInTheDocument()
   })
 
-  it('selecting a card shows its detail inline in the split view', async () => {
+  it('fills the page with the list and slides the detail in on select', async () => {
     const { client } = createRecordingClient((call) => {
       if (call.method === 'GET' && call.path === '/v1/admin/agents') {
         return [agentResponse('Sales Agent')]
@@ -58,8 +58,7 @@ describe('RegistryPage', () => {
     renderAdmin(<RegistryPage />, client)
     await flush()
 
-    // The detail column shows a placeholder until a card is selected.
-    expect(screen.getByText('Select an agent to see its details.')).toBeInTheDocument()
+    // No detail rendered until a card is selected.
     expect(screen.queryByText('Admin view')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByTestId('agent-card-ag1'))

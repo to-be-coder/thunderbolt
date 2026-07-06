@@ -7,17 +7,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { PageHeader } from '@/components/ui/page-header'
 import { cn } from '@/lib/utils'
 import { Building2, ChevronRight, Plus } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useAgents } from '../api/hooks'
+import type { TeamAgentWithCapabilities } from '../api/types'
 import { AgentDetailPanel } from './agent-detail-panel'
 import { AgentForm } from './agent-form'
 import { AgentConnectionIndicator } from './connection-status'
 
+/** Detail column width when open. The width animation reflows the list column;
+ *  the content translate slides it in — together they read as one motion. */
+const DETAIL_WIDTH = 'clamp(360px, 42vw, 560px)'
+// Linear's spring curve — fast start, smooth tail, no overshoot.
+const SLIDE = 'cubic-bezier(0.32, 0.72, 0, 1)'
+
 /**
- * S1 — Registry. A master-detail split: the middle column lists team agents as
- * cards (each showing its live ACP connection status); selecting one shows its
- * detail inline in the right column (Edit / Delete live there). The `+` opens
- * the register form in a modal.
+ * S1 — Registry. The agent list fills the page until one is selected; then the
+ * detail slides in from the right (an inline flex child — no overlay) and the
+ * list shrinks to make room. Each card shows the agent's live ACP connection
+ * status; Edit / Delete live in the detail. The `+` opens the register modal.
  */
 export const RegistryPage = () => {
   const agentsQuery = useAgents()
@@ -27,30 +34,39 @@ export const RegistryPage = () => {
   const agents = agentsQuery.data ?? []
   const selectedAgent = agents.find((agent) => agent.id === selectedId) ?? null
 
+  // Latch the last selected agent so it stays rendered through the close
+  // animation (ref assignment in render is the sanctioned no-effect pattern).
+  const lastAgent = useRef<TeamAgentWithCapabilities | null>(selectedAgent)
+  if (selectedAgent) {
+    lastAgent.current = selectedAgent
+  }
+  const panelAgent = selectedAgent ?? lastAgent.current
+  const open = selectedAgent !== null
+
   return (
-    <div className="flex w-full flex-col gap-6">
-      <PageHeader title="Registry">
-        <Button
-          variant="outline"
-          size="icon"
-          className="rounded-lg"
-          onClick={() => setRegistering(true)}
-          aria-label="Register an agent"
-        >
-          <Plus />
-        </Button>
-      </PageHeader>
+    <div className="flex w-full">
+      <div className="flex min-w-0 flex-1 flex-col gap-6">
+        <PageHeader title="Registry">
+          <Button
+            variant="outline"
+            size="icon"
+            className="rounded-lg"
+            onClick={() => setRegistering(true)}
+            aria-label="Register an agent"
+          >
+            <Plus />
+          </Button>
+        </PageHeader>
 
-      <Dialog open={registering} onOpenChange={setRegistering}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Register agent</DialogTitle>
-          </DialogHeader>
-          {registering && <AgentForm agent={null} onDone={() => setRegistering(false)} />}
-        </DialogContent>
-      </Dialog>
+        <Dialog open={registering} onOpenChange={setRegistering}>
+          <DialogContent className="max-h-[85vh] overflow-y-auto">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Register agent</DialogTitle>
+            </DialogHeader>
+            {registering && <AgentForm agent={null} onDone={() => setRegistering(false)} />}
+          </DialogContent>
+        </Dialog>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(260px,340px)_minmax(0,1fr)]">
         <div className="flex flex-col gap-2">
           {agentsQuery.isPending && <p className="text-sm text-muted-foreground">Loading…</p>}
           {!agentsQuery.isPending && agents.length === 0 && (
@@ -78,17 +94,26 @@ export const RegistryPage = () => {
             </button>
           ))}
         </div>
-
-        <div>
-          {selectedAgent ? (
-            <AgentDetailPanel agent={selectedAgent} onClose={() => setSelectedId(null)} />
-          ) : (
-            <div className="flex min-h-64 items-center justify-center rounded-lg border border-dashed border-border p-8">
-              <p className="text-sm text-muted-foreground">Select an agent to see its details.</p>
-            </div>
-          )}
-        </div>
       </div>
+
+      <aside
+        className="shrink-0 overflow-hidden transition-[width] duration-300 motion-reduce:transition-none"
+        style={{ width: open ? DETAIL_WIDTH : '0px', transitionTimingFunction: SLIDE }}
+        aria-hidden={!open}
+      >
+        <div
+          className="transition-transform duration-300 motion-reduce:transition-none"
+          style={{
+            width: DETAIL_WIDTH,
+            transform: open ? 'translateX(0)' : 'translateX(100%)',
+            transitionTimingFunction: SLIDE,
+          }}
+        >
+          <div className="pl-6">
+            {panelAgent && <AgentDetailPanel agent={panelAgent} onClose={() => setSelectedId(null)} />}
+          </div>
+        </div>
+      </aside>
     </div>
   )
 }
