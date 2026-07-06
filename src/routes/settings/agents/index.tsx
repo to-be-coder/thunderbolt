@@ -73,7 +73,19 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
 
   return (
     <div className="flex flex-col gap-6 p-4 w-full max-w-[760px] mx-auto">
-      <PageHeader title="Agents" />
+      <PageHeader title="Agents">
+        {canConnect && (
+          <Button
+            variant="outline"
+            className="rounded-lg"
+            onClick={() => setDialogOpen(true)}
+            data-testid="connect-an-agent"
+          >
+            <Plus className="size-4" />
+            Connect an agent
+          </Button>
+        )}
+      </PageHeader>
 
       <AgentList
         teamCards={teamCards}
@@ -81,18 +93,6 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
         policy={policy}
         onOpenAgent={(agentId) => navigate(`/settings/agents/${agentId}`)}
       />
-
-      {canConnect && (
-        <Button
-          variant="outline"
-          className="self-start rounded-lg"
-          onClick={() => setDialogOpen(true)}
-          data-testid="connect-an-agent"
-        >
-          <Plus className="size-4" />
-          Connect an agent
-        </Button>
-      )}
 
       <AddCustomAgentDialog
         open={dialogOpen}
