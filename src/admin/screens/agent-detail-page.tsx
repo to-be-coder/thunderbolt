@@ -27,9 +27,9 @@ import { StatusPill } from './status-pill'
 
 /**
  * S1a — Agent detail. The admin's view of one team agent: its summary plus the
- * live technical wiring (models, MCP servers, tools, credentials) fetched fresh
- * from the ACP endpoint. Admin-only; never stored or synced — the display-only
- * card can't carry it (INVARIANT 2). Edit / Delete live in the header.
+ * live technical wiring (models, MCP servers, tools) fetched fresh from the ACP
+ * endpoint. Admin-only; never stored or synced — the display-only card can't
+ * carry it (INVARIANT 2). Edit / Delete live in the header.
  */
 export const AgentDetailPage = () => {
   const { agentId } = useParams()
@@ -148,21 +148,6 @@ const AdminDetail = ({ agent }: { agent: TeamAgentWithCapabilities }) => {
           </Field>
           <Field label="Tools">
             <TagList items={detail.tools} />
-          </Field>
-          <Field label="Credentials">
-            <p className="text-xs text-muted-foreground">
-              “As you” runs under each member’s own login; “service account” uses one shared org account.
-            </p>
-            <ul className="flex flex-col gap-1 text-sm">
-              {detail.credentials.map((credential) => (
-                <li key={credential.label} className="flex items-center justify-between gap-2">
-                  <span>{credential.label}</span>
-                  <StatusPill tone={credential.mode === 'as_you' ? 'warning' : 'muted'}>
-                    {credential.mode === 'as_you' ? 'as you' : 'service account'}
-                  </StatusPill>
-                </li>
-              ))}
-            </ul>
           </Field>
         </>
       )}
