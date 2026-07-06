@@ -3,7 +3,13 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { isAgentAvailable as isAgentAvailable_default } from '@/acp/agent-availability'
-import { useCurrentChatSession } from '@/chats/chat-store'
+import { testAcpConnection as testAcpConnection_default } from '@/acp'
+import {
+  isSealedForSlash,
+  showsSkillsBar,
+  useAgentDescriptor as useAgentDescriptor_default,
+} from '@/chats/agent-descriptor'
+import { useChatStore, useCurrentChatSession } from '@/chats/chat-store'
 import { estimateTokensForText } from '@/ai/tokenizers'
 import { useContextTracking as useContextTracking_default } from '@/hooks/use-context-tracking'
 import { useIsMobile as useIsMobile_default } from '@/hooks/use-mobile'
@@ -28,6 +34,10 @@ import { AlertCircle, Loader2 } from 'lucide-react'
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { useLocation as useLocation_default, useNavigate as useNavigate_default } from 'react-router'
 import { ChatSkillsBar } from './chat-skills-bar'
+import { ChatAgentSelector } from './chat-agent-selector'
+import { ComposerBlock, resolveComposerBlock } from './composer-block'
+import { SealedSlashHint } from './sealed-slash-hint'
+import { useSealedSlashHint } from './use-sealed-slash-hint'
 import { ContextOverflowModal } from '../context-overflow-modal'
 import { ContextUsageIndicator } from '../context-usage-indicator'
 import { PromptInput } from '../ui/prompt-input'
@@ -73,6 +83,10 @@ type ChatPromptInputProps = {
   useEnabledSkills?: typeof useEnabledSkills_default
   /** Inject for tests that need to drive the unavailable-agent fallback. */
   isAgentAvailable?: typeof isAgentAvailable_default
+  /** Inject to drive per-agent-kind composer behavior (pickers / skills / block). */
+  useAgentDescriptor?: typeof useAgentDescriptor_default
+  /** Inject for the offline (T5b) Test-connection affordance. */
+  testAcpConnection?: typeof testAcpConnection_default
 }
 
 export const ChatPromptInput = forwardRef<ChatPromptInputRef, ChatPromptInputProps>(
@@ -87,6 +101,8 @@ export const ChatPromptInput = forwardRef<ChatPromptInputRef, ChatPromptInputPro
       useLibrarySkills = useLibrarySkills_default,
       useEnabledSkills = useEnabledSkills_default,
       isAgentAvailable = isAgentAvailable_default,
+      useAgentDescriptor = useAgentDescriptor_default,
+      testAcpConnection = testAcpConnection_default,
     },
     ref,
   ) => {
@@ -106,6 +122,19 @@ export const ChatPromptInput = forwardRef<ChatPromptInputRef, ChatPromptInputPro
     } = useCurrentChatSession()
 
     const { messages, status, stop, sendMessage } = useChat({ chat: chatInstance })
+
+    // The normalized, agent-kind-aware descriptor drives which pickers render,
+    // whether the skills bar exists, the seal-hit education, and the three
+    // blocked thread states — all derived during render, no effect.
+    const descriptor = useAgentDescriptor()
+    const modelCount = useChatStore((state) => state.models.length)
+    const blockState = resolveComposerBlock({ descriptor, connectionStatus, connectionError, modelCount })
+    const sealedHint = useSealedSlashHint({
+      sealed: isSealedForSlash(descriptor),
+      agentKind: descriptor.kind,
+      trackEvent,
+    })
+    const hasMessages = messages.length > 0
 
     const { skills: library } = useLibrarySkills()
     const { isEnabled } = useEnabledSkills()
@@ -351,6 +380,7 @@ export const ChatPromptInput = forwardRef<ChatPromptInputRef, ChatPromptInputPro
 
     const footerStartElements = (
       <div className="flex items-center gap-2">
+        <ChatAgentSelector readOnly={hasMessages} />
         {isConnecting ? (
           <div
             role="status"
@@ -415,16 +445,35 @@ export const ChatPromptInput = forwardRef<ChatPromptInputRef, ChatPromptInputPro
       )
     }
 
+    // Thread states (T5): a revoked team grant, an offline personal ACP agent, or
+    // the Thunderbolt agent with no connected models each replace the composer.
+    if (blockState) {
+      return (
+        <ComposerBlock
+          state={blockState}
+          descriptor={descriptor}
+          agentUrl={selectedAgent.url}
+          testAcpConnection={testAcpConnection}
+        />
+      )
+    }
+
     return (
       <>
         <div className="flex w-full flex-col gap-3">
-          <ChatSkillsBar
-            onAddToChat={handleAddChipFromBar}
-            onAddInstruction={insertInstructionText}
-            // Pinning is a "starting a new chat" affordance — once the thread
-            // has any message, hide the bar so chips don't compete for space.
-            hidden={messages.length > 0}
-          />
+          {sealedHint.visible && <SealedSlashHint agentName={descriptor.name} onDismiss={sealedHint.dismiss} />}
+          {/* Skills bar renders ONLY for the Thunderbolt agent and EXTENSIBLE
+              company agents. For sealed company + personal ACP agents it is
+              absent (not rendered) — the first `/` educates instead. */}
+          {showsSkillsBar(descriptor) && (
+            <ChatSkillsBar
+              onAddToChat={handleAddChipFromBar}
+              onAddInstruction={insertInstructionText}
+              // Pinning is a "starting a new chat" affordance — once the thread
+              // has any message, hide the bar so chips don't compete for space.
+              hidden={hasMessages}
+            />
+          )}
           <PromptInput
             ref={formRef}
             value={input}
@@ -451,7 +500,15 @@ export const ChatPromptInput = forwardRef<ChatPromptInputRef, ChatPromptInputPro
                 />
               ) : null
             }
-            onTextareaKeyDown={handleSlashKeyDown}
+            onTextareaKeyDown={(e) => {
+              // First `/` in a sealed / personal-ACP thread raises the one-time
+              // educational note + fires the seal-hit demand signal (no-op for
+              // agents that have a skills surface).
+              if (e.key === '/') {
+                sealedHint.notifySlash()
+              }
+              handleSlashKeyDown(e)
+            }}
             onTextareaSelect={(e) => setCursorPos(e.currentTarget.selectionStart)}
           />
         </div>

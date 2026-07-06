@@ -142,6 +142,47 @@ describe('ChatModePicker', () => {
     expect(container.firstChild).toBeNull()
   })
 
+  it('derives mode chips from a team agent capabilities (data-driven, never configured)', () => {
+    setupWithAgent(builtInAgent)
+
+    const descriptor = {
+      kind: 'team' as const,
+      id: 'team-1',
+      name: 'Research Assistant',
+      icon: null,
+      category: 'extensible' as const,
+      advertisedModels: [],
+      capabilities: [{ label: 'Web search' }, { label: 'Read internal docs' }],
+      card: null,
+      revoked: false,
+    }
+
+    render(<ChatModePicker useAgentDescriptor={() => descriptor} />, { wrapper: TestWrapper })
+
+    expect(screen.getByText('Web search')).toBeInTheDocument()
+    // The seeded Chat/Search modes must NOT appear — modes come from the card.
+    expect(screen.queryByText('Search')).toBeNull()
+  })
+
+  it('renders nothing when a non-thunderbolt agent advertises no capabilities', () => {
+    setupWithAgent(builtInAgent)
+
+    const descriptor = {
+      kind: 'personal' as const,
+      id: 'personal-1',
+      name: 'My Agent',
+      icon: null,
+      category: null,
+      advertisedModels: [],
+      capabilities: [],
+      card: null,
+      revoked: false,
+    }
+
+    const { container } = render(<ChatModePicker useAgentDescriptor={() => descriptor} />, { wrapper: TestWrapper })
+    expect(container.firstChild).toBeNull()
+  })
+
   it('changes the selected mode in the store on click', async () => {
     setupWithAgent(builtInAgent)
 

@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/sidebar'
 import { Flame, Loader2, Search } from 'lucide-react'
 import { ChatActions } from './chat-actions'
+import { ChatFilterBar } from './chat-filter-bar'
+import { hasActiveFilters } from './chat-filters'
 import { ChatListItem } from './chat-list-item'
 import type { ChatListProps } from './types'
 
@@ -31,24 +33,35 @@ export const ChatList = ({
   searchQuery,
   showSearch,
   searchInputRef,
+  agentFilterOptions,
+  filters,
+  onFilterChange,
   onChatClick,
   onRename,
   onSearchClick,
   onSearchQueryChange,
 }: ChatListProps) => {
+  // The header row (label + search + filter) stays visible whenever there is
+  // history, an active search, or an active filter — so a filter that narrows to
+  // zero results never hides its own clear-all control.
+  const showHeaderRow = chatThreads.length > 0 || Boolean(debouncedSearchQuery) || hasActiveFilters(filters)
+
   return (
     <>
       <SidebarGroup className="flex-1 flex flex-col min-h-0">
-        {!isCollapsed && (chatThreads.length > 0 || debouncedSearchQuery) && (
+        {!isCollapsed && showHeaderRow && (
           <div className="flex items-center justify-between flex-shrink-0">
             <SidebarGroupLabel>Recent Chats</SidebarGroupLabel>
-            <ChatActions
-              isCollapsed={isCollapsed}
-              debouncedSearchQuery={debouncedSearchQuery}
-              deleteAllChatsMutation={deleteAllChatsMutation}
-              deleteAllChatsDialogRef={deleteAllChatsDialogRef}
-              onSearchClick={onSearchClick}
-            />
+            <div className="flex items-center gap-0.5">
+              <ChatFilterBar options={agentFilterOptions} filters={filters} dispatch={onFilterChange} />
+              <ChatActions
+                isCollapsed={isCollapsed}
+                debouncedSearchQuery={debouncedSearchQuery}
+                deleteAllChatsMutation={deleteAllChatsMutation}
+                deleteAllChatsDialogRef={deleteAllChatsDialogRef}
+                onSearchClick={onSearchClick}
+              />
+            </div>
           </div>
         )}
         <div

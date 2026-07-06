@@ -158,6 +158,7 @@ export type EventType =
   | 'model_select'
   | 'mode_select'
   | 'agent_select'
+  | 'agent_seal_hit'
   | 'acp_mode_changed'
   | 'acp_config_options_changed'
   | 'settings_theme_set'

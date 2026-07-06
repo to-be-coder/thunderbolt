@@ -14,8 +14,9 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import type { DeleteAllChatsMutationType, DeleteChatMutationType } from '@/layout/sidebar/types'
-import type { MouseEvent, RefObject } from 'react'
+import type { Dispatch, MouseEvent, RefObject } from 'react'
 import { useLocation } from 'react-router'
+import type { AgentFilterOption, ChatFilterAction, ChatFilters } from './chat-filters'
 import { ChatList } from './chat-list'
 import { NavigationMenu } from './navigation-menu'
 import { SidebarHeader } from './sidebar-header'
@@ -30,6 +31,9 @@ type ChatSidebarContentProps = {
   debouncedSearchQuery: string
   showSearch: boolean
   searchInputRef: RefObject<HTMLInputElement | null>
+  agentFilterOptions: AgentFilterOption[]
+  filters: ChatFilters
+  onFilterChange: Dispatch<ChatFilterAction>
   deleteAllChatsMutation: DeleteAllChatsMutationType
   deleteChatMutation: DeleteChatMutationType
   deleteAllChatsDialogRef: RefObject<DeleteAllChatsDialogRef | null>
@@ -53,6 +57,9 @@ export const ChatSidebarContent = ({
   debouncedSearchQuery,
   showSearch,
   searchInputRef,
+  agentFilterOptions,
+  filters,
+  onFilterChange,
   deleteAllChatsMutation,
   deleteChatMutation,
   deleteAllChatsDialogRef,
@@ -103,6 +110,9 @@ export const ChatSidebarContent = ({
         searchQuery={searchQuery}
         showSearch={showSearch}
         searchInputRef={searchInputRef}
+        agentFilterOptions={agentFilterOptions}
+        filters={filters}
+        onFilterChange={onFilterChange}
         onChatClick={onChatClick}
         onRename={onRename}
         onSearchClick={onSearchClick}

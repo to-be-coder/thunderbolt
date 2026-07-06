@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { updateSettings } from '@/dal'
-import { agentRefForAgentId, updateChatThread } from '@/dal/chat-threads'
+import { type AgentRef, agentRefForAgentId, updateChatThread } from '@/dal/chat-threads'
 import { getDb } from '@/db/database'
 import { type NamedMCPClient, type ReconnectClient } from '@/lib/mcp-provider'
 import { trackEvent } from '@/lib/posthog'
@@ -62,6 +62,7 @@ type ChatStoreActions = {
   setPendingPermission(id: string, permission: PendingPermission | null): void
   resolvePendingPermission(id: string, response: RequestPermissionResponse): void
   setSelectedAgent(id: string, agent: Agent): Promise<void>
+  setSelectedAgentRef(id: string, ref: AgentRef, agent: Agent): Promise<void>
   setSelectedMode(id: string, modeId: string | null): Promise<void>
   setSelectedModel(id: string, modelId: string | null): Promise<void>
   updateSession(id: string, session: Partial<Omit<ChatSession, 'id'>>): void
@@ -154,6 +155,13 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
   },
 
   setSelectedAgent: async (id, agent) => {
+    // Personal/built-in selection: the kind is derivable from the agent id.
+    // Team agents have no `Agent` id-to-kind mapping, so team selection goes
+    // through `setSelectedAgentRef` with an explicit `{ kind: 'team' }` ref.
+    await get().setSelectedAgentRef(id, agentRefForAgentId(agent.id), agent)
+  },
+
+  setSelectedAgentRef: async (id, ref, agent) => {
     const { sessions } = get()
 
     const session = sessions.get(id)
@@ -167,18 +175,19 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
     // agent a conversation happened with cannot be rewritten. The thread
     // write runs BEFORE the in-memory update so a rejection propagates to the
     // caller without leaving the session pointing at an agent the thread
-    // never switched to.
-    const agentKind = agentRefForAgentId(agent.id).kind
+    // never switched to. `selectedAgent` stays a valid `Agent` — team refs
+    // pass a synthesized card-agent so downstream `Agent`-typed consumers
+    // don't crash; the authoritative team binding is the thread's agentRef.
+    const agentId = ref.agentId
+    const agentKind = ref.kind
     const db = getDb()
 
     if (session.chatThread) {
-      await updateChatThread(db, session.chatThread.id, { agentId: agent.id, agentKind })
+      await updateChatThread(db, session.chatThread.id, { agentId, agentKind })
     }
 
     const nextSessions = new Map(sessions)
-    const nextChatThread = session.chatThread
-      ? { ...session.chatThread, agentId: agent.id, agentKind }
-      : session.chatThread
+    const nextChatThread = session.chatThread ? { ...session.chatThread, agentId, agentKind } : session.chatThread
     nextSessions.set(id, { ...session, chatThread: nextChatThread, selectedAgent: agent })
 
     set({ sessions: nextSessions })

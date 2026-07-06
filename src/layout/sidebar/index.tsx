@@ -8,13 +8,18 @@ import { Sidebar as SidebarRoot, useSidebar } from '@/components/ui/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useDatabase } from '@/contexts'
 import { deleteAllChatThreads, deleteChatThread, getAllChatThreads, updateChatThread } from '@/dal'
+import { useAgents } from '@/dal/agents'
+import { useTeamAgents } from '@/dal/use-team-agents'
+import { builtInAgent } from '@/defaults/agents'
 import { useDebounce } from '@/hooks/use-debounce'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useSettings } from '@/hooks/use-settings'
 import { trackEvent } from '@/lib/posthog'
 import { useMutation } from '@tanstack/react-query'
 import { useQuery } from '@powersync/tanstack-react-query'
-import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type MouseEvent, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import type { AgentFilterOption } from './chat-filters'
+import { chatFiltersReducer, initialChatFilters, passesChatFilters } from './chat-filters'
 import { useLocation, useNavigate, useParams } from 'react-router'
 import { ChatSidebarContent } from './chat-sidebar'
 import { SettingsSidebarContent } from './settings-sidebar'
@@ -48,6 +53,20 @@ export default function Sidebar() {
   const [showSearch, setShowSearch] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
+  // In-memory (per-mount) filter view — cleared in one tap, never persisted.
+  const [filters, filterDispatch] = useReducer(chatFiltersReducer, initialChatFilters)
+  const personalAgents = useAgents()
+  const teamCards = useTeamAgents()
+
+  const agentFilterOptions = useMemo<AgentFilterOption[]>(
+    () => [
+      { id: builtInAgent.id, label: builtInAgent.name, kind: 'thunderbolt' },
+      ...personalAgents.map((agent) => ({ id: agent.id, label: agent.name, kind: 'personal' as const })),
+      ...teamCards.map((card) => ({ id: card.id, label: card.name, kind: 'team' as const })),
+    ],
+    [personalAgents, teamCards],
+  )
+
   const { experimentalFeatureTasks } = useSettings({
     experimental_feature_tasks: false,
   })
@@ -77,8 +96,11 @@ export default function Sidebar() {
       return []
     }
 
-    return data.filter((thread) => thread.title?.toLowerCase().includes(debouncedSearchQuery?.toLowerCase()))
-  }, [data, debouncedSearchQuery])
+    return data.filter(
+      (thread) =>
+        thread.title?.toLowerCase().includes(debouncedSearchQuery?.toLowerCase()) && passesChatFilters(thread, filters),
+    )
+  }, [data, debouncedSearchQuery, filters])
 
   const deleteChatMutation = useMutation({
     mutationFn: async ({ id }: { id: string }) => {
@@ -200,6 +222,9 @@ export default function Sidebar() {
             debouncedSearchQuery={debouncedSearchQuery}
             showSearch={showSearch}
             searchInputRef={searchInputRef}
+            agentFilterOptions={agentFilterOptions}
+            filters={filters}
+            onFilterChange={filterDispatch}
             deleteAllChatsMutation={deleteAllChatsMutation}
             deleteChatMutation={deleteChatMutation}
             deleteAllChatsDialogRef={deleteAllChatsDialogRef}

@@ -5,7 +5,8 @@
 import type { DeleteAllChatsDialogRef } from '@/components/delete-all-chats-dialog'
 import type { DeleteChatDialogRef } from '@/components/delete-chat-dialog'
 import type { UseMutationResult } from '@tanstack/react-query'
-import type { MouseEvent, RefObject } from 'react'
+import type { Dispatch, MouseEvent, RefObject } from 'react'
+import type { AgentFilterOption, ChatFilterAction, ChatFilters } from './chat-filters'
 
 export type ChatThread = {
   id: string
@@ -39,6 +40,9 @@ export type ChatListProps = {
   searchQuery: string
   showSearch: boolean
   searchInputRef: RefObject<HTMLInputElement | null>
+  agentFilterOptions: AgentFilterOption[]
+  filters: ChatFilters
+  onFilterChange: Dispatch<ChatFilterAction>
   onChatClick: (threadId: string) => void
   onRename: (threadId: string, title: string) => void
   onSearchClick: (e?: MouseEvent) => void

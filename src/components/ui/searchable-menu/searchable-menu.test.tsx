@@ -3,14 +3,30 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, mock } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test'
 import { SearchableMenu } from './searchable-menu'
 import type { SearchableMenuItem } from './types'
 
-// Mock useIsMobile hook
-mock.module('@/hooks/use-mobile', () => ({
-  useIsMobile: () => ({ isMobile: false }),
-}))
+// Force the non-mobile layout deterministically. `useIsMobile` reads
+// `window.matchMedia`, so we drive that directly and restore it afterwards —
+// mock.module('@/hooks/use-mobile') would leak process-wide and break other
+// files' mobile tests (bun does not scope module mocks per file).
+const realMatchMedia = window.matchMedia
+beforeEach(() => {
+  window.matchMedia = ((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as typeof window.matchMedia
+})
+afterEach(() => {
+  window.matchMedia = realMatchMedia
+})
 
 const mockFlatItems: SearchableMenuItem[] = [
   { id: '1', label: 'Option 1', description: 'First option' },

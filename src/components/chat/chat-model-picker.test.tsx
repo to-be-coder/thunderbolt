@@ -106,21 +106,46 @@ describe('ChatModelPicker', () => {
     expect(screen.getByText('GPT-4')).toBeInTheDocument()
   })
 
-  it('renders nothing when the selected agent is remote-acp', () => {
+  it('renders the "set by your organization" chip for a personal ACP agent that advertises nothing', () => {
     setupWithAgent(remoteAcpAgent)
 
-    const { container } = render(<ChatModelPicker />, { wrapper: TestWrapper })
+    render(<ChatModelPicker />, { wrapper: TestWrapper })
 
-    expect(container.firstChild).toBeNull()
+    // v1 ACP cards advertise nothing → static chip in the model slot, not the
+    // user's connected-model picker.
+    expect(screen.getByText('Set by your organization')).toBeInTheDocument()
     expect(screen.queryByText('GPT-4')).toBeNull()
   })
 
-  it('renders nothing when the selected agent is managed-acp', () => {
+  it('renders the org chip for a managed-acp agent too', () => {
     setupWithAgent(managedAcpAgent)
 
-    const { container } = render(<ChatModelPicker />, { wrapper: TestWrapper })
+    render(<ChatModelPicker />, { wrapper: TestWrapper })
 
-    expect(container.firstChild).toBeNull()
+    expect(screen.getByText('Set by your organization')).toBeInTheDocument()
+  })
+
+  it('renders the advertised models as a bounded picker when a team card advertises more than one', () => {
+    setupWithAgent(builtInAgent)
+
+    const descriptor = {
+      kind: 'team' as const,
+      id: 'team-1',
+      name: 'Research Assistant',
+      icon: null,
+      category: 'extensible' as const,
+      advertisedModels: ['Company GPT-4o', 'Company Claude Sonnet'],
+      capabilities: [],
+      card: null,
+      revoked: false,
+    }
+
+    render(<ChatModelPicker useAgentDescriptor={() => descriptor} />, { wrapper: TestWrapper })
+
+    // Bounded picker defaults to the first advertised model, and none of the
+    // user's connected models appear.
+    expect(screen.getByText('Company GPT-4o')).toBeInTheDocument()
+    expect(screen.queryByText('GPT-4')).toBeNull()
   })
 
   it('renders nothing when the agent is built-in but no models are configured', () => {

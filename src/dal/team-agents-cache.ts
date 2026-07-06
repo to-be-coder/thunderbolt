@@ -18,7 +18,9 @@ import type { AgentCard } from '@shared/agent-cards'
 
 type TeamAgentsCacheRow = typeof teamAgentsCacheTable.$inferSelect
 
-const rowToCard = (row: TeamAgentsCacheRow): AgentCard => ({
+/** Map a raw cache row into the display-only {@link AgentCard} shape. Exported
+ *  so the live `useTeamAgents` hook can reuse it over a compilable query. */
+export const rowToCard = (row: TeamAgentsCacheRow): AgentCard => ({
   id: row.id,
   name: row.name,
   icon: row.icon,
@@ -43,9 +45,15 @@ export const replaceTeamAgentsCache = async (db: AnyDrizzleDatabase, cards: Agen
   })
 }
 
+/** Drizzle select for all cached team agent cards, alpha by name. Shared by the
+ *  imperative {@link getTeamAgentsCache} and the live `useTeamAgents` hook (which
+ *  wraps it in `toCompilableQuery`). */
+export const getTeamAgentsCacheQuery = (db: AnyDrizzleDatabase) =>
+  db.select().from(teamAgentsCacheTable).orderBy(asc(teamAgentsCacheTable.name))
+
 /** All cached team agent cards, alpha by name. */
 export const getTeamAgentsCache = async (db: AnyDrizzleDatabase): Promise<AgentCard[]> => {
-  const rows = await db.select().from(teamAgentsCacheTable).orderBy(asc(teamAgentsCacheTable.name))
+  const rows = await getTeamAgentsCacheQuery(db)
   return rows.map(rowToCard)
 }
 
