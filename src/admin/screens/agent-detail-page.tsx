@@ -97,6 +97,9 @@ const AdminDetail = ({ agent }: { agent: TeamAgentWithCapabilities }) => {
             <TagList items={detail.tools} />
           </Field>
           <Field label="Credentials">
+            <p className="text-xs text-muted-foreground">
+              “As you” runs under each member’s own login; “service account” uses one shared org account.
+            </p>
             <ul className="flex flex-col gap-1 text-sm">
               {detail.credentials.map((credential) => (
                 <li key={credential.label} className="flex items-center justify-between gap-2">

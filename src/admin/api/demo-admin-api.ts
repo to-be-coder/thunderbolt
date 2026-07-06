@@ -316,13 +316,26 @@ export const createDemoAdminApi = (): AdminApi => {
       // per-endpoint descriptor from the URL so each agent reads differently.
       const seed = acpUrl.split('/').filter(Boolean).pop() ?? 'agent'
       const workspace = seed.charAt(0).toUpperCase() + seed.slice(1)
+      // A credential names the external SYSTEM the agent connects to; the mode
+      // says whose identity it runs under (each member's own vs a shared org
+      // account) — so the label must never just restate the mode.
+      const credentialsBySeed: Record<string, AgentEndpointDetail['credentials']> = {
+        sales: [
+          { label: 'Salesforce CRM', mode: 'as_you' },
+          { label: 'Sales knowledge base', mode: 'service_account' },
+        ],
+        finance: [
+          { label: 'NetSuite', mode: 'as_you' },
+          { label: 'Finance knowledge base', mode: 'service_account' },
+        ],
+      }
       return {
         models: ['claude-opus-4-8', 'claude-haiku-4-5'],
         mcpServers: [`${seed}-mcp`, 'shared-knowledge-mcp'],
         tools: [`search_${seed}`, `summarize_${seed}`, 'create_note'],
-        credentials: [
-          { label: `${workspace} workspace`, mode: 'as_you' },
-          { label: 'Org service account', mode: 'service_account' },
+        credentials: credentialsBySeed[seed] ?? [
+          { label: 'Google Workspace', mode: 'as_you' },
+          { label: `${workspace} knowledge base`, mode: 'service_account' },
         ],
       }
     },
