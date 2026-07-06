@@ -29,6 +29,7 @@ export const adminKeys = {
   groupMembers: (groupId: string) => ['admin', 'groups', groupId, 'members'] as const,
   agents: ['admin', 'agents'] as const,
   agentEndpoint: (acpUrl: string) => ['admin', 'agents', 'endpoint', acpUrl] as const,
+  agentStatus: (acpUrl: string) => ['admin', 'agents', 'status', acpUrl] as const,
   grants: ['admin', 'grants'] as const,
   policy: ['admin', 'policy'] as const,
   audit: (action?: string) => ['admin', 'audit', action ?? 'all'] as const,
@@ -149,6 +150,18 @@ export const useAgentEndpointDetail = (acpUrl: string | undefined) => {
     queryFn: () => api.describeEndpoint(acpUrl ?? ''),
     enabled: acpUrl !== undefined && acpUrl !== '',
     staleTime: 60_000,
+  })
+}
+
+/** Live connection state of an agent's ACP endpoint (Ready / Needs auth / … ).
+ *  Fetched fresh; never stored. Drives the registry status line. */
+export const useAgentConnectionStatus = (acpUrl: string | undefined) => {
+  const api = useAdminApi()
+  return useQuery({
+    queryKey: adminKeys.agentStatus(acpUrl ?? ''),
+    queryFn: () => api.agentStatus(acpUrl ?? ''),
+    enabled: acpUrl !== undefined && acpUrl !== '',
+    staleTime: 30_000,
   })
 }
 

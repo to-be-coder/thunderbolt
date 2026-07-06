@@ -25,6 +25,24 @@ const agentResponse = (name: string) => ({
 describe('RegistryPage', () => {
   afterEach(cleanup)
 
+  it('renders a card per agent showing its live connection status and a link to detail', async () => {
+    const { client } = createRecordingClient((call) => {
+      if (call.method === 'GET' && call.path === '/v1/admin/agents') {
+        return [agentResponse('Sales Agent')]
+      }
+      if (call.path === '/v1/admin/agents/status') {
+        return { state: 'ready' }
+      }
+      return {}
+    })
+    renderAdmin(<RegistryPage />, client)
+    await flush()
+
+    expect(screen.getByText('Sales Agent')).toBeInTheDocument()
+    expect(screen.getByText('Ready')).toBeInTheDocument()
+    expect(screen.getByTestId('agent-card-ag1')).toHaveAttribute('href', '/admin/agents/ag1')
+  })
+
   it('register connects to the endpoint and derives the name when Name is blank', async () => {
     const { client, calls } = createRecordingClient((call) => {
       if (call.path === '/v1/admin/agents/connection-test') {

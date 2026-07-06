@@ -2,36 +2,24 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus } from 'lucide-react'
-import { Link } from 'react-router'
 import { PageHeader } from '@/components/ui/page-header'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Building2, ChevronRight, Plus } from 'lucide-react'
+import { Link } from 'react-router'
 import { useState } from 'react'
-import { useAgents, useDeleteAgent } from '../api/hooks'
-import type { TeamAgentWithCapabilities } from '../api/types'
+import { useAgents } from '../api/hooks'
 import { AgentForm } from './agent-form'
-import { StatusPill } from './status-pill'
+import { AgentConnectionIndicator } from './connection-status'
 
-type Editing = { mode: 'closed' } | { mode: 'new' } | { mode: 'edit'; agent: TeamAgentWithCapabilities }
-
-/** S1 — Registry. List of team agents plus the register/edit form. */
+/**
+ * S1 — Registry. A card list of team agents; each card shows the agent's live
+ * ACP connection status and opens its detail view (where Edit / Delete live).
+ * The `+` opens the register form in a modal.
+ */
 export const RegistryPage = () => {
   const agentsQuery = useAgents()
-  const deleteAgent = useDeleteAgent()
-  const [editing, setEditing] = useState<Editing>({ mode: 'closed' })
+  const [registering, setRegistering] = useState(false)
 
   const agents = agentsQuery.data ?? []
 
@@ -42,95 +30,42 @@ export const RegistryPage = () => {
           variant="outline"
           size="icon"
           className="rounded-lg"
-          onClick={() => setEditing({ mode: 'new' })}
+          onClick={() => setRegistering(true)}
           aria-label="Register an agent"
         >
           <Plus />
         </Button>
       </PageHeader>
 
-      <Dialog open={editing.mode !== 'closed'} onOpenChange={(open) => !open && setEditing({ mode: 'closed' })}>
+      <Dialog open={registering} onOpenChange={setRegistering}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader className="sr-only">
-            <DialogTitle>{editing.mode === 'edit' ? 'Edit agent' : 'Register agent'}</DialogTitle>
+            <DialogTitle>Register agent</DialogTitle>
           </DialogHeader>
-          {editing.mode !== 'closed' && (
-            <AgentForm
-              agent={editing.mode === 'edit' ? editing.agent : null}
-              onDone={() => setEditing({ mode: 'closed' })}
-            />
-          )}
+          {registering && <AgentForm agent={null} onDone={() => setRegistering(false)} />}
         </DialogContent>
       </Dialog>
 
-      <div className="rounded-lg border border-border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Agent</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {agentsQuery.isPending && (
-              <TableRow>
-                <TableCell colSpan={3} className="text-muted-foreground">
-                  Loading…
-                </TableCell>
-              </TableRow>
-            )}
-            {!agentsQuery.isPending && agents.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={3} className="text-muted-foreground">
-                  No agents registered yet.
-                </TableCell>
-              </TableRow>
-            )}
-            {agents.map((agent) => (
-              <TableRow key={agent.id}>
-                <TableCell className="font-medium">
-                  <Link to={`/admin/agents/${agent.id}`} className="inline-flex items-center gap-2 hover:underline">
-                    <span aria-hidden>{agent.icon || '🤖'}</span>
-                    {agent.name}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <StatusPill tone={agent.category === 'sealed' ? 'muted' : 'info'}>{agent.category}</StatusPill>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => setEditing({ mode: 'edit', agent })}>
-                    Edit
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                        Delete
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete {agent.name}?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This removes the agent and all grants to it. This cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => deleteAgent.mutate(agent.id)}
-                          className="bg-destructive text-white hover:bg-destructive/90"
-                        >
-                          Delete agent
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      <div className="flex flex-col gap-2">
+        {agentsQuery.isPending && <p className="text-sm text-muted-foreground">Loading…</p>}
+        {!agentsQuery.isPending && agents.length === 0 && (
+          <p className="text-sm text-muted-foreground">No agents registered yet.</p>
+        )}
+        {agents.map((agent) => (
+          <Link
+            key={agent.id}
+            to={`/admin/agents/${agent.id}`}
+            data-testid={`agent-card-${agent.id}`}
+            className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 transition-colors hover:bg-secondary/50"
+          >
+            <Building2 className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-medium">{agent.name}</div>
+              <AgentConnectionIndicator acpUrl={agent.acpUrl} />
+            </div>
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          </Link>
+        ))}
       </div>
     </div>
   )

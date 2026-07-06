@@ -2,12 +2,27 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { PageHeader } from '@/components/ui/page-header'
 import { ArrowLeft } from 'lucide-react'
-import type { ReactNode } from 'react'
-import { Link, useParams } from 'react-router'
-import { useAgentEndpointDetail, useAgents } from '../api/hooks'
+import { useState, type ReactNode } from 'react'
+import { Link, useNavigate, useParams } from 'react-router'
+import { useAgentEndpointDetail, useAgents, useDeleteAgent } from '../api/hooks'
 import type { TeamAgentWithCapabilities } from '../api/types'
+import { AgentForm } from './agent-form'
+import { AgentConnectionIndicator } from './connection-status'
 import { StatusPill } from './status-pill'
 
 /** Demo icon names → emoji; a real card carries a proper icon. */
@@ -24,7 +39,10 @@ const iconFor = (icon: string): string => ICON_EMOJI[icon] ?? (icon || '🤖')
  */
 export const AgentDetailPage = () => {
   const { agentId } = useParams()
+  const navigate = useNavigate()
   const agentsQuery = useAgents()
+  const deleteAgent = useDeleteAgent()
+  const [editOpen, setEditOpen] = useState(false)
   const agent = (agentsQuery.data ?? []).find((candidate) => candidate.id === agentId) ?? null
 
   if (agentsQuery.isPending) {
@@ -40,18 +58,62 @@ export const AgentDetailPage = () => {
     )
   }
 
+  const handleDelete = async () => {
+    await deleteAgent.mutateAsync(agent.id)
+    navigate('/admin')
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <BackLink />
       <PageHeader title={agent.name}>
-        <StatusPill tone={agent.category === 'sealed' ? 'muted' : 'info'}>{agent.category}</StatusPill>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+            Edit
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {agent.name}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This removes the agent and all grants to it. This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-destructive text-white hover:bg-destructive/90">
+                  Delete agent
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </PageHeader>
+
+      <div className="flex items-center gap-3">
+        <StatusPill tone={agent.category === 'sealed' ? 'muted' : 'info'}>{agent.category}</StatusPill>
+        <AgentConnectionIndicator acpUrl={agent.acpUrl} />
+      </div>
       <p className="text-sm text-muted-foreground">{agent.description || 'No description provided.'}</p>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <AdminDetail agent={agent} />
         <MemberView agent={agent} />
       </div>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Edit agent</DialogTitle>
+          </DialogHeader>
+          {editOpen && <AgentForm agent={agent} onDone={() => setEditOpen(false)} />}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

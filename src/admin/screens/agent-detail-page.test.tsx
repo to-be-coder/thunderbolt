@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import '@testing-library/jest-dom'
-import { cleanup, screen } from '@testing-library/react'
+import { cleanup, fireEvent, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'bun:test'
 import { createRecordingClient, flush, renderAdminAt } from '../test-utils'
 import type { TeamAgentWithCapabilities } from '../api/types'
@@ -49,6 +49,9 @@ const renderDetail = () => {
     if (call.path === '/v1/admin/agents/describe') {
       return endpointDetail
     }
+    if (call.path === '/v1/admin/agents/status') {
+      return { state: 'ready' }
+    }
     return []
   })
   renderAdminAt('/admin/agents/ag-sales', '/admin/agents/:agentId', <AgentDetailPage />, client)
@@ -82,5 +85,27 @@ describe('AgentDetailPage', () => {
     expect(screen.getByText('claude-opus-4-8')).toBeInTheDocument()
     expect(screen.getByText('sales-mcp')).toBeInTheDocument()
     expect(screen.getByText('search_sales')).toBeInTheDocument()
+  })
+
+  it('Edit opens the agent form pre-filled from the agent', async () => {
+    renderDetail()
+    await flush()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    await flush()
+
+    expect(screen.getByLabelText('ACP URL')).toHaveValue('wss://agents.test/sales')
+  })
+
+  it('Delete removes the agent via DELETE', async () => {
+    const calls = renderDetail()
+    await flush()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete agent' }))
+    await flush()
+
+    const del = calls.find((call) => call.method === 'DELETE' && call.path === '/v1/admin/agents/ag-sales')
+    expect(del).toBeDefined()
   })
 })

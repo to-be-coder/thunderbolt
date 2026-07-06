@@ -103,6 +103,19 @@ export type AgentEndpointDetail = {
   credentials: { label: string; mode: CredentialMode }[]
 }
 
+/**
+ * Live connection state of a team agent's ACP endpoint, surfaced in the admin
+ * registry. Fetched fresh, never stored. `connecting` is the client-side
+ * in-flight state (the probe hasn't returned yet); the rest are what a probe of
+ * the endpoint reports:
+ *  - `ready`         — handshake done, auth satisfied, idle and promptable.
+ *  - `working`       — mid-turn (optional; only if the list is a launch point).
+ *  - `needs_auth`    — advertised auth methods, caller isn't authenticated.
+ *  - `error`         — spawn/crash/protocol/transport failure.
+ *  - `not_connected` — configured but never successfully handshaken.
+ */
+export type AgentConnectionState = 'ready' | 'working' | 'needs_auth' | 'error' | 'not_connected'
+
 export type GrantTargetType = 'group' | 'everyone' | 'member'
 
 export type Grant = {

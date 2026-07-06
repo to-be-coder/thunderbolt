@@ -15,6 +15,7 @@
 import type { HttpClient } from '@/contexts'
 import type {
   AdminIdentity,
+  AgentConnectionState,
   AgentEndpointDetail,
   AgentInput,
   AgentPatch,
@@ -63,6 +64,9 @@ export const createAdminApi = (httpClient: HttpClient) => ({
   // Admin-only live descriptor — fetched fresh, never persisted or synced.
   describeEndpoint: (acpUrl: string) =>
     httpClient.post('admin/agents/describe', { json: { acpUrl } }).json<AgentEndpointDetail>(),
+  // Live connection state of the endpoint (Ready / Needs auth / Error / …).
+  agentStatus: (acpUrl: string) =>
+    httpClient.post('admin/agents/status', { json: { acpUrl } }).json<{ state: AgentConnectionState }>(),
 
   // Grants
   listGrants: () => httpClient.get('admin/grants').json<Grant[]>(),

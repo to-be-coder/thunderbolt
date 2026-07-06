@@ -17,6 +17,7 @@
 import type { AdminApi } from './admin-client'
 import type {
   AdminIdentity,
+  AgentConnectionState,
   AgentEndpointDetail,
   AgentInput,
   AgentPatch,
@@ -310,6 +311,14 @@ export const createDemoAdminApi = (): AdminApi => {
       const label = new URL(acpUrl).hostname.split('.')[0] ?? ''
       const name = label ? label.charAt(0).toUpperCase() + label.slice(1) : ''
       return { reachable: true, name } as const
+    },
+    agentStatus: async (acpUrl: string): Promise<{ state: AgentConnectionState }> => {
+      // A live server reports its handshake result; the demo assigns a plausible
+      // per-endpoint state so the registry shows a spread. Freshly-registered
+      // agents (unknown seed) read as never-verified.
+      const seed = acpUrl.split('/').filter(Boolean).pop() ?? ''
+      const bySeed: Record<string, AgentConnectionState> = { sales: 'ready', finance: 'not_connected' }
+      return { state: bySeed[seed] ?? 'not_connected' }
     },
     describeEndpoint: async (acpUrl: string): Promise<AgentEndpointDetail> => {
       // A live server returns its own wiring; the demo derives a plausible,
