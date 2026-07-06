@@ -93,7 +93,6 @@ export const AgentDetailPage = () => {
         <StatusPill tone={agent.category === 'sealed' ? 'muted' : 'info'}>{agent.category}</StatusPill>
         <AgentConnectionIndicator acpUrl={agent.acpUrl} />
       </div>
-      <p className="text-sm text-muted-foreground">{agent.description || 'No description provided.'}</p>
 
       <AdminDetail agent={agent} />
 

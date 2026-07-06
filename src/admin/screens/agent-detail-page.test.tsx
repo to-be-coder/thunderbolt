@@ -61,12 +61,13 @@ const renderDetail = () => {
 describe('AgentDetailPage', () => {
   afterEach(cleanup)
 
-  it('shows the agent summary and no member-preview section', async () => {
+  it('shows the agent name and no member-preview section', async () => {
     renderDetail()
     await flush()
 
-    expect(screen.getByText('Drafts outreach and summarizes accounts.')).toBeInTheDocument()
+    expect(screen.getByText('Sales Agent')).toBeInTheDocument()
     expect(screen.queryByText('What members see')).not.toBeInTheDocument()
+    expect(screen.queryByText('Drafts outreach and summarizes accounts.')).not.toBeInTheDocument()
   })
 
   it('fetches and shows the admin-only endpoint wiring', async () => {
