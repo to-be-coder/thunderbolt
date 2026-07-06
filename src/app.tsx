@@ -4,7 +4,7 @@
 
 import '@/lib/dayjs'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router'
 import { PowerSyncContext } from '@powersync/react'
 
 import ChatDetailPage from '@/chats/detail'
@@ -44,10 +44,7 @@ import { UpgradeRequired } from './components/upgrade-required'
 import { useConfigStore } from '@/api/config-store'
 import { compareSemver } from '@/lib/compare-semver'
 import { AuthGate } from './components/auth-gate'
-import { WorkspaceGate } from './components/workspace-gate'
-import { WorkspaceMembershipGate } from './components/workspace-membership-gate'
-// Paired with the temporarily-hidden Permissions route — uncomment together.
-// import { RequireWorkspaceAdmin } from './settings/workspace/require-permission'
+import { useBootstrapReadiness } from '@/lib/post-auth-bootstrap'
 import { OnboardingDialog } from './components/onboarding/onboarding-dialog'
 import { WelcomeDialog } from './components/welcome-dialog'
 import { PendingDeviceModal } from './components/pending-device-modal'
@@ -89,11 +86,6 @@ const McpServersPage = lazy(() => import('@/settings/mcp-servers'))
 const SkillsPage = lazy(() => import('@/settings/skills'))
 const AgentsSettingsPage = lazy(() => import('@/routes/settings/agents'))
 const IntegrationsPage = lazy(() => import('@/settings/integrations'))
-const WorkspaceGeneralPage = lazy(() => import('@/settings/workspace/general'))
-const WorkspaceMembersPage = lazy(() => import('@/settings/workspace/members'))
-// Permissions page is paired with the temporarily-hidden sidebar entry in
-// `settings-sidebar.tsx`. Comment both back in to re-enable the feature.
-// const WorkspacePermissionsPage = lazy(() => import('@/settings/workspace/permissions'))
 
 // Lazily import SSO components so non-enterprise deployments don't pay
 // for the extra bundle size and attack surface.
@@ -107,12 +99,19 @@ const MessageSimulatorPage = import.meta.env.DEV ? lazy(() => import('./devtools
 const queryClient = new QueryClient()
 
 /**
- * Shared route sub-tree mounted under both the personal workspace (unprefixed)
- * and `/w/:workspaceId` (shared, membership-gated). Paths are relative so each
- * mount resolves them against its parent — `chats/new` becomes either
- * `/chats/new` or `/w/<id>/chats/new`.
+ * Route guard that holds the main-app routes behind a loading screen until
+ * `runPostAuthBootstrap` completes — keeps DAL reads/writes from firing before
+ * the pre-Workspaces migration and default reconciliation have prepared the DB.
  */
-const renderWorkspaceRoutes = ({ experimentalFeatureTasks }: { experimentalFeatureTasks: boolean }) => (
+const BootstrapGate = () => {
+  const bootstrapped = useBootstrapReadiness((s) => s.bootstrapped)
+  if (!bootstrapped) {
+    return <Loading />
+  }
+  return <Outlet />
+}
+
+const renderMainRoutes = ({ experimentalFeatureTasks }: { experimentalFeatureTasks: boolean }) => (
   <>
     {/* Home routes with HomeLayout */}
     <Route element={<ChatLayout />}>
@@ -132,17 +131,6 @@ const renderWorkspaceRoutes = ({ experimentalFeatureTasks }: { experimentalFeatu
       <Route path="skills" element={<SkillsPage />} />
       <Route path="agents" element={<AgentsSettingsPage />} />
       <Route path="integrations" element={<IntegrationsPage />} />
-      <Route path="workspace">
-        <Route path="general" element={<WorkspaceGeneralPage />} />
-        <Route path="members" element={<WorkspaceMembersPage />} />
-        {/* Permissions page hidden until the feature ships — paired with the
-            commented import above and the sidebar entry in
-            `layout/sidebar/settings-sidebar.tsx`.
-        <Route element={<RequireWorkspaceAdmin />}>
-          <Route path="permissions" element={<WorkspacePermissionsPage />} />
-        </Route>
-        */}
-      </Route>
       {import.meta.env.DEV && <Route path="dev-settings" element={<DevSettingsPage />} />}
     </Route>
   </>
@@ -225,18 +213,11 @@ const AppRoutes = ({ initData }: { initData: InitData }) => {
 
         {/* Main app routes - authenticated only. The gate decides redirect
             targets internally from VITE_AUTH_MODE + VITE_AUTH_ENABLE_ANONYMOUS.
-            `WorkspaceGate` then holds the routes until `runPostAuthBootstrap`
-            has resolved the active workspace — keeps DAL inserts from firing
-            with a null workspace id between authentication and sync landing.
-
-            The shared sub-tree (chat / settings / dev surfaces) is mounted
-            twice: unprefixed for the personal workspace (canonical) and under
-            `/w/:workspaceId/` for shared workspaces (membership-gated). Index
-            and child paths are relative so the same JSX resolves to either
-            `/chats/new` or `/w/:workspaceId/chats/new` based on its parent. */}
+            `BootstrapGate` then holds the routes until `runPostAuthBootstrap`
+            completes — keeps DAL reads/writes from firing between
+            authentication and the DB being ready. */}
         <Route element={<AuthGate require="authenticated" />}>
-          <Route element={<WorkspaceGate />}>
-            {/* Personal workspace — unprefixed canonical URLs. */}
+          <Route element={<BootstrapGate />}>
             <Route
               path="/"
               element={
@@ -247,22 +228,7 @@ const AppRoutes = ({ initData }: { initData: InitData }) => {
                 </>
               }
             >
-              {renderWorkspaceRoutes({ experimentalFeatureTasks: experimentalFeatureTasks.value })}
-            </Route>
-
-            {/* Shared workspaces — `/w/:workspaceId/...`, membership-gated. */}
-            <Route path="/w/:workspaceId" element={<WorkspaceMembershipGate />}>
-              <Route
-                element={
-                  <>
-                    <Layout />
-                    <OnboardingDialog />
-                    <WelcomeDialog />
-                  </>
-                }
-              >
-                {renderWorkspaceRoutes({ experimentalFeatureTasks: experimentalFeatureTasks.value })}
-              </Route>
+              {renderMainRoutes({ experimentalFeatureTasks: experimentalFeatureTasks.value })}
             </Route>
           </Route>
         </Route>

@@ -16,13 +16,13 @@ type ChatHydrateHandlerProps = PropsWithChildren<{
 }>
 
 const ChatHydrateHandler = ({ children, id, isNew }: ChatHydrateHandlerProps) => {
-  const { hydrateChatStore, isReady, saveMessages, workspaceId } = useHydrateChatStore({ id, isNew })
+  const { hydrateChatStore, isReady, saveMessages } = useHydrateChatStore({ id, isNew })
 
-  useHandleIntegrationCompletion({ saveMessages, workspaceId })
+  useHandleIntegrationCompletion({ saveMessages })
 
   useEffect(() => {
     void hydrateChatStore()
-  }, [id, workspaceId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isReady) {
     return null

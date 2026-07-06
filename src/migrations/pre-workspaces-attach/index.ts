@@ -11,8 +11,8 @@
  *   2. IndexedDB      — copy `thunderbolt-keys` to `thunderbolt-keys__<serverId>`
  *      so encryption keys survive the namespacing change.
  *   3. Local SQLite   — `ATTACH DATABASE` the legacy `thunderbolt-sync.db` into
- *      the new `server-<id>.db` and copy rows table-by-table, stamping
- *      `workspace_id` (and `scope` where applicable) on the way in.
+ *      the new `server-<id>.db` and copy rows table-by-table over the columns
+ *      both schemas share.
  *
  * Each step is idempotent and runs at most once per device. Step 3's "already
  * ran" signal is the localStorage `pre_workspaces_attach_completed__<serverId>`

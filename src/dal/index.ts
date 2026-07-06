@@ -146,57 +146,6 @@ export {
   type UpdateSkillInput,
 } from './skills'
 
-// Workspaces
-export {
-  duplicateWorkspace,
-  ensurePersonalWorkspace,
-  getPersonalWorkspaceByOwner,
-  getPersonalWorkspaceByOwnerQuery,
-  getWorkspaceById,
-  getWorkspaceByIdQuery,
-  getWorkspacesForUserQuery,
-  updateWorkspace,
-  useWorkspacesQuery,
-  type DuplicateWorkspaceInput,
-  type UpdateWorkspacePatch,
-  type Workspace,
-} from './workspaces'
-export {
-  getMembership,
-  getMembershipQuery,
-  getMembershipsByUser,
-  getMembershipsByUserQuery,
-  getMembershipsByWorkspace,
-  getMembershipsByWorkspaceQuery,
-  isWorkspaceAdmin,
-  removeMembership,
-  updateMembershipRole,
-  useUserMembershipsQuery,
-  useWorkspaceMembersQuery,
-  type WorkspaceMembership,
-} from './workspace-memberships'
-export {
-  addPendingMembership,
-  getPendingByWorkspace,
-  getPendingByWorkspaceQuery,
-  removePendingMembership,
-  updatePendingMembershipRole,
-  useWorkspacePendingMembershipsQuery,
-  type AddPendingMembershipInput,
-  type WorkspacePendingMembership,
-} from './workspace-pending-memberships'
-export {
-  getPermissionsByWorkspace,
-  getPermissionsByWorkspaceQuery,
-  getRequiredRoleForPermission,
-  getRequiredRoleForPermissionQuery,
-  setWorkspacePermissionRequiredRole,
-  useWorkspacePermissionsQuery,
-  type WorkspacePermission,
-  type WorkspacePermissionKey,
-  type WorkspacePermissionRole,
-} from './workspace-permissions'
-
 // Agents (ACP)
 export {
   composeAllAgents,

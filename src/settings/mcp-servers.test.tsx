@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { createMcpServer, getAllMcpServers } from '@/dal'
-import { resetTestDatabase, setupTestDatabase, teardownTestDatabase, wsId } from '@/dal/test-utils'
+import { resetTestDatabase, setupTestDatabase, teardownTestDatabase } from '@/dal/test-utils'
 import { getDb } from '@/db/database'
 import {
   renderWithReactivity,
@@ -63,7 +63,7 @@ describe('McpServersPage reactivity', () => {
     const serverId1 = uuidv7()
     const serverId2 = uuidv7()
 
-    await createMcpServer(db, wsId, {
+    await createMcpServer(db, {
       id: serverId1,
       name: 'First Server',
       url: 'http://localhost:8000/mcp/',
@@ -79,7 +79,7 @@ describe('McpServersPage reactivity', () => {
     await waitForElement(() => screen.queryByText('localhost:8000/mcp'))
     expect(screen.getByText('localhost:8000/mcp')).toBeInTheDocument()
 
-    await createMcpServer(db, wsId, {
+    await createMcpServer(db, {
       id: serverId2,
       name: 'Second Server',
       url: 'http://localhost:9000/mcp/',
@@ -239,7 +239,7 @@ describe('McpServersPage Add & Authorize', () => {
     })
 
     // The row was created then rolled back, leaving no live server.
-    const remaining = await getAllMcpServers(db, wsId)
+    const remaining = await getAllMcpServers(db)
     expect(remaining).toHaveLength(0)
     expect(
       screen.getByText('Another MCP authorization is already in progress — finish or cancel it first.'),
@@ -268,7 +268,7 @@ describe('McpServersPage Add & Authorize', () => {
       await getClock().runAllAsync()
     })
 
-    const created = await getAllMcpServers(db, wsId)
+    const created = await getAllMcpServers(db)
     expect(created).toHaveLength(1)
     expect(startMcpOAuthFlow).toHaveBeenCalledTimes(1)
   })
@@ -450,7 +450,7 @@ describe('McpServersPage tools refresh after reconnect', () => {
     const db = getDb()
     const serverId = uuidv7()
     const url = 'http://localhost:8000/mcp/'
-    await createMcpServer(db, wsId, { id: serverId, name: 'srv', url, type: 'http', enabled: 1 })
+    await createMcpServer(db, { id: serverId, name: 'srv', url, type: 'http', enabled: 1 })
     renderWithReactivity(<McpServersPage />, {
       tables: ['mcp_servers', 'mcp_secrets'],
       wrapper: makeMcpWrapper(createClient),

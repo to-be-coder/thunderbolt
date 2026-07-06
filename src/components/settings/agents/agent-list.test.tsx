@@ -40,13 +40,6 @@ const customAgent: Agent = {
   enabled: 1,
   deletedAt: null,
   userId: 'user-42',
-  scope: 'workspace',
-}
-
-const privateAgent: Agent = {
-  ...customAgent,
-  id: 'custom-private',
-  scope: 'user',
 }
 
 const noop = () => {}
@@ -60,55 +53,22 @@ describe('canDeleteAgent', () => {
     expect(canDeleteAgent(systemAgent, 'user-42')).toBe(false)
   })
 
-  it('returns true for workspace-scoped customs owned by the current user', () => {
+  it('returns true for customs when a user is signed in', () => {
     expect(canDeleteAgent(customAgent, 'user-42')).toBe(true)
-  })
-
-  it('returns true for workspace-scoped customs owned by a different user (any add-permitted member may delete)', () => {
-    expect(canDeleteAgent(customAgent, 'someone-else')).toBe(true)
-  })
-
-  it('returns true for user-scoped customs owned by the current user', () => {
-    expect(canDeleteAgent(privateAgent, 'user-42')).toBe(true)
-  })
-
-  it('returns false for user-scoped customs owned by a different user (BE rejects non-owner)', () => {
-    expect(canDeleteAgent(privateAgent, 'someone-else')).toBe(false)
   })
 
   it('returns false when no user is signed in', () => {
     expect(canDeleteAgent(customAgent, null)).toBe(false)
   })
-
-  it('returns false when the workspace `remove_agents` permission denies the user', () => {
-    expect(canDeleteAgent(customAgent, 'user-42', false)).toBe(false)
-  })
-
-  it('returns true when canRemoveAgents defaults (omitted), preserving prior behaviour', () => {
-    expect(canDeleteAgent(customAgent, 'user-42')).toBe(true)
-  })
 })
 
 describe('canEditAgent', () => {
-  it('mirrors canDeleteAgent — built-in / system are non-editable, customs follow the scope rule', () => {
+  it('mirrors canDeleteAgent — built-in / system are non-editable, customs are editable when signed in', () => {
     expect(canEditAgent(builtInAgent, 'user-42')).toBe(false)
     expect(canEditAgent(systemAgent, 'user-42')).toBe(false)
-    // Workspace-scoped custom: any add-permitted member can edit.
     expect(canEditAgent(customAgent, 'user-42')).toBe(true)
-    expect(canEditAgent(customAgent, 'someone-else')).toBe(true)
-    // User-scoped custom: owner only.
-    expect(canEditAgent(privateAgent, 'user-42')).toBe(true)
-    expect(canEditAgent(privateAgent, 'someone-else')).toBe(false)
     // No session: never.
     expect(canEditAgent(customAgent, null)).toBe(false)
-  })
-
-  it('returns false when the workspace `add_agents` permission denies the user', () => {
-    expect(canEditAgent(customAgent, 'user-42', false)).toBe(false)
-  })
-
-  it('returns true when canEditAgents defaults (omitted), preserving prior behaviour', () => {
-    expect(canEditAgent(customAgent, 'user-42')).toBe(true)
   })
 })
 
@@ -208,60 +168,6 @@ describe('AgentList', () => {
     render(<AgentList agents={[customAgent]} currentUserId="user-42" onToggle={noop} onEdit={noop} onDelete={noop} />)
 
     expect(screen.getByTestId(`agent-toggle-${customAgent.id}`)).not.toBeDisabled()
-  })
-
-  it('hides the Remove affordance on every row when canRemoveAgents is false', () => {
-    const onToggle = mock(() => {})
-    const onDelete = mock(() => {})
-
-    render(
-      <AgentList
-        agents={[customAgent]}
-        currentUserId="user-42"
-        canRemoveAgents={false}
-        onToggle={onToggle}
-        onEdit={noop}
-        onDelete={onDelete}
-      />,
-    )
-
-    expect(screen.queryByTestId(`agent-delete-${customAgent.id}`)).not.toBeInTheDocument()
-  })
-
-  it('disables the row toggle when canEditAgents is false (even for an owned custom)', () => {
-    const onToggle = mock(() => {})
-    const onDelete = mock(() => {})
-
-    render(
-      <AgentList
-        agents={[customAgent]}
-        currentUserId="user-42"
-        canEditAgents={false}
-        onToggle={onToggle}
-        onEdit={noop}
-        onDelete={onDelete}
-      />,
-    )
-
-    expect(screen.getByTestId(`agent-toggle-${customAgent.id}`)).toBeDisabled()
-  })
-
-  it('hides the Edit affordance on every row when canEditAgents is false', () => {
-    const onToggle = mock(() => {})
-    const onDelete = mock(() => {})
-
-    render(
-      <AgentList
-        agents={[customAgent]}
-        currentUserId="user-42"
-        canEditAgents={false}
-        onToggle={onToggle}
-        onEdit={noop}
-        onDelete={onDelete}
-      />,
-    )
-
-    expect(screen.queryByTestId(`agent-edit-${customAgent.id}`)).not.toBeInTheDocument()
   })
 })
 

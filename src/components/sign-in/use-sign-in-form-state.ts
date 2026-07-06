@@ -239,10 +239,10 @@ export const useSignInFormState = ({
         analytics.onPromotionSuccess(result.data.user.id)
       }
 
-      // Post-auth pipeline: connect sync, await the personal workspace, reconcile
-      // defaults. Fires here so the success step doesn't appear until the user can
-      // actually use the app. The dedupe in `runPostAuthBootstrap` keeps this
-      // safe even if `SessionToWorkspaceBootstrap` is firing in parallel.
+      // Post-auth pipeline: connect sync, reconcile defaults. Fires here so the
+      // success step doesn't appear until the user can actually use the app. The
+      // dedupe in `runPostAuthBootstrap` keeps this safe even if the auth-context
+      // session bootstrap observer is firing in parallel.
       if (result.data?.user?.id) {
         try {
           await runPostAuthBootstrap({

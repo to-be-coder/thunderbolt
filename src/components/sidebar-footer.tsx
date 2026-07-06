@@ -19,7 +19,6 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { useAuth, useSignInModal } from '@/contexts'
-import { useWorkspaceUrl } from '@/lib/active-workspace'
 import { getDownloadUrl } from '@/lib/download-links'
 import { isWebDesktopPlatform, isTauri } from '@/lib/platform'
 import { edgeSpacing, mobileSidebarWidthRatio } from '@/lib/constants'
@@ -80,8 +79,6 @@ export const SidebarFooter = ({ className }: SidebarFooterProps) => {
   const { openSignInModal } = useSignInModal()
   const [logoutModalOpen, setLogoutModalOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const devSettingsUrl = useWorkspaceUrl('/settings/dev-settings')
-  const messageSimulatorUrl = useWorkspaceUrl('/message-simulator')
 
   // On mobile, always treat the sidebar as expanded when it's open
   const isExpanded = isMobile || state === 'expanded'
@@ -261,13 +258,13 @@ export const SidebarFooter = ({ className }: SidebarFooterProps) => {
                 <AccountMenuItemButton
                   icon={<Terminal className={iconSize} />}
                   label="Dev Settings"
-                  to={devSettingsUrl}
+                  to="/settings/dev-settings"
                   onNavigate={handleMenuNavigate}
                 />
                 <AccountMenuItemButton
                   icon={<Terminal className={iconSize} />}
                   label="Message Simulator"
-                  to={messageSimulatorUrl}
+                  to="/message-simulator"
                   onNavigate={handleMenuNavigate}
                 />
               </div>

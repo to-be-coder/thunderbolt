@@ -20,8 +20,6 @@ const skill = (id: string, name: string): Skill => ({
   deletedAt: null,
   defaultHash: null,
   userId: null,
-  workspaceId: null,
-  scope: null,
 })
 
 const fakeUsePinnedSkills = (overrides?: {
@@ -51,13 +49,6 @@ const fakeUseEnabledSkills = (enabledIds: ReadonlySet<string>) =>
     setEnabled: async () => undefined,
   })) as unknown as typeof import('@/skills/use-skills').useEnabledSkills
 
-const fakeUseWorkspacePermission = (isAllowed: boolean) =>
-  (() => ({
-    requiredRole: 'admin' as const,
-    isAllowed,
-    isResolved: true,
-  })) as unknown as typeof import('@/hooks/use-workspace-permission').useWorkspacePermission
-
 const renderBar = (props: Partial<Parameters<typeof ChatSkillsBar>[0]> = {}) => {
   return render(
     <MemoryRouter>
@@ -68,7 +59,6 @@ const renderBar = (props: Partial<Parameters<typeof ChatSkillsBar>[0]> = {}) => 
           usePinnedSkills={props.usePinnedSkills ?? fakeUsePinnedSkills({ pinned: [] })}
           useLibrarySkills={props.useLibrarySkills ?? fakeUseLibrarySkills([])}
           useEnabledSkills={props.useEnabledSkills ?? fakeUseEnabledSkills(new Set())}
-          useWorkspacePermission={props.useWorkspacePermission ?? fakeUseWorkspacePermission(true)}
         />
       </TooltipProvider>
     </MemoryRouter>,
@@ -134,42 +124,4 @@ describe('ChatSkillsBar', () => {
 
   // The chip's click → onAddToChat path is exercised end-to-end at the
   // composer level; here we trust Radix's primitives.
-
-  describe('permission gating (add_skills)', () => {
-    it('hides the "+ Pin a skill" trigger when the user lacks add_skills', () => {
-      const a = skill('a', 'daily-brief')
-      renderBar({
-        usePinnedSkills: fakeUsePinnedSkills({ pinned: [] }),
-        useLibrarySkills: fakeUseLibrarySkills([a]),
-        useEnabledSkills: fakeUseEnabledSkills(new Set(['a'])),
-        useWorkspacePermission: fakeUseWorkspacePermission(false),
-      })
-
-      expect(screen.queryByLabelText('Pin a skill')).not.toBeInTheDocument()
-    })
-
-    it('renders nothing when the user lacks add_skills and has no pinned chips, regardless of candidates', () => {
-      const a = skill('a', 'daily-brief')
-      const { container } = renderBar({
-        usePinnedSkills: fakeUsePinnedSkills({ pinned: [] }),
-        useLibrarySkills: fakeUseLibrarySkills([a]),
-        useEnabledSkills: fakeUseEnabledSkills(new Set(['a'])),
-        useWorkspacePermission: fakeUseWorkspacePermission(false),
-      })
-      expect(container.firstChild).toBeNull()
-    })
-
-    it('still renders pinned chips when the user lacks add_skills (read-only chips)', () => {
-      const a = skill('a', 'daily-brief')
-      renderBar({
-        usePinnedSkills: fakeUsePinnedSkills({ pinned: [a] }),
-        useLibrarySkills: fakeUseLibrarySkills([a]),
-        useEnabledSkills: fakeUseEnabledSkills(new Set(['a'])),
-        useWorkspacePermission: fakeUseWorkspacePermission(false),
-      })
-
-      expect(screen.getByText('/daily-brief')).toBeTruthy()
-      expect(screen.queryByLabelText('Pin a skill')).not.toBeInTheDocument()
-    })
-  })
 })

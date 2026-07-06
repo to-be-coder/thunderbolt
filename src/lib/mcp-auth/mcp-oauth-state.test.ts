@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { beforeEach, describe, expect, it } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { setOAuthState } from '@/lib/oauth-state'
 import {
   abandonedFlowMs,
@@ -27,6 +27,12 @@ const emptyHandshake = {
 
 describe('MCP OAuth state', () => {
   beforeEach(() => {
+    localStorage.clear()
+  })
+
+  // bun shares localStorage across test files in one process — clear after the
+  // last test too so a persisted handshake can't leak into later files.
+  afterEach(() => {
     localStorage.clear()
   })
 

@@ -73,7 +73,7 @@ export const MagicLinkVerify = () => {
         // This ensures the sidebar and other components see the new session immediately
         await refetchSession()
 
-        // Post-auth pipeline: connect sync, resolve personal workspace, reconcile.
+        // Post-auth pipeline: connect sync, reconcile defaults.
         // Idempotent + deduped vs. the AuthProvider observer.
         if (result.data?.user?.id) {
           try {

@@ -49,16 +49,6 @@ const settingsSchema = z
     // against a malicious client bypassing the frontend gate via direct curl.
     // Surfaced to the UI via GET /config as `allowAnonUsers`.
     authAllowAnonymous: z.boolean().default(false),
-    // Workspace creation policy flags. Surfaced via GET /config; enforced by the
-    // PowerSync upload-handler factory (workspaces table). Both default to false to
-    // match v1 production posture (central-admin only); relax per deployment.
-    allowWorkspaceCreationByAnon: z.boolean().default(false),
-    allowWorkspaceCreationByMembers: z.boolean().default(false),
-    // THU-603: per-row scope on the 8 workspace-shared resource tables. When false,
-    // PowerSync upload handlers reject `scope = 'user'` PUTs (USER_SCOPE_DISABLED)
-    // and the UI hides the scope picker. Defaults true so the feature is opt-out:
-    // deployments that want strict workspace-shared semantics set this to false.
-    allowUserScopedResources: z.boolean().default(true),
     oidcClientId: z.string().default(''),
     oidcClientSecret: z.string().default(''),
     oidcIssuer: z.string().default(''),
@@ -193,9 +183,6 @@ const parseSettings = (): Settings => {
     microsoftClientSecret: process.env.MICROSOFT_CLIENT_SECRET || '',
     authMode: (process.env.AUTH_MODE || 'consumer').toLowerCase(),
     authAllowAnonymous: process.env.AUTH_ALLOW_ANONYMOUS === 'true',
-    allowWorkspaceCreationByAnon: process.env.ALLOW_WORKSPACE_CREATION_BY_ANON === 'true',
-    allowWorkspaceCreationByMembers: process.env.ALLOW_WORKSPACE_CREATION_BY_MEMBERS === 'true',
-    allowUserScopedResources: process.env.ALLOW_USER_SCOPED_RESOURCES !== 'false',
     oidcClientId: process.env.OIDC_CLIENT_ID || '',
     oidcClientSecret: process.env.OIDC_CLIENT_SECRET || '',
     oidcIssuer: process.env.OIDC_ISSUER || '',

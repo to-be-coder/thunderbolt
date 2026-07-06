@@ -12,7 +12,7 @@ import type { AgentAdapter } from '@/types/acp'
 import type { AgentDiscoveryResponse } from '@shared/acp-types'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { composeAllAgents, createAgent, deleteAgent, getAgentSecrets, setAgentSecrets, updateAgent } from './agents'
-import { otherWsId, resetTestDatabase, setupTestDatabase, teardownTestDatabase, wsId } from './test-utils'
+import { resetTestDatabase, setupTestDatabase, teardownTestDatabase } from './test-utils'
 import type { Agent } from '@/types/acp'
 
 /** Seed the global adapter cache with a fake connection for `agentId` and hand
@@ -77,7 +77,7 @@ describe('agents DAL', () => {
   describe('createAgent', () => {
     it('inserts a custom agent with the caller-supplied userId', async () => {
       const db = getDb()
-      await createAgent(db, wsId, {
+      await createAgent(db, {
         id: 'agent-1',
         name: 'Custom Remote',
         type: 'remote-acp',
@@ -96,7 +96,7 @@ describe('agents DAL', () => {
     })
 
     it('defaults enabled = 1 when omitted', async () => {
-      await createAgent(getDb(), wsId, {
+      await createAgent(getDb(), {
         id: 'agent-default',
         name: 'Defaults',
         type: 'remote-acp',
@@ -108,38 +108,23 @@ describe('agents DAL', () => {
       expect(row?.enabled).toBe(1)
     })
 
-    it("defaults scope to 'workspace' when input omits it (THU-603)", async () => {
-      await createAgent(getDb(), wsId, {
-        id: 'agent-scope-default',
-        name: 'Defaults',
-        type: 'remote-acp',
-        transport: 'websocket',
-        url: 'wss://x',
-        userId: 'u1',
-      })
-      const row = await getDb().select().from(agentsTable).get()
-      expect(row?.scope).toBe('workspace')
-    })
-
-    it("persists scope='user' for user-private agents (THU-603)", async () => {
-      await createAgent(getDb(), wsId, {
+    it('persists the owning userId', async () => {
+      await createAgent(getDb(), {
         id: 'agent-private',
         name: 'Private',
         type: 'remote-acp',
         transport: 'websocket',
         url: 'wss://x',
         userId: 'u1',
-        scope: 'user',
       })
       const row = await getDb().select().from(agentsTable).get()
-      expect(row?.scope).toBe('user')
       expect(row?.userId).toBe('u1')
     })
   })
 
   describe('updateAgent', () => {
     it('patches a custom agent in place', async () => {
-      await createAgent(getDb(), wsId, {
+      await createAgent(getDb(), {
         id: 'a1',
         name: 'Original',
         type: 'remote-acp',
@@ -148,7 +133,7 @@ describe('agents DAL', () => {
         userId: 'u1',
       })
 
-      await updateAgent(getDb(), wsId, 'a1', { name: 'Renamed', enabled: 0 })
+      await updateAgent(getDb(), 'a1', { name: 'Renamed', enabled: 0 })
 
       const row = await getDb().select().from(agentsTable).get()
       expect(row?.name).toBe('Renamed')
@@ -156,11 +141,11 @@ describe('agents DAL', () => {
     })
 
     it('refuses to edit the built-in agent', async () => {
-      await expect(updateAgent(getDb(), wsId, builtInAgent.id, { name: 'nope' })).rejects.toThrow(/built-in/)
+      await expect(updateAgent(getDb(), builtInAgent.id, { name: 'nope' })).rejects.toThrow(/built-in/)
     })
 
     it('no-ops on an empty patch (does not touch DB)', async () => {
-      await createAgent(getDb(), wsId, {
+      await createAgent(getDb(), {
         id: 'a2',
         name: 'Untouched',
         type: 'remote-acp',
@@ -168,13 +153,13 @@ describe('agents DAL', () => {
         url: 'wss://x',
         userId: 'u1',
       })
-      await updateAgent(getDb(), wsId, 'a2', {})
+      await updateAgent(getDb(), 'a2', {})
       const row = await getDb().select().from(agentsTable).get()
       expect(row?.name).toBe('Untouched')
     })
 
     it('disposes the warm ACP connection when the wire identity (url) changes', async () => {
-      await createAgent(getDb(), wsId, {
+      await createAgent(getDb(), {
         id: 'a-url',
         name: 'Wired',
         type: 'remote-acp',
@@ -184,13 +169,13 @@ describe('agents DAL', () => {
       })
       const cached = await seedCachedAdapter('a-url')
 
-      await updateAgent(getDb(), wsId, 'a-url', { url: 'wss://new/ws' })
+      await updateAgent(getDb(), 'a-url', { url: 'wss://new/ws' })
 
       expect(cached.disconnectCount()).toBe(1)
     })
 
     it('does NOT dispose the connection on a non-wire patch (rename only)', async () => {
-      await createAgent(getDb(), wsId, {
+      await createAgent(getDb(), {
         id: 'a-name',
         name: 'Before',
         type: 'remote-acp',
@@ -200,7 +185,7 @@ describe('agents DAL', () => {
       })
       const cached = await seedCachedAdapter('a-name')
 
-      await updateAgent(getDb(), wsId, 'a-name', { name: 'After' })
+      await updateAgent(getDb(), 'a-name', { name: 'After' })
 
       expect(cached.disconnectCount()).toBe(0)
     })
@@ -208,7 +193,7 @@ describe('agents DAL', () => {
 
   describe('deleteAgent', () => {
     it('soft-deletes by stamping deletedAt; does not hard-delete', async () => {
-      await createAgent(getDb(), wsId, {
+      await createAgent(getDb(), {
         id: 'a-del',
         name: 'Doomed',
         type: 'remote-acp',
@@ -217,7 +202,7 @@ describe('agents DAL', () => {
         userId: 'u1',
       })
 
-      await deleteAgent(getDb(), wsId, 'a-del')
+      await deleteAgent(getDb(), 'a-del')
 
       const row = await getDb().select().from(agentsTable).get()
       expect(row).toBeDefined()
@@ -225,11 +210,11 @@ describe('agents DAL', () => {
     })
 
     it('refuses to delete the built-in agent', async () => {
-      await expect(deleteAgent(getDb(), wsId, builtInAgent.id)).rejects.toThrow(/built-in/)
+      await expect(deleteAgent(getDb(), builtInAgent.id)).rejects.toThrow(/built-in/)
     })
 
     it('disposes the agent warm ACP connection on delete', async () => {
-      await createAgent(getDb(), wsId, {
+      await createAgent(getDb(), {
         id: 'a-disp',
         name: 'Doomed',
         type: 'remote-acp',
@@ -239,7 +224,7 @@ describe('agents DAL', () => {
       })
       const cached = await seedCachedAdapter('a-disp')
 
-      await deleteAgent(getDb(), wsId, 'a-disp')
+      await deleteAgent(getDb(), 'a-disp')
 
       expect(cached.disconnectCount()).toBe(1)
     })
@@ -500,30 +485,6 @@ describe('agents DAL', () => {
 
       const rows = await getDb().select().from(agentsSystemTable).all()
       expect(rows).toHaveLength(1)
-    })
-  })
-
-  describe('workspace isolation', () => {
-    it('should not update or delete an agent from another workspace', async () => {
-      const db = getDb()
-      await db.insert(agentsTable).values({
-        id: 'agent-other',
-        name: 'Other',
-        type: 'remote-acp',
-        transport: 'websocket',
-        url: 'wss://example.test/ws',
-        enabled: 1,
-        userId: 'u1',
-        workspaceId: otherWsId,
-      })
-
-      // Both should be no-ops in the active workspace.
-      await updateAgent(getDb(), wsId, 'agent-other', { name: 'Hijacked' })
-      await deleteAgent(getDb(), wsId, 'agent-other')
-
-      const raw = await db.select().from(agentsTable).get()
-      expect(raw?.name).toBe('Other')
-      expect(raw?.deletedAt).toBeNull()
     })
   })
 })

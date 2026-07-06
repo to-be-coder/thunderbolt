@@ -35,12 +35,7 @@ import { StatusCard } from '@/components/ui/status-card'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useDatabase } from '@/contexts'
-import { ScopePicker } from '@/components/scope-picker'
-import { ScopeBadge } from '@/components/scope-badge'
-import { useScopePickerEnabled } from '@/hooks/use-scope-picker-enabled'
 import { useActiveUserId } from '@/stores/trust-domain-registry'
-import { useActiveWorkspaceId } from '@/lib/active-workspace'
-import { useWorkspacePermission as useWorkspacePermission_default } from '@/hooks/use-workspace-permission'
 import { createModel as createModelDAL, deleteModel, getAllModels, resetModelToDefault, updateModel } from '@/dal'
 import { defaultModels } from '@/defaults/models'
 import { isModelModified } from '@/defaults/utils'
@@ -176,7 +171,6 @@ const formSchema = z
     url: z.string().optional(),
     apiKey: z.string().optional(),
     toolUsage: z.boolean(),
-    scope: z.enum(['workspace', 'user']),
   })
   .refine(
     (data) => {
@@ -211,7 +205,6 @@ const editFormSchema = z.object({
   model: z.string().min(1, { message: 'Model name is required.' }),
   url: z.string().optional(),
   apiKey: z.string().optional(),
-  scope: z.enum(['workspace', 'user']),
 })
 
 const buildEditFormSchema = (provider: Model['provider']) =>
@@ -225,17 +218,11 @@ const EditModelForm = ({
   onCancel,
   onSubmit,
   isPending,
-  showScopePicker = false,
 }: {
   model: Model
   onCancel: () => void
   onSubmit: (values: z.infer<typeof editFormSchema> & { id: string }) => void
   isPending: boolean
-  /** Mount the scope picker (THU-603). Parent computes this as
-   *  `scopePickerEnabled && canAddModels` — any member with add permission can
-   *  flip scope; the BE transfers ownership to the caller when scope becomes
-   *  `'user'`. Same pattern as `SkillForm`. */
-  showScopePicker?: boolean
 }) => {
   const form = useForm<z.infer<typeof editFormSchema>>({
     resolver: zodResolver(buildEditFormSchema(model.provider)),
@@ -244,7 +231,6 @@ const EditModelForm = ({
       model: model.model || '',
       url: model.url || '',
       apiKey: model.apiKey || '',
-      scope: model.scope ?? 'workspace',
     },
   })
 
@@ -255,20 +241,6 @@ const EditModelForm = ({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="grid gap-4 pt-4 pb-2">
-        {showScopePicker && (
-          <FormField
-            control={form.control}
-            name="scope"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <ScopePicker id="edit-model-scope" value={field.value} onChange={field.onChange} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
         <FormField
           control={form.control}
           name="name"
@@ -347,13 +319,11 @@ const EditModelModal = ({
   onOpenChange,
   onSubmit,
   isPending,
-  showScopePicker,
 }: {
   model: Model | null
   onOpenChange: (open: boolean) => void
   onSubmit: (values: z.infer<typeof editFormSchema> & { id: string }) => void
   isPending: boolean
-  showScopePicker?: boolean
 }) => (
   <Dialog open={!!model} onOpenChange={onOpenChange}>
     <ResponsiveModalContentComposable className="sm:max-w-[500px]">
@@ -368,31 +338,18 @@ const EditModelModal = ({
           onCancel={() => onOpenChange(false)}
           onSubmit={onSubmit}
           isPending={isPending}
-          showScopePicker={showScopePicker}
         />
       )}
     </ResponsiveModalContentComposable>
   </Dialog>
 )
 
-type ModelsPageProps = {
-  /** Test seam — defaults to the real hook. Tests inject a fake to drive the
-   *  gated Add/Edit/Delete affordances. */
-  useWorkspacePermission?: typeof useWorkspacePermission_default
-}
-
-export default function ModelsPage({ useWorkspacePermission = useWorkspacePermission_default }: ModelsPageProps = {}) {
+export default function ModelsPage() {
   const db = useDatabase()
-  const workspaceId = useActiveWorkspaceId()
   const currentUserId = useActiveUserId()
-  const scopePickerEnabled = useScopePickerEnabled()
   const getProxyFetch = useProxyFetchGetter()
   const [state, dispatch] = useReducer(modelReducer, initialState)
   const [editingModel, setEditingModel] = useState<Model | null>(null)
-  // Workspace `add_models` / `remove_models` — BE enforces; FE hides
-  // affordances so the user isn't presented with actions that round-trip-fail.
-  const { isAllowed: canAddModels } = useWorkspacePermission('add_models')
-  const { isAllowed: canRemoveModels } = useWorkspacePermission('remove_models')
   const {
     isAddDialogOpen,
     deleteConfirmOpen,
@@ -406,26 +363,19 @@ export default function ModelsPage({ useWorkspacePermission = useWorkspacePermis
   } = state
 
   const { data: models = [] } = useQuery({
-    queryKey: ['models', workspaceId],
-    query: toCompilableQuery(getAllModels(db, workspaceId ?? '')),
-    enabled: !!workspaceId,
+    queryKey: ['models'],
+    query: toCompilableQuery(getAllModels(db)),
   })
 
   const toggleModelMutation = useMutation({
     mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
-      if (!workspaceId) {
-        throw new Error('No active workspace')
-      }
-      await updateModel(db, workspaceId, id, { enabled: enabled ? 1 : 0 })
+      await updateModel(db, id, { enabled: enabled ? 1 : 0 })
     },
   })
 
   const addModelMutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
-      if (!workspaceId) {
-        throw new Error('No active workspace')
-      }
-      await createModelDAL(db, workspaceId, {
+      await createModelDAL(db, {
         id: uuidv7(),
         ...values,
         apiKey: values.apiKey || null,
@@ -434,9 +384,6 @@ export default function ModelsPage({ useWorkspacePermission = useWorkspacePermis
         enabled: 1,
         toolUsage: values.toolUsage ? 1 : 0,
         contextWindow: null,
-        // Pass through the picker's scope when it was mounted; userId stamps
-        // the row's author so 'user' scope syncs into the per-user bucket.
-        scope: scopePickerEnabled ? values.scope : 'workspace',
         userId: currentUserId ?? null,
       })
     },
@@ -449,10 +396,7 @@ export default function ModelsPage({ useWorkspacePermission = useWorkspacePermis
 
   const deleteModelMutation = useMutation({
     mutationFn: async (id: string) => {
-      if (!workspaceId) {
-        throw new Error('No active workspace')
-      }
-      await deleteModel(db, workspaceId, id)
+      await deleteModel(db, id)
     },
     onSuccess: () => {
       dispatch({ type: 'CLOSE_DELETE_CONFIRM' })
@@ -461,14 +405,8 @@ export default function ModelsPage({ useWorkspacePermission = useWorkspacePermis
 
   const editModelMutation = useMutation({
     mutationFn: async (values: z.infer<typeof editFormSchema> & { id: string }) => {
-      if (!workspaceId) {
-        throw new Error('No active workspace')
-      }
       const { id, ...fields } = values
-      // `scope` flows through to updateModel — any member with `add_models`
-      // permission may flip it; the BE handler transfers ownership to the
-      // caller when scope becomes `'user'`.
-      await updateModel(db, workspaceId, id, {
+      await updateModel(db, id, {
         ...fields,
         apiKey: fields.apiKey || null,
         url: fields.url || null,
@@ -481,14 +419,11 @@ export default function ModelsPage({ useWorkspacePermission = useWorkspacePermis
 
   const resetModelMutation = useMutation({
     mutationFn: async (id: string) => {
-      if (!workspaceId) {
-        throw new Error('No active workspace')
-      }
       const defaultModel = defaultModels.find((m) => m.id === id)
       if (!defaultModel) {
         throw new Error('Model is not a default model')
       }
-      await resetModelToDefault(db, workspaceId, id, defaultModel)
+      await resetModelToDefault(db, id, defaultModel)
     },
   })
 
@@ -508,7 +443,6 @@ export default function ModelsPage({ useWorkspacePermission = useWorkspacePermis
       url: '',
       apiKey: '',
       toolUsage: true,
-      scope: 'workspace',
     },
   })
 
@@ -566,8 +500,6 @@ export default function ModelsPage({ useWorkspacePermission = useWorkspacePermis
         vendor: null,
         description: null,
         userId: null,
-        workspaceId: null,
-        scope: 'workspace' as const,
       }
       const model = await createModel(modelConfigWithDefaults, getProxyFetch)
 
@@ -958,13 +890,11 @@ export default function ModelsPage({ useWorkspacePermission = useWorkspacePermis
     <div className="flex flex-col gap-6 p-4 pb-12 w-full max-w-[760px] mx-auto">
       <PageHeader title="Models">
         <Dialog open={isAddDialogOpen} onOpenChange={handleDialogOpenChange}>
-          {canAddModels && (
-            <DialogTrigger asChild>
-              <Button variant="outline" size="icon" className="rounded-lg">
-                <Plus />
-              </Button>
-            </DialogTrigger>
-          )}
+          <DialogTrigger asChild>
+            <Button variant="outline" size="icon" className="rounded-lg">
+              <Plus />
+            </Button>
+          </DialogTrigger>
           <ResponsiveModalContentComposable className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <ResponsiveModalHeader>
               <ResponsiveModalTitle>Add Model</ResponsiveModalTitle>
@@ -972,20 +902,6 @@ export default function ModelsPage({ useWorkspacePermission = useWorkspacePermis
             </ResponsiveModalHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} onKeyDown={handleKeyDown} className="grid gap-4 pt-4 pb-2">
-                {scopePickerEnabled && (
-                  <FormField
-                    control={form.control}
-                    name="scope"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <ScopePicker id="model-scope" value={field.value} onChange={field.onChange} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
                 <FormField
                   control={form.control}
                   name="provider"
@@ -1276,7 +1192,7 @@ export default function ModelsPage({ useWorkspacePermission = useWorkspacePermis
                           </TooltipProvider>
                         )}
                         <ModificationIndicator
-                          hasModifications={isModelModified(model) && canAddModels}
+                          hasModifications={isModelModified(model)}
                           onReset={() => handleResetModel(model.id)}
                           customMessage="You've customized this model."
                           ariaLabel="Modified model"
@@ -1288,7 +1204,6 @@ export default function ModelsPage({ useWorkspacePermission = useWorkspacePermis
                       <p className="text-sm text-muted-foreground">
                         {getProviderDisplay(model.provider)} - {model.model}
                       </p>
-                      <ScopeBadge scope={model.scope} show={scopePickerEnabled} className="mt-1" />
                     </div>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
@@ -1298,7 +1213,6 @@ export default function ModelsPage({ useWorkspacePermission = useWorkspacePermis
                           <div>
                             <Switch
                               checked={isEnabled}
-                              disabled={!canAddModels}
                               onCheckedChange={(checked) =>
                                 toggleModelMutation.mutate({ id: model.id, enabled: checked })
                               }
@@ -1316,19 +1230,17 @@ export default function ModelsPage({ useWorkspacePermission = useWorkspacePermis
                       <ButtonGroupItem
                         variant="outline"
                         onClick={() => setEditingModel(model)}
-                        disabled={isSystemModel || !canAddModels}
+                        disabled={isSystemModel}
                       >
                         <Pen className="h-3 w-3" />
                       </ButtonGroupItem>
-                      {canRemoveModels && (
-                        <ButtonGroupItem
-                          variant="outline"
-                          onClick={() => dispatch({ type: 'OPEN_DELETE_CONFIRM', modelId: model.id })}
-                          disabled={isSystemModel}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </ButtonGroupItem>
-                      )}
+                      <ButtonGroupItem
+                        variant="outline"
+                        onClick={() => dispatch({ type: 'OPEN_DELETE_CONFIRM', modelId: model.id })}
+                        disabled={isSystemModel}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </ButtonGroupItem>
                     </ButtonGroup>
                   </div>
                 </div>
@@ -1364,12 +1276,10 @@ export default function ModelsPage({ useWorkspacePermission = useWorkspacePermis
               <Cpu className="size-10 text-muted-foreground mb-4" />
               <h3 className="font-medium text-foreground mb-1">No models configured</h3>
               <p className="text-sm text-muted-foreground mb-4">Get started by adding your first AI model.</p>
-              {canAddModels && (
-                <Button onClick={() => handleDialogOpenChange(true)} variant="outline">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Model
-                </Button>
-              )}
+              <Button onClick={() => handleDialogOpenChange(true)} variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Model
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -1381,9 +1291,6 @@ export default function ModelsPage({ useWorkspacePermission = useWorkspacePermis
         onOpenChange={(open) => !open && setEditingModel(null)}
         onSubmit={(values) => editModelMutation.mutate(values)}
         isPending={editModelMutation.isPending}
-        // Any member with `add_models` permission can flip scope; the BE
-        // transfers ownership to the caller when scope becomes `'user'`.
-        showScopePicker={scopePickerEnabled && canAddModels}
       />
 
       {/* Delete Confirmation */}

@@ -6,8 +6,7 @@
  * Step 3 of the pre-Workspaces v1 data migration. Reads the legacy
  * `thunderbolt-sync.db` (or `thunderbolt.db`) through a separate wa-sqlite
  * engine and copies every row of every legacy table into the matching table
- * on the new `server-<id>.db`, stamping `workspace_id = personalWorkspaceId`
- * and (where the new schema has it) `scope = 'workspace'` on the way in.
+ * on the new `server-<id>.db`.
  *
  * Why a separate engine instead of ATTACH:
  *   The PowerSync wa-sqlite engine's VFS state is per-engine. ATTACH'ing the
@@ -19,9 +18,8 @@
  * INSERT OR IGNORE drops rows whose PK already exists in the new DB — this
  * handles two cases without special-casing them:
  *
- *   - sync-enabled users whose BE-side rows were re-stamped with `workspace_id`
- *     by Drizzle 0021 and sync'd down into the new DB before the migration ran,
- *     and
+ *   - sync-enabled users whose BE-side rows sync'd down into the new DB
+ *     before the migration ran, and
  *   - retry-after-partial-failure: the first half of a previous run already
  *     wrote some rows; the rerun finishes the rest.
  *
@@ -108,7 +106,6 @@ const copyTableViaReader = async (
   reader: LegacyReader,
   db: AnyDrizzleDatabase,
   table: LegacyTable,
-  personalWorkspaceId: string,
 ): Promise<CopyTableOutcome> => {
   if (!(await reader.hasTable(table.name))) {
     return emptyOutcome
@@ -127,19 +124,10 @@ const copyTableViaReader = async (
     return emptyOutcome
   }
 
-  // Build the column list inserted per row: shared columns first (positionally
-  // aligned with the legacy row), then any synthetic columns the new schema
-  // requires that the legacy schema lacked (workspace_id, scope).
+  // Insert only the columns both schemas share (positionally aligned with the
+  // legacy row). Workspace-era synthetic columns (workspace_id, scope) are gone
+  // from the new schema, so nothing extra is stamped on the way in.
   const insertCols: string[] = [...sharedCols]
-  const extraValues: unknown[] = []
-  if (table.needsWorkspaceId && newColsSet.has('workspace_id') && !sharedCols.includes('workspace_id')) {
-    insertCols.push('workspace_id')
-    extraValues.push(personalWorkspaceId)
-  }
-  if (table.needsScope && newColsSet.has('scope') && !sharedCols.includes('scope')) {
-    insertCols.push('scope')
-    extraValues.push('workspace')
-  }
 
   const rows = await reader.selectAll(table.name)
   if (rows.length === 0) {
@@ -169,9 +157,6 @@ const copyTableViaReader = async (
   await db.transaction(async (tx) => {
     for (const row of rows) {
       const values: unknown[] = sharedColIndices.map((i) => row[i])
-      for (const v of extraValues) {
-        values.push(v)
-      }
       const placeholders = sql.join(
         values.map((v) => sql`${v}`),
         sql.raw(', '),
@@ -194,7 +179,7 @@ const copyTableViaReader = async (
 
 /**
  * Stamp `models.api_key` from the legacy `models_secrets.api_key` for the
- * migrated personal-workspace rows. Returns the number of rows updated.
+ * migrated rows. Returns the number of rows updated.
  *
  * THU-505 stored api keys in a local-only `models_secrets` table; THU-579
  * reverted that and moved the column back onto the synced `models` table.
@@ -215,11 +200,7 @@ const copyTableViaReader = async (
  * upload, so on first sync the BE-side NULL would clobber the local value
  * (THU-622 rollout observation).
  */
-const stampModelApiKeysFromLegacyReader = async (
-  reader: LegacyReader,
-  db: AnyDrizzleDatabase,
-  personalWorkspaceId: string,
-): Promise<number> => {
+const stampModelApiKeysFromLegacyReader = async (reader: LegacyReader, db: AnyDrizzleDatabase): Promise<number> => {
   if (!(await reader.hasTable('models_secrets'))) {
     return 0
   }
@@ -245,9 +226,7 @@ const stampModelApiKeysFromLegacyReader = async (
       const result = await tx
         .update(modelsTable)
         .set({ apiKey })
-        .where(
-          and(eq(modelsTable.id, id), eq(modelsTable.workspaceId, personalWorkspaceId), isNull(modelsTable.apiKey)),
-        )
+        .where(and(eq(modelsTable.id, id), isNull(modelsTable.apiKey)))
         .returning({ id: modelsTable.id })
       updated += result.length
     }
@@ -265,10 +244,8 @@ const stampModelApiKeysFromLegacyReader = async (
  *
  * Carrying forward the legacy queue keeps only what the legacy build had
  * legitimately pending: rows the user authored offline (sync-disabled) or
- * mutated between the last upload and the upgrade (sync-enabled). The BE's
- * workspace-scoped handler already falls back to `computePersonalWorkspaceId`
- * when an upload payload lacks `workspace_id` (added during the THU-622
- * rollout), so legacy entries flow through with no schema awareness needed.
+ * mutated between the last upload and the upgrade (sync-enabled). Legacy
+ * entries flow through the BE upload handler with no schema awareness needed.
  *
  * Order requirement: must run BEFORE `stampModelApiKeysFromLegacyReader`. The
  * api-key UPDATE generates new `ps_crud` entries that *must* upload (the BE
@@ -350,7 +327,6 @@ export type LegacyDbHandle = {
 export type RunLocalDbMigrationOpts = {
   newDb: AnyDrizzleDatabase
   serverId: string
-  personalWorkspaceId: string
   /**
    * Location of the legacy SQLite file (filename + VFS backend). `null` means
    * "no legacy DB on disk" — the migration marks itself complete and returns
@@ -398,7 +374,6 @@ const emptyResult = (durationMs: number): RunLocalDbMigrationResult => ({
 export const runLocalDbMigration = async ({
   newDb,
   serverId,
-  personalWorkspaceId,
   legacyDb,
   openReader = defaultOpenLegacyReader,
 }: RunLocalDbMigrationOpts): Promise<RunLocalDbMigrationResult> => {
@@ -444,7 +419,7 @@ export const runLocalDbMigration = async ({
     if (!thisServerConsumed) {
       const totalFailures: string[] = []
       for (const table of allLegacyTables) {
-        const outcome = await copyTableViaReader(reader, newDb, table, personalWorkspaceId)
+        const outcome = await copyTableViaReader(reader, newDb, table)
         rowsInsertedByTable[table.name] = outcome.persisted
         // Systematic failure: rows existed in legacy, every attempt threw, none
         // persisted. Distinguishes a real bug (schema drift, type mismatch) from
@@ -471,7 +446,7 @@ export const runLocalDbMigration = async ({
       // destructive part lands. The global flag must be here, not at the end —
       // otherwise an api-key stamp failure below would leave the device-global
       // legacy state unflagged-as-consumed, and signing into a DIFFERENT
-      // server would re-import it into the other account's workspace (bleed).
+      // server would re-import it into the other account (bleed).
       setDataCompletionFlag(serverId)
       setGlobalCompletionFlag()
     }
@@ -480,7 +455,7 @@ export const runLocalDbMigration = async ({
     // be wiped). Independently idempotent (`isNull(modelsTable.apiKey)` guard),
     // so retrying after a failed boot is safe even though the data steps above
     // are now skipped.
-    modelApiKeysCopied = await stampModelApiKeysFromLegacyReader(reader, newDb, personalWorkspaceId)
+    modelApiKeysCopied = await stampModelApiKeysFromLegacyReader(reader, newDb)
   } finally {
     await reader.close()
   }

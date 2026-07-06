@@ -25,8 +25,6 @@ const skill: Skill = {
   deletedAt: null,
   defaultHash: null,
   userId: null,
-  workspaceId: null,
-  scope: null,
 }
 
 const renderList = (props: { canCreate?: boolean } = {}) => {

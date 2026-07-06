@@ -37,17 +37,6 @@ describe('Config Routes', () => {
       expect(on.body.allowAnonUsers).toBe(true)
     })
 
-    it('exposes workspace creation policy flags', async () => {
-      const { body } = await fetchConfig(
-        createTestSettings({
-          allowWorkspaceCreationByAnon: true,
-          allowWorkspaceCreationByMembers: true,
-        }),
-      )
-      expect(body.allowWorkspaceCreationByAnon).toBe(true)
-      expect(body.allowWorkspaceCreationByMembers).toBe(true)
-    })
-
     it('exposes builtInAgentEnabled: true by default and false when disabled', async () => {
       const onByDefault = await fetchConfig(createTestSettings())
       expect(onByDefault.body.builtInAgentEnabled).toBe(true)
@@ -72,14 +61,6 @@ describe('Config Routes', () => {
     it('exposes minAppVersion when set', async () => {
       const { body } = await fetchConfig(createTestSettings({ minAppVersion: '0.2.0' }))
       expect(body.minAppVersion).toBe('0.2.0')
-    })
-
-    it('exposes allowUserScopedResources', async () => {
-      const on = await fetchConfig(createTestSettings({ allowUserScopedResources: true }))
-      expect(on.body.allowUserScopedResources).toBe(true)
-
-      const off = await fetchConfig(createTestSettings({ allowUserScopedResources: false }))
-      expect(off.body.allowUserScopedResources).toBe(false)
     })
 
     it('does not require authentication', async () => {

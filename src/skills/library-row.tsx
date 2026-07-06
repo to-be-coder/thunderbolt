@@ -7,7 +7,7 @@ import { MoreHorizontal, Plus, SquarePen, Trash2 } from 'lucide-react'
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Switch } from '@/components/ui/switch'
-import { useWorkspaceNavigate } from '@/lib/active-workspace'
+import { useNavigate } from 'react-router'
 import type { Skill } from '@/types'
 
 /**
@@ -45,16 +45,16 @@ export const LibraryRow = ({
   skill: Skill
   enabled: boolean
   isActive: boolean
-  /** Defaults to true. Mirrors `add_skills`; gates the enable toggle + Edit menu item. */
+  /** Defaults to true; gates the enable toggle + Edit menu item. */
   canEdit?: boolean
-  /** Defaults to true. Mirrors the workspace `remove_skills` permission. */
+  /** Defaults to true; gates the Delete menu item. */
   canDelete?: boolean
   onSelect: (id: string) => void
   onToggleEnabled: (id: string, next: boolean) => void
   onEdit: (id: string) => void
   onDelete: (id: string) => void
 }) => {
-  const navigate = useWorkspaceNavigate()
+  const navigate = useNavigate()
 
   return (
     <m.li layout layoutId={skill.id} transition={skillRowTransition}>

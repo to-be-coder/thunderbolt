@@ -14,7 +14,6 @@ import {
   ResponsiveModalTitle,
 } from '@/components/ui/responsive-modal'
 import { Dialog } from '@/components/ui/dialog'
-import { ScopePicker, type ResourceScope } from '@/components/scope-picker'
 import { StatusCard } from '@/components/ui/status-card'
 import { getPlatform, isTauri } from '@/lib/platform'
 import { testAcpConnection as defaultTestAcpConnection } from '@/acp'
@@ -62,9 +61,6 @@ export type AddCustomAgentPayload = {
   url: string
   description: string | null
   transport: 'websocket'
-  /** `'workspace'` (default) shares with all members; `'user'` keeps the agent
-   *  private to its author within the workspace (THU-603). */
-  scope: ResourceScope
 }
 
 /** Async probe signature the dialog uses to test a remote agent endpoint.
@@ -86,20 +82,12 @@ type AddCustomAgentDialogProps = {
   isIos?: () => boolean
   /** Test/DI override for the connection probe. Production callers omit this. */
   testAcpConnection?: TestAcpConnectionFn
-  /**
-   * Whether to mount the per-row scope picker (THU-603). Production callers
-   * derive this from `useScopePickerEnabled` (deployment flag + non-personal
-   * workspace). Defaults to `false` so tests and callers that don't need it
-   * stay simple. When false, `onSubmit` always reports `scope: 'workspace'`.
-   */
-  showScopePicker?: boolean
 }
 
 type AgentDialogState = {
   name: string
   url: string
   description: string
-  scope: ResourceScope
   submitting: boolean
   isTestingConnection: boolean
   connectionStatus: 'idle' | 'success' | 'error'
@@ -110,7 +98,6 @@ type AgentDialogAction =
   | { type: 'SET_NAME'; value: string }
   | { type: 'SET_URL'; value: string }
   | { type: 'SET_DESCRIPTION'; value: string }
-  | { type: 'SET_SCOPE'; value: ResourceScope }
   | { type: 'START_SUBMIT' }
   | { type: 'END_SUBMIT' }
   | { type: 'START_CONNECTION_TEST' }
@@ -122,7 +109,6 @@ const emptyState: AgentDialogState = {
   name: '',
   url: '',
   description: '',
-  scope: 'workspace',
   submitting: false,
   isTestingConnection: false,
   connectionStatus: 'idle',
@@ -139,7 +125,6 @@ const buildInitialState = (agent: Agent | null): AgentDialogState =>
         name: agent.name,
         url: agent.url ?? '',
         description: agent.description ?? '',
-        scope: agent.scope ?? 'workspace',
       }
     : emptyState
 
@@ -153,8 +138,6 @@ const agentDialogReducer = (state: AgentDialogState, action: AgentDialogAction):
       return { ...state, url: action.value, connectionStatus: 'idle', connectionError: null }
     case 'SET_DESCRIPTION':
       return { ...state, description: action.value }
-    case 'SET_SCOPE':
-      return { ...state, scope: action.value }
     case 'START_SUBMIT':
       return { ...state, submitting: true }
     case 'END_SUBMIT':
@@ -179,7 +162,6 @@ export const AddCustomAgentDialog = ({
   editingAgent,
   isIos,
   testAcpConnection = defaultTestAcpConnection,
-  showScopePicker = false,
 }: AddCustomAgentDialogProps) => {
   const isEditing = !!editingAgent
   // Lazy init seeds the form from the agent on first mount. The parent varies
@@ -232,9 +214,6 @@ export const AddCustomAgentDialog = ({
       url: trimmedUrl,
       description: trimmedDescription.length > 0 ? trimmedDescription : null,
       transport: validation.transport,
-      // When the picker is hidden (deployment disabled or personal workspace)
-      // we drop back to 'workspace' — the row default matches today's behavior.
-      scope: showScopePicker ? state.scope : 'workspace',
     })
     dispatch({ type: 'END_SUBMIT' })
     dispatch({ type: 'RESET', next: buildInitialState(editingAgent ?? null) })
@@ -253,14 +232,6 @@ export const AddCustomAgentDialog = ({
           </ResponsiveModalDescription>
         </ResponsiveModalHeader>
         <div className="grid gap-4 pt-4 pb-2">
-          {showScopePicker && (
-            <ScopePicker
-              id="agent-scope"
-              value={state.scope}
-              onChange={(value) => dispatch({ type: 'SET_SCOPE', value })}
-              disabled={state.submitting}
-            />
-          )}
           <div className="grid gap-2">
             <Label htmlFor="agent-name">Name</Label>
             <Input

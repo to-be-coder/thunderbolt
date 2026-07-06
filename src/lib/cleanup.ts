@@ -52,9 +52,8 @@ type CleanupDeps = {
  */
 /**
  * Reset module-level state that doesn't live in the DB / IDB / localStorage:
- * the active-workspace store (and, transitively via the bootstrap reset, the
- * inflight bootstrap promise). Done early so any concurrent observers can't
- * see a stale workspace id after the wipe begins.
+ * the inflight bootstrap promise and the bootstrap-readiness flag. Done early
+ * so the router re-gates behind the loading screen as soon as the wipe begins.
  */
 const resetVolatileStores = (): void => {
   resetPostAuthBootstrap()

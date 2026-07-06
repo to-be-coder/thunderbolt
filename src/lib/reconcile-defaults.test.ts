@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { getAllModels } from '@/dal'
-import { resetTestDatabase, setupTestDatabase, teardownTestDatabase, wsId } from '@/dal/test-utils'
+import { resetTestDatabase, setupTestDatabase, teardownTestDatabase } from '@/dal/test-utils'
 import { getDb } from '@/db/database'
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test'
 import { eq } from 'drizzle-orm'
@@ -40,8 +40,6 @@ const buildRetiredModel = (overrides: Partial<Model> = {}): Model => {
     vendor: 'mistral',
     description: 'Retired',
     userId: null,
-    workspaceId: wsId,
-    scope: null,
     ...overrides,
   }
   return { ...base, defaultHash: hashModel(base) }
@@ -73,8 +71,6 @@ const buildRetiredProfile = (overrides: Partial<ModelProfile> = {}): ModelProfil
     deletedAt: null,
     defaultHash: null,
     userId: null,
-    workspaceId: wsId,
-    scope: null,
     ...overrides,
   }
   return { ...base, defaultHash: hashModelProfile(base) }
@@ -178,23 +174,23 @@ describe('seedModels', () => {
 
   test('soft-deleted models do not appear in getAllModels', async () => {
     const db = getDb()
-    await reconcileDefaultsForTable(db, modelsTable, defaultModels, hashModel, { workspaceId: wsId })
+    await reconcileDefaultsForTable(db, modelsTable, defaultModels, hashModel)
 
     // Get all models before deletion
-    const modelsBefore = await getAllModels(getDb(), wsId)
+    const modelsBefore = await getAllModels(getDb())
     expect(modelsBefore.length).toBe(defaultModels.length)
 
     // Soft delete a model
     await db.update(modelsTable).set({ deletedAt: nowIso() }).where(eq(modelsTable.id, defaultModels[0].id))
 
     // Get all models after deletion - should not include soft-deleted model
-    const modelsAfter = await getAllModels(getDb(), wsId)
+    const modelsAfter = await getAllModels(getDb())
     expect(modelsAfter.length).toBe(defaultModels.length - 1)
     expect(modelsAfter.find((m) => m.id === defaultModels[0].id)).toBeUndefined()
 
     // Re-seed should not restore the deleted model
     await reconcileDefaultsForTable(db, modelsTable, defaultModels, hashModel)
-    const modelsAfterReseed = await getAllModels(getDb(), wsId)
+    const modelsAfterReseed = await getAllModels(getDb())
     expect(modelsAfterReseed.length).toBe(defaultModels.length - 1)
     expect(modelsAfterReseed.find((m) => m.id === defaultModels[0].id)).toBeUndefined()
   })
@@ -206,7 +202,7 @@ describe('cleanupRemovedDefaults', () => {
     await db.insert(modelsTable).values(buildRetiredModel())
     await db.insert(modelProfilesTable).values(buildRetiredProfile())
 
-    await cleanupRemovedDefaults(db, wsId)
+    await cleanupRemovedDefaults(db)
 
     const model = await db.select().from(modelsTable).where(eq(modelsTable.id, retiredModelId)).get()
     expect(model?.deletedAt).not.toBeNull()
@@ -223,7 +219,7 @@ describe('cleanupRemovedDefaults', () => {
     // Stored hash deliberately does not match the row contents → row counts as edited.
     await db.insert(modelsTable).values({ ...buildRetiredModel(), name: 'User Renamed' })
 
-    await cleanupRemovedDefaults(db, wsId)
+    await cleanupRemovedDefaults(db)
 
     const model = await db.select().from(modelsTable).where(eq(modelsTable.id, retiredModelId)).get()
     expect(model?.deletedAt).toBeNull()
@@ -237,7 +233,7 @@ describe('cleanupRemovedDefaults', () => {
     // the old rule, leaving the model orphaned.
     await db.insert(modelProfilesTable).values(buildRetiredProfile())
 
-    await cleanupRemovedDefaults(db, wsId)
+    await cleanupRemovedDefaults(db)
 
     const profile = await db
       .select()
@@ -251,7 +247,7 @@ describe('cleanupRemovedDefaults', () => {
     const db = getDb()
     await reconcileDefaultsForTable(db, modelsTable, defaultModels, hashModel)
 
-    await cleanupRemovedDefaults(db, wsId)
+    await cleanupRemovedDefaults(db)
 
     for (const def of defaultModels) {
       const row = await db.select().from(modelsTable).where(eq(modelsTable.id, def.id)).get()
@@ -263,7 +259,7 @@ describe('cleanupRemovedDefaults', () => {
     const db = getDb()
     await db.insert(modelsTable).values({ ...buildRetiredModel(), isSystem: 0, defaultHash: null })
 
-    await cleanupRemovedDefaults(db, wsId)
+    await cleanupRemovedDefaults(db)
 
     const model = await db.select().from(modelsTable).where(eq(modelsTable.id, retiredModelId)).get()
     expect(model?.deletedAt).toBeNull()
@@ -271,7 +267,7 @@ describe('cleanupRemovedDefaults', () => {
 
   test('no-op when retired row is absent', async () => {
     const db = getDb()
-    await cleanupRemovedDefaults(db, wsId)
+    await cleanupRemovedDefaults(db)
     const model = await db.select().from(modelsTable).where(eq(modelsTable.id, retiredModelId)).get()
     expect(model).toBeUndefined()
   })
@@ -280,34 +276,14 @@ describe('cleanupRemovedDefaults', () => {
     const db = getDb()
     await db.insert(modelsTable).values(buildRetiredModel())
 
-    await cleanupRemovedDefaults(db, wsId)
+    await cleanupRemovedDefaults(db)
     const after1 = await db.select().from(modelsTable).where(eq(modelsTable.id, retiredModelId)).get()
     const firstDeletedAt = after1?.deletedAt
     expect(firstDeletedAt).not.toBeNull()
 
-    await cleanupRemovedDefaults(db, wsId)
+    await cleanupRemovedDefaults(db)
     const after2 = await db.select().from(modelsTable).where(eq(modelsTable.id, retiredModelId)).get()
     expect(after2?.deletedAt).toBe(firstDeletedAt!)
-  })
-
-  test('does not touch rows in a different workspace (per-workspace uuid defaults)', async () => {
-    const db = getDb()
-    const otherWorkspaceId = '019eac99-0000-7000-8000-000000000001'
-    const otherWorkspaceModelId = '019eac99-0000-7000-8000-000000000002'
-    // Simulates a shared workspace's default — fresh uuid (not in defaultModels)
-    // but defaultHash matches the shipped definition (we just seeded it).
-    const shipped = defaultModels[0]
-    await db.insert(modelsTable).values({
-      ...shipped,
-      id: otherWorkspaceModelId,
-      workspaceId: otherWorkspaceId,
-      defaultHash: hashModel(shipped),
-    })
-
-    await cleanupRemovedDefaults(db, wsId)
-
-    const row = await db.select().from(modelsTable).where(eq(modelsTable.id, otherWorkspaceModelId)).get()
-    expect(row?.deletedAt).toBeNull()
   })
 })
 

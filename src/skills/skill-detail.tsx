@@ -15,7 +15,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ScopePicker, type ResourceScope } from '@/components/scope-picker'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -30,8 +29,6 @@ export const SkillDetail = ({
   description,
   instruction,
   enabled,
-  scope,
-  showScope,
   canEdit = true,
   canDelete = true,
   onToggleEnabled,
@@ -43,15 +40,9 @@ export const SkillDetail = ({
   description: string
   instruction: string
   enabled: boolean
-  /** Read-only display of the row's scope. Mounted only when `showScope` is true. */
-  scope?: ResourceScope
-  /** Whether to render the read-only scope picker (THU-603). Parent gates on
-   *  `useScopePickerEnabled` so the control disappears in personal workspaces
-   *  and on deployments that disabled the feature. */
-  showScope?: boolean
-  /** Defaults to true. Mirrors `add_skills`; gates the enable toggle + Edit menu item. */
+  /** Defaults to true; gates the enable toggle + Edit menu item. */
   canEdit?: boolean
-  /** Defaults to true. Mirrors the workspace `remove_skills` permission. */
+  /** Defaults to true; gates the Delete menu item. */
   canDelete?: boolean
   onToggleEnabled: (next: boolean) => void
   onEdit: () => void
@@ -163,8 +154,6 @@ export const SkillDetail = ({
           </div>
         </div>
       </header>
-
-      {showScope && scope && <ScopePicker id={`skill-scope-${name}`} value={scope} onChange={() => {}} readOnly />}
 
       <Accordion
         type="multiple"

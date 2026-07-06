@@ -15,13 +15,8 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { useAuth } from '@/contexts'
-import { useActiveWorkspaceMembership } from '@/hooks/use-active-workspace-membership'
 import { useAgentsSettingsHidden } from '@/hooks/use-agents-settings-hidden'
-import { stripWorkspacePrefix, useActiveWorkspace } from '@/lib/active-workspace'
-// `Lock` is paired with the temporarily-hidden Permissions entry below — keep
-// the import commented so re-enabling the menu is a one-spot uncomment.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ArrowLeft, Bot, Cpu, Plug, Server, SlidersHorizontal, Smartphone, Users, Zap } from 'lucide-react'
+import { ArrowLeft, Bot, Cpu, Plug, Server, SlidersHorizontal, Smartphone, Zap } from 'lucide-react'
 import { useLocation } from 'react-router'
 import { SidebarHeader } from './sidebar-header'
 
@@ -47,28 +42,7 @@ export const SettingsSidebarContent = ({
   // sessions and unauthenticated boots have nothing meaningful to manage there.
   const { data: session } = useAuth().useSession()
   const isLoggedIn = !!session?.user && session.user.isAnonymous !== true
-  const activeWorkspace = useActiveWorkspace()
-  // `isAdmin` is currently only used by the commented-out Permissions entry
-  // below — keep the call so re-enabling is a single comment-flip.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { isAdmin: _isAdmin } = useActiveWorkspaceMembership()
-  // Members is visible to every member of a shared workspace — the page is
-  // read-friendly without action permissions, and individual actions (invite /
-  // change role / remove) gate themselves on the granular permission keys.
-  // Always hidden in Personal Workspaces (Decision 25 — no members to manage).
-  // The General settings page is reachable only via the per-workspace gear in
-  // the workspace selector now, so this whole sidebar group collapses to just
-  // Members; on Personal Workspaces it has no items, so we hide it entirely.
-  const membersItemVisible = activeWorkspace?.isPersonal !== 1
-  const workspaceGroupVisible = membersItemVisible
-  // Permissions is implicitly admin-only — there is no configurable
-  // meta-permission for editing the permissions grid itself.
-  // Hidden for now (see commented JSX block below); kept here so re-enabling
-  // is a one-spot revert.
-  // const permissionsItemVisible = activeWorkspace?.isPersonal !== 1 && isAdmin && !e2eeEnabled
-  // `isActive` highlighting reads the sub-path so the same matching rules work
-  // for both personal (`/settings/...`) and shared (`/w/<id>/settings/...`) URLs.
-  const subPath = stripWorkspacePrefix(location.pathname)
+  const subPath = location.pathname
 
   return (
     <SidebarContent className="flex flex-col h-full">
@@ -185,46 +159,6 @@ export const SettingsSidebarContent = ({
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
-
-      {workspaceGroupVisible && (
-        <SidebarGroup>
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {membersItemVisible && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={() => onSettingsNavigate('/settings/workspace/members')}
-                    tooltip="Members"
-                    className="cursor-pointer"
-                    isActive={subPath === '/settings/workspace/members'}
-                  >
-                    <Users className="size-4" />
-                    <span>Members</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              {/* Permissions entry hidden — feature isn't ready for users yet.
-                  Underlying page + permissions DAL/handlers stay intact for the
-                  internal eng team via direct URL nav.
-              {permissionsItemVisible && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={() => onSettingsNavigate('/settings/workspace/permissions')}
-                    tooltip="Permissions"
-                    className="cursor-pointer"
-                    isActive={subPath === '/settings/workspace/permissions'}
-                  >
-                    <Lock className="size-4" />
-                    <span>Permissions</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              */}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      )}
 
       <div className="flex-1" />
 

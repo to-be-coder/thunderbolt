@@ -71,8 +71,6 @@ export const defaultSkillDailyBrief: Skill = {
   deletedAt: null,
   defaultHash: null,
   userId: null,
-  workspaceId: null,
-  scope: 'workspace',
 }
 
 export const defaultSkillImportantEmails: Skill = {
@@ -86,8 +84,6 @@ export const defaultSkillImportantEmails: Skill = {
   deletedAt: null,
   defaultHash: null,
   userId: null,
-  workspaceId: null,
-  scope: 'workspace',
 }
 
 export const defaultSkills: ReadonlyArray<Skill> = [defaultSkillDailyBrief, defaultSkillImportantEmails] as const

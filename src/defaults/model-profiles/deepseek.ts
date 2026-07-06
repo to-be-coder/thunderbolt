@@ -29,6 +29,4 @@ export const defaultModelProfileDeepseekV4Pro: ModelProfile = {
   deletedAt: null,
   defaultHash: null,
   userId: null,
-  workspaceId: null,
-  scope: 'workspace',
 }

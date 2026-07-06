@@ -6,7 +6,6 @@ import { createAuth } from '@/auth/auth'
 import { session as sessionTable, user } from '@/db/auth-schema'
 import { encryptionMetadataTable, envelopesTable } from '@/db/encryption-schema'
 import { chatThreadsTable, devicesTable, settingsTable, tasksTable } from '@/db/schema'
-import { workspacesTable } from '@/db/powersync-schema'
 import { hashCanarySecret } from '@/lib/canary'
 import { createTestDb } from '@/test-utils/db'
 import { createHmac } from 'crypto'
@@ -424,19 +423,15 @@ describe('Account API', () => {
         lastSeen: now,
         createdAt: now,
       })
-      const workspaceId = '00000000-0000-0000-0000-000000000000'
-      await db.insert(workspacesTable).values({ id: workspaceId, name: 'Test Workspace' })
       await db.insert(tasksTable).values({
         id: 'task-cascade-1',
         item: 'Task',
         userId,
-        workspaceId,
       })
       await db.insert(chatThreadsTable).values({
         id: 'thread-cascade-1',
         title: 'Thread',
         userId,
-        workspaceId,
       })
 
       const response = await app.handle(

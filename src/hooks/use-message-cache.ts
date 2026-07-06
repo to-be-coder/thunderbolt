@@ -4,7 +4,6 @@
 
 import { useDatabase } from '@/contexts'
 import { getMessage, updateMessageCache } from '@/dal/chat-messages'
-import { useActiveWorkspaceId } from '@/lib/active-workspace'
 import { useQuery } from '@tanstack/react-query'
 
 type UseMessageCacheOptions<T> = {
@@ -38,17 +37,13 @@ type UseMessageCacheOptions<T> = {
  */
 export const useMessageCache = <T>({ messageId, cacheKey, fetchFn, enabled = true }: UseMessageCacheOptions<T>) => {
   const db = useDatabase()
-  const workspaceId = useActiveWorkspaceId()
   const storageKey = cacheKey.join('/')
 
   return useQuery({
-    queryKey: ['messageCache', workspaceId, messageId, ...cacheKey],
+    queryKey: ['messageCache', messageId, ...cacheKey],
     queryFn: async () => {
-      if (!workspaceId) {
-        throw new Error('No active workspace')
-      }
       // 1. Check DB for cached data
-      const message = await getMessage(db, workspaceId, messageId)
+      const message = await getMessage(db, messageId)
 
       if (!message) {
         throw new Error(`Message ${messageId} not found`)
@@ -64,11 +59,11 @@ export const useMessageCache = <T>({ messageId, cacheKey, fetchFn, enabled = tru
 
       // 3. Not cached - fetch and update DB
       const fetched = await fetchFn()
-      await updateMessageCache(db, workspaceId, messageId, storageKey, fetched)
+      await updateMessageCache(db, messageId, storageKey, fetched)
 
       return fetched
     },
-    enabled: enabled && !!workspaceId,
+    enabled,
     staleTime: Infinity, // Once fetched, never refetch
     gcTime: Infinity, // Keep in cache forever
     retry: false, // Don't retry on failure

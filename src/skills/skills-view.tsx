@@ -10,8 +10,6 @@ import { useLocation, useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { SkillNameInvalidError, SkillNameTakenError } from '@/dal'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { useScopePickerEnabled } from '@/hooks/use-scope-picker-enabled'
-import { useWorkspacePermission } from '@/hooks/use-workspace-permission'
 import { useActiveUserId } from '@/stores/trust-domain-registry'
 import { DeleteSkillDialog } from './delete-skill-dialog'
 import { DependentsDialog } from './dependents-dialog'
@@ -31,7 +29,6 @@ export const SkillsView = () => {
   // component independent of `AuthProvider` so existing skills-view tests
   // that don't mount Better Auth still render.
   const currentUserId = useActiveUserId()
-  const scopePickerEnabled = useScopePickerEnabled()
   // Pinning is managed entirely from the chat composer; we only read
   // `pinnedSet` here to auto-unpin on disable (a disabled skill can't be
   // summoned from the chat pinned bar, so keeping its slot would waste
@@ -39,10 +36,6 @@ export const SkillsView = () => {
   const { pinnedSet, togglePin } = usePinnedSkills()
   const { isEnabled, setEnabled } = useEnabledSkills()
   const trackSkillEvent = useSkillTelemetry()
-  // Workspace `add_skills` / `remove_skills` — BE enforces; FE hides
-  // affordances so the user isn't presented with actions that round-trip-fail.
-  const { isAllowed: canAddSkills } = useWorkspacePermission('add_skills')
-  const { isAllowed: canRemoveSkills } = useWorkspacePermission('remove_skills')
 
   const [state, dispatch] = useReducer(skillsViewReducer, initialSkillsViewState)
   const {
@@ -198,15 +191,11 @@ export const SkillsView = () => {
   const handleSubmit = async (values: SkillFormValues) => {
     try {
       if (mode === 'create') {
-        // Stamp `userId` from the active session so a `scope: 'user'` row lands
-        // in the right per-user bucket on sync. For `scope: 'workspace'` rows
-        // userId is informational (any member can edit) but we still record it
-        // for attribution.
+        // `userId` is recorded for attribution.
         const created = await createSkill({
           name: values.name,
           description: values.description,
           instruction: values.instruction,
-          scope: values.scope,
           userId: currentUserId ?? null,
         })
         trackSkillEvent('skill_created', created.id, { instruction_length: values.instruction.length })
@@ -238,12 +227,10 @@ export const SkillsView = () => {
         Skills are reusable instruction templates you summon in chat with{' '}
         <code className="rounded-sm bg-secondary px-1 font-mono text-xs">/name</code>.
       </p>
-      {canAddSkills && (
-        <Button size="sm" onClick={() => dispatch({ type: 'START_CREATE' })}>
-          <Plus />
-          Create your first skill
-        </Button>
-      )}
+      <Button size="sm" onClick={() => dispatch({ type: 'START_CREATE' })}>
+        <Plus />
+        Create your first skill
+      </Button>
     </section>
   )
 
@@ -253,18 +240,13 @@ export const SkillsView = () => {
       // user clicks "Create it" for a different slug back-to-back.
       key={createInitialName ? `create:${createInitialName}` : 'create'}
       mode="create"
-      initialValues={
-        createInitialName
-          ? { name: createInitialName, description: '', instruction: '', scope: 'workspace' }
-          : undefined
-      }
+      initialValues={createInitialName ? { name: createInitialName, description: '', instruction: '' } : undefined}
       onCancel={() => requestLeave({ type: 'cancel' })}
       onSubmit={handleSubmit}
       onDirtyChange={(dirty) => dispatch({ type: 'SET_DIRTY', dirty })}
       onNameChange={() => dispatch({ type: 'CLEAR_NAME_ERROR' })}
       resetSignal={resetSignal}
       nameError={nameError}
-      showScopePicker={scopePickerEnabled}
     />
   )
 
@@ -279,10 +261,6 @@ export const SkillsView = () => {
         description={active.description}
         instruction={active.instruction}
         enabled={isEnabled(active.id)}
-        scope={active.scope ?? 'workspace'}
-        showScope={scopePickerEnabled}
-        canEdit={canAddSkills}
-        canDelete={canRemoveSkills}
         onToggleEnabled={(next) => handleToggleEnabled(active.id, next)}
         onEdit={() => onEdit(active.id)}
         onDelete={() => onDelete(active.id)}
@@ -296,7 +274,6 @@ export const SkillsView = () => {
           name: active.name,
           description: active.description,
           instruction: active.instruction,
-          scope: active.scope ?? 'workspace',
         }}
         onCancel={() => requestLeave({ type: 'cancel' })}
         onSubmit={handleSubmit}
@@ -304,9 +281,6 @@ export const SkillsView = () => {
         onNameChange={() => dispatch({ type: 'CLEAR_NAME_ERROR' })}
         resetSignal={resetSignal}
         nameError={nameError}
-        // Any member with `add_skills` permission can flip scope; the BE
-        // transfers ownership to the caller when scope becomes `'user'`.
-        showScopePicker={scopePickerEnabled && canAddSkills}
       />
     )
 
@@ -318,9 +292,6 @@ export const SkillsView = () => {
         // active skill, so it stays null there.
         activeSkillId={(mode === 'detail' || mode === 'edit') && active ? active.id : null}
         isEnabled={isEnabled}
-        canCreate={canAddSkills}
-        canEdit={canAddSkills}
-        canDelete={canRemoveSkills}
         onToggleEnabled={handleToggleEnabled}
         onCreate={() => {
           if ((mode === 'create' || mode === 'edit') && isDirty) {

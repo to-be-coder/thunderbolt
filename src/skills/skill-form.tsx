@@ -7,7 +7,6 @@ import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ScopePicker, type ResourceScope } from '@/components/scope-picker'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { validateSkillName } from '@/dal'
@@ -18,9 +17,6 @@ export type SkillFormValues = {
   name: string
   description: string
   instruction: string
-  /** Defaults to `'workspace'` when omitted. Edit mode preserves the row's
-   *  current scope (immutable on existing rows per the BE handler). */
-  scope: ResourceScope
 }
 
 /**
@@ -37,7 +33,6 @@ export const SkillForm = ({
   mode = 'create',
   initialValues,
   nameError,
-  showScopePicker = false,
 }: {
   onCancel: () => void
   onSubmit: (values: SkillFormValues) => void
@@ -51,9 +46,6 @@ export const SkillForm = ({
   initialValues?: SkillFormValues
   /** Inline name-uniqueness error from the DAL pre-check. */
   nameError?: string | null
-  /** Mount the per-row scope picker (THU-603). Production callers pass the
-   *  value of `useScopePickerEnabled()`; tests/stories default to `false`. */
-  showScopePicker?: boolean
 }) => {
   // Strip a leading `/` defensively — names are stored bare per the
   // AgentSkills spec, but legacy rows from before THU-534 landed may still
@@ -61,16 +53,10 @@ export const SkillForm = ({
   const initialName = (initialValues?.name ?? '').replace(/^\/+/, '')
   const initialDescription = initialValues?.description ?? ''
   const initialInstruction = initialValues?.instruction ?? ''
-  const initialScope: ResourceScope = initialValues?.scope ?? 'workspace'
 
   const [name, setName] = useState(initialName)
   const [description, setDescription] = useState(initialDescription)
   const [instruction, setInstruction] = useState(initialInstruction)
-  const [scope, setScope] = useState<ResourceScope>(initialScope)
-  // The parent decides when the picker is interactive — for edit mode it
-  // typically also requires the active user to be the row's author (the BE
-  // applies scope changes only when the caller owns the row).
-  const renderScopePicker = showScopePicker
 
   // Auto-focus the name input on mount for `create` mode — the user just
   // clicked "+", they're about to type a name. Edit mode skips this so we
@@ -102,21 +88,15 @@ export const SkillForm = ({
   // Compute dirty against a hypothetical next-state so each onChange handler
   // can report it before React has applied the setState. Avoids the
   // useEffect-notifying-parent anti-pattern.
-  const computeDirty = (next: { name: string; description: string; instruction: string; scope: ResourceScope }) =>
+  const computeDirty = (next: { name: string; description: string; instruction: string }) =>
     mode === 'edit'
-      ? next.name !== initialName ||
-        next.description !== initialDescription ||
-        next.instruction !== initialInstruction ||
-        next.scope !== initialScope
-      : next.name.length > 0 ||
-        next.description.length > 0 ||
-        next.instruction.length > 0 ||
-        next.scope !== initialScope
+      ? next.name !== initialName || next.description !== initialDescription || next.instruction !== initialInstruction
+      : next.name.length > 0 || next.description.length > 0 || next.instruction.length > 0
 
   const handleNameChange = (raw: string) => {
     const v = raw.replace(/^\/+/, '')
     setName(v)
-    onDirtyChange?.(computeDirty({ name: v, description, instruction, scope }))
+    onDirtyChange?.(computeDirty({ name: v, description, instruction }))
     // A "name already exists" error from the parent applies to the *previous*
     // value; clear it as soon as the user edits so they don't see a stale
     // message about a name they're no longer trying to submit.
@@ -124,15 +104,11 @@ export const SkillForm = ({
   }
   const handleDescriptionChange = (v: string) => {
     setDescription(v)
-    onDirtyChange?.(computeDirty({ name, description: v, instruction, scope }))
+    onDirtyChange?.(computeDirty({ name, description: v, instruction }))
   }
   const handleInstructionChange = (v: string) => {
     setInstruction(v)
-    onDirtyChange?.(computeDirty({ name, description, instruction: v, scope }))
-  }
-  const handleScopeChange = (next: ResourceScope) => {
-    setScope(next)
-    onDirtyChange?.(computeDirty({ name, description, instruction, scope: next }))
+    onDirtyChange?.(computeDirty({ name, description, instruction: v }))
   }
 
   const [prevResetSignal, setPrevResetSignal] = useState(resetSignal)
@@ -141,7 +117,6 @@ export const SkillForm = ({
     setName(initialName)
     setDescription(initialDescription)
     setInstruction(initialInstruction)
-    setScope(initialScope)
     // Parent already knows it triggered the reset; it sets its own isDirty
     // back to false in the same handler, so no notification needed here.
   }
@@ -154,7 +129,6 @@ export const SkillForm = ({
       name: name.trim(),
       description: description.trim(),
       instruction: instruction.trim(),
-      scope,
     })
   }
 
@@ -162,10 +136,6 @@ export const SkillForm = ({
     <section className="flex h-full flex-1 flex-col bg-background text-foreground">
       <div className="flex min-h-0 flex-1 flex-col gap-5 px-6 py-5">
         <h2 className="text-xl text-foreground">{mode === 'edit' ? 'Edit Skill' : 'Create Skill'}</h2>
-
-        {renderScopePicker && (
-          <ScopePicker id="skill-scope" value={scope} onChange={handleScopeChange} label="Visibility" />
-        )}
 
         <div className="flex flex-col gap-2">
           <label htmlFor="skill-name" className="text-base text-foreground">

@@ -28,8 +28,7 @@ export const SuggestionChip = ({
   /** Display label — the bare slug; the leading `/` is added at render time. */
   label: string
   dimmed: boolean
-  /** Defaults to true. Mirrors `add_skills`; when false the Reorder + Unpin
-   *  items are hidden because both round-trip through a PATCH the BE gates. */
+  /** Defaults to true; when false the Reorder + Unpin items are hidden. */
   canEdit?: boolean
   onClick: () => void
   onOpenChange?: (open: boolean) => void

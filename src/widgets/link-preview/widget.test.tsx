@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import '@/testing-library'
-import { resetTestDatabase, setupTestDatabase, teardownTestDatabase, wsId } from '@/dal/test-utils'
+import { resetTestDatabase, setupTestDatabase, teardownTestDatabase } from '@/dal/test-utils'
 import { ExternalLinkDialogProvider } from '@/components/chat/markdown-utils'
 import { ContentViewProvider } from '@/content-view/context'
 import { resetTestTrustDomain, seedTestTrustDomain } from '@/test-utils/powersync-reactivity-test'
@@ -23,7 +23,7 @@ afterAll(async () => {
   await teardownTestDatabase()
 })
 
-// `useMessageCache` (called by FetchLinkPreview) is gated on `useActiveWorkspaceId`.
+// `useMessageCache` (called by FetchLinkPreview) is gated on the active user.
 // Without a seeded trust domain the query is disabled, the widget skips the
 // loading branch, and skeleton assertions fail.
 beforeEach(async () => {
@@ -37,14 +37,10 @@ afterEach(() => {
 
 const renderWithProviders = (ui: ReactElement) => {
   const TestProvider = createTestProvider()
-  // MemoryRouter at a workspace-prefixed URL so `useActiveWorkspaceId` (consumed
-  // by `useMessageCache` inside the fallback path) resolves synchronously off
-  // the URL on the first render instead of waiting for the live workspace
-  // query to land.
   return render(ui, {
     wrapper: ({ children }) => (
       <TestProvider>
-        <MemoryRouter initialEntries={[`/w/${wsId}/chats/new`]}>
+        <MemoryRouter initialEntries={['/chats/new']}>
           <ContentViewProvider>
             <ExternalLinkDialogProvider>{children}</ExternalLinkDialogProvider>
           </ContentViewProvider>

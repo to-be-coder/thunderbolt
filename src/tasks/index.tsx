@@ -8,7 +8,6 @@ import { PageSearch } from '@/components/ui/page-search'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useDatabase } from '@/contexts'
-import { useActiveWorkspaceId } from '@/lib/active-workspace'
 import { createTask, deleteTask, getIncompleteTasks, getIncompleteTasksCount, updateTask } from '@/dal'
 import { trackEvent } from '@/lib/posthog'
 import { cn } from '@/lib/utils'
@@ -249,7 +248,6 @@ const NewTaskInput = ({ onAdd, onCancel }: NewTaskInputProps) => {
 // Main Tasks Page Component
 export default function TasksPage() {
   const db = useDatabase()
-  const workspaceId = useActiveWorkspaceId()
 
   // State
   const [isAddingNew, setIsAddingNew] = useState(false)
@@ -290,10 +288,9 @@ export default function TasksPage() {
     isLoading,
     isPlaceholderData,
   } = useQuery({
-    queryKey: ['tasks', workspaceId, debouncedSearchQuery],
-    query: toCompilableQuery(getIncompleteTasks(db, workspaceId ?? '', debouncedSearchQuery)),
+    queryKey: ['tasks', debouncedSearchQuery],
+    query: toCompilableQuery(getIncompleteTasks(db, debouncedSearchQuery)),
     placeholderData: (previousData) => previousData,
-    enabled: !!workspaceId,
   })
 
   // Reset optimistic order when tasks change significantly (render-time check)
@@ -314,21 +311,17 @@ export default function TasksPage() {
 
   // Count total tasks (query returns [{ count }])
   const { data: countResult } = useQuery({
-    queryKey: ['tasks', 'count', workspaceId],
-    query: toCompilableQuery(getIncompleteTasksCount(db, workspaceId ?? '')),
-    enabled: !!workspaceId,
+    queryKey: ['tasks', 'count'],
+    query: toCompilableQuery(getIncompleteTasksCount(db)),
   })
   const totalCount = countResult?.[0]?.count ?? 0
 
   // Mutations
   const addTaskMutation = useMutation({
     mutationFn: async (item: string) => {
-      if (!workspaceId) {
-        throw new Error('No active workspace')
-      }
       const order = tasks.length > 0 ? Math.min(...tasks.map((t) => t.order)) - 100 : 1000
 
-      await createTask(db, workspaceId, {
+      await createTask(db, {
         id: uuidv7(),
         item,
         order,
@@ -342,10 +335,7 @@ export default function TasksPage() {
 
   const updateTaskMutation = useMutation({
     mutationFn: async ({ id, item }: { id: string; item: string }) => {
-      if (!workspaceId) {
-        throw new Error('No active workspace')
-      }
-      await updateTask(db, workspaceId, id, { item })
+      await updateTask(db, id, { item })
     },
     onSuccess: (_, values) => {
       trackEvent('task_update_text', { task_id: values.id, new_length: values.item.length })
@@ -354,19 +344,13 @@ export default function TasksPage() {
 
   const deleteTaskMutation = useMutation({
     mutationFn: (id: string) => {
-      if (!workspaceId) {
-        throw new Error('No active workspace')
-      }
-      return deleteTask(db, workspaceId, id)
+      return deleteTask(db, id)
     },
   })
 
   const updateOrderMutation = useMutation({
     mutationFn: async (updates: { id: string; order: number }[]) => {
-      if (!workspaceId) {
-        throw new Error('No active workspace')
-      }
-      await Promise.all(updates.map(({ id, order }) => updateTask(db, workspaceId, id, { order })))
+      await Promise.all(updates.map(({ id, order }) => updateTask(db, id, { order })))
     },
     onSuccess: (_, updates) => {
       trackEvent('task_reorder', {
@@ -378,10 +362,7 @@ export default function TasksPage() {
 
   const completeTaskMutation = useMutation({
     mutationFn: async (id: string) => {
-      if (!workspaceId) {
-        throw new Error('No active workspace')
-      }
-      await updateTask(db, workspaceId, id, { isComplete: 1 })
+      await updateTask(db, id, { isComplete: 1 })
     },
     onSuccess: (_, id) => {
       trackEvent('task_mark_complete', { task_id: id })

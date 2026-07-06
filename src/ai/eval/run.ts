@@ -28,8 +28,7 @@ const main = async () => {
 
   // Set up a single shared database for all scenarios (read-only for evals)
   await setupTestDatabase()
-  // Seed the trust-domain registry so requireActiveWorkspaceId can resolve
-  // the personal workspace from the test DB (getActiveUserId() reads from here).
+  // Seed the trust-domain registry so getActiveUserId() resolves from the test DB.
   seedTestTrustDomain()
 
   // Suppress noisy console output from fetch.ts unless --verbose

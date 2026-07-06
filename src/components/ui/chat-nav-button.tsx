@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils'
 import { Slot } from '@radix-ui/react-slot'
 import { Ellipsis, Trash2 } from 'lucide-react'
 import { type HTMLAttributes } from 'react'
-import { useWorkspaceNavigate } from '@/lib/active-workspace'
+import { useNavigate } from 'react-router'
 
 type ChatNavButtonProps = HTMLAttributes<HTMLDivElement> & {
   chatTitle: string
@@ -29,7 +29,7 @@ type ChatNavButtonProps = HTMLAttributes<HTMLDivElement> & {
 
 export const ChatNavButton = ({ chatTitle, threadId, className, asChild = false, ...props }: ChatNavButtonProps) => {
   const Comp = asChild ? Slot : 'div'
-  const navigate = useWorkspaceNavigate()
+  const navigate = useNavigate()
 
   const handleButtonClick = () => {
     navigate(`/chats/${threadId}`)

@@ -4,44 +4,36 @@
 
 /**
  * Canonical list of legacy `thunderbolt-sync.db` tables to copy into the new
- * `server-<id>.db` during the Workspaces v1 upgrade. `needsWorkspaceId` adds
- * `workspace_id = personalWorkspaceId` to each row at insert time;
- * `needsScope` additionally stamps `scope = 'workspace'`.
- *
- * The new Workspaces v1 tables (`workspaces`, `workspace_memberships`,
- * `workspace_pending_memberships`, `workspace_permissions`) are NOT listed —
- * they don't exist in the legacy schema. The personal workspace itself is
- * created by `ensurePersonalWorkspace` before this migration runs.
+ * `server-<id>.db` during the pre-Workspaces upgrade. Rows are copied over the
+ * columns both schemas share — no synthetic columns are stamped.
  */
 export type LegacyTable = {
   readonly name: string
-  readonly needsWorkspaceId: boolean
-  readonly needsScope: boolean
 }
 
 export const syncedLegacyTables: readonly LegacyTable[] = [
-  { name: 'chat_threads', needsWorkspaceId: true, needsScope: false },
-  { name: 'chat_messages', needsWorkspaceId: true, needsScope: false },
-  { name: 'tasks', needsWorkspaceId: true, needsScope: false },
-  { name: 'models', needsWorkspaceId: true, needsScope: true },
-  { name: 'prompts', needsWorkspaceId: true, needsScope: true },
-  { name: 'skills', needsWorkspaceId: true, needsScope: true },
-  { name: 'triggers', needsWorkspaceId: true, needsScope: true },
-  { name: 'modes', needsWorkspaceId: true, needsScope: true },
-  { name: 'model_profiles', needsWorkspaceId: true, needsScope: true },
-  { name: 'agents', needsWorkspaceId: true, needsScope: true },
-  { name: 'settings', needsWorkspaceId: false, needsScope: false },
-  { name: 'devices', needsWorkspaceId: false, needsScope: false },
+  { name: 'chat_threads' },
+  { name: 'chat_messages' },
+  { name: 'tasks' },
+  { name: 'models' },
+  { name: 'prompts' },
+  { name: 'skills' },
+  { name: 'triggers' },
+  { name: 'modes' },
+  { name: 'model_profiles' },
+  { name: 'agents' },
+  { name: 'settings' },
+  { name: 'devices' },
 ]
 
 export const localLegacyTables: readonly LegacyTable[] = [
-  { name: 'mcp_servers', needsWorkspaceId: true, needsScope: false },
+  { name: 'mcp_servers' },
   // models_secrets is intentionally absent: its api_key value is folded into
   // models.api_key by the local-db-migration (THU-579 reverts THU-505).
-  { name: 'integrations_secrets', needsWorkspaceId: false, needsScope: false },
-  { name: 'mcp_secrets', needsWorkspaceId: false, needsScope: false },
-  { name: 'agents_secrets', needsWorkspaceId: false, needsScope: false },
-  { name: 'agents_system', needsWorkspaceId: false, needsScope: false },
+  { name: 'integrations_secrets' },
+  { name: 'mcp_secrets' },
+  { name: 'agents_secrets' },
+  { name: 'agents_system' },
 ]
 
 export const allLegacyTables: readonly LegacyTable[] = [...syncedLegacyTables, ...localLegacyTables]

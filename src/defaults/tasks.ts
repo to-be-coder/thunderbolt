@@ -26,7 +26,6 @@ export const defaultTaskConnectEmail: Task = {
   defaultHash: null,
   deletedAt: null,
   userId: null,
-  workspaceId: null,
 }
 
 export const defaultTaskSetPreferences: Task = {
@@ -37,7 +36,6 @@ export const defaultTaskSetPreferences: Task = {
   defaultHash: null,
   deletedAt: null,
   userId: null,
-  workspaceId: null,
 }
 
 export const defaultTaskExplorePro: Task = {
@@ -48,7 +46,6 @@ export const defaultTaskExplorePro: Task = {
   defaultHash: null,
   deletedAt: null,
   userId: null,
-  workspaceId: null,
 }
 
 /**

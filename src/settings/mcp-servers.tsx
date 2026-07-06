@@ -32,7 +32,6 @@ import {
 import type { McpServerCredentials } from '@/dal/mcp-secrets'
 import { useDatabase } from '@/contexts'
 import { mcpSecretsTable } from '@/db/tables'
-import { useActiveWorkspaceId } from '@/lib/active-workspace'
 import { useMCP, type MCPClient } from '@/lib/mcp-provider'
 import { type McpServer } from '@/types'
 import { useMutation } from '@tanstack/react-query'
@@ -189,7 +188,6 @@ export default function McpServersPage({ deps = {} }: { deps?: McpServersPageDep
   const classifyAuth = deps.classifyMcpServerAuth ?? classifyMcpServerAuth
   const db = useDatabase()
   const cloudUrl = useActiveCloudUrl() ?? ''
-  const workspaceId = useActiveWorkspaceId()
   // Read provider connection state read-only for status display. Sync ownership
   // lives in the single global useMcpSync() in AppContent — running it here too
   // would re-run the reconciliation effect and double-register servers.
@@ -224,7 +222,6 @@ export default function McpServersPage({ deps = {} }: { deps?: McpServersPageDep
     processCallback,
   } = useMcpServerOAuth({
     db,
-    workspaceId,
     buildOAuthFetch,
     reconnectServer,
     clearNavState: () => navigate('.', { replace: true, state: null }),
@@ -266,9 +263,8 @@ export default function McpServersPage({ deps = {} }: { deps?: McpServersPageDep
 
   // TODO: Add support for stdio servers
   const { data: servers = [] } = useQuery({
-    queryKey: ['mcp-servers', workspaceId],
-    query: toCompilableQuery(getRemoteMcpServers(db, workspaceId ?? '')),
-    enabled: !!workspaceId,
+    queryKey: ['mcp-servers'],
+    query: toCompilableQuery(getRemoteMcpServers(db)),
   })
 
   // Reactively track the STORED credential type per server so the card can apply
@@ -315,10 +311,7 @@ export default function McpServersPage({ deps = {} }: { deps?: McpServersPageDep
 
   const toggleServerMutation = useMutation({
     mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
-      if (!workspaceId) {
-        throw new Error('No active workspace')
-      }
-      await updateMcpServer(db, workspaceId, id, {
+      await updateMcpServer(db, id, {
         enabled: enabled ? 1 : 0,
         updatedAt: new Date().toISOString(),
       })
@@ -329,14 +322,10 @@ export default function McpServersPage({ deps = {} }: { deps?: McpServersPageDep
     // The id is minted by the caller (not here) so an Add & Authorize retry can't
     // mint a fresh id and orphan a duplicate row when the flow fails and rolls back.
     mutationFn: async ({ id, name, url }: { id: string; name: string; url: string }) => {
-      if (!workspaceId) {
-        throw new Error('No active workspace')
-      }
       // OAuth servers have no credential here — they authorize post-create and
       // reconnect separately (see the Add & Authorize handler).
       await createMcpServerWithCredentials(
         db,
-        workspaceId,
         { id, name, url, type: form.transport, enabled: 1 },
         form.token ? { type: 'bearer', token: form.token } : undefined,
       )
@@ -345,12 +334,8 @@ export default function McpServersPage({ deps = {} }: { deps?: McpServersPageDep
 
   const importServersMutation = useMutation({
     mutationFn: async (parsed: ParsedMcpServer[]): Promise<void> => {
-      if (!workspaceId) {
-        throw new Error('No active workspace')
-      }
       await createMcpServersWithCredentials(
         db,
-        workspaceId,
         parsed.map((server) => ({
           server: {
             id: uuidv7(),
@@ -367,10 +352,7 @@ export default function McpServersPage({ deps = {} }: { deps?: McpServersPageDep
 
   const deleteServerMutation = useMutation({
     mutationFn: (id: string) => {
-      if (!workspaceId) {
-        throw new Error('No active workspace')
-      }
-      return deleteMcpServer(db, workspaceId, id)
+      return deleteMcpServer(db, id)
     },
     onSuccess: () => {
       setDeleteConfirmOpen(null)

@@ -20,18 +20,27 @@ export type UserScopedConfig = {
   denyColumns?: readonly string[]
   /** When true, DELETE ops are permanently rejected. */
   denyDelete?: boolean
+  /**
+   * Column name (in PowerSync upload's snake_case form) used by the table for
+   * soft-delete tombstones. When set, a DELETE op writes this column to `now()`
+   * instead of hard-deleting the row (backend prefers soft deletes; the FE DAL
+   * soft-deletes these tables via PATCH anyway, so raw DELETEs only arrive from
+   * stale or misbehaving clients).
+   */
+  softDeleteColumn?: string
 }
 
 /**
  * Builds an `UploadHandler` for a table whose rows are owned by a single user
- * (the row's `user_id` column always equals the authenticated user). Covers
- * every pre-workspace synced table; the workspace tables get their own handlers.
- *
- * Behavior matches the pre-factory `applyOperation` so this commit is a pure
- * refactor for the existing tables. Workspace-id scoping is layered in commit 3.
+ * (the row's `user_id` column always equals the authenticated user). Every
+ * synced table except `settings`/`devices` (which have bespoke configs) routes
+ * through this factory. The ownership pin — `user_id = ctx.userId` on PUT and
+ * `WHERE user_id = ctx.userId` on PATCH/DELETE — is the per-op, per-table,
+ * tx-scoped authorization choke point; later per-user grant checks slot into
+ * `validate` here.
  */
 export const createUserScopedHandler = (cfg: UserScopedConfig): UploadHandler => {
-  const { tableName, denyColumns = [], denyDelete = false } = cfg
+  const { tableName, denyColumns = [], denyDelete = false, softDeleteColumn } = cfg
 
   return {
     validate: async (op) => {
@@ -108,6 +117,18 @@ export const createUserScopedHandler = (cfg: UserScopedConfig): UploadHandler =>
           return
         }
         case 'DELETE': {
+          if (softDeleteColumn) {
+            const tombstoned = await tx
+              .update(table)
+              .set({ [dbNameToKey[softDeleteColumn] ?? softDeleteColumn]: new Date() } as never)
+              .where(and(eq(pkColumn, op.id), eq(tableWithUserId.userId, ctx.userId)))
+              .returning()
+
+            if (tombstoned.length === 0) {
+              throw new UploadRejection('permanent', 'ROW_NOT_FOUND')
+            }
+            return
+          }
           const deleted = await tx
             .delete(table)
             .where(and(eq(pkColumn, op.id), eq(tableWithUserId.userId, ctx.userId)))

@@ -5,14 +5,7 @@
 import type { Settings } from '@/config/settings'
 import { createBetterAuthPlugin } from '@/auth/elysia-plugin'
 import { session as sessionTable, user as userTable } from '@/db/auth-schema'
-import {
-  devicesTable,
-  modelsTable,
-  promptsTable,
-  settingsTable,
-  workspaceMembershipsTable,
-  workspacesTable,
-} from '@/db/schema'
+import { devicesTable, modelsTable, promptsTable, settingsTable } from '@/db/schema'
 import { createTestDb } from '@/test-utils/db'
 import { createHmac } from 'crypto'
 import { eq } from 'drizzle-orm'
@@ -33,9 +26,6 @@ const signToken = (token: string): string => {
 
 const powersyncSettings: Settings = {
   serverId: 'd70c9c16-8665-4eb8-afb3-0d9f0214e4f8',
-  allowWorkspaceCreationByAnon: false,
-  allowWorkspaceCreationByMembers: false,
-  allowUserScopedResources: true,
   fireworksApiKey: '',
   mistralApiKey: '',
   anthropicApiKey: '',
@@ -1601,26 +1591,12 @@ describe('PowerSync API', () => {
         userId,
       })
       await insertTrustedDevice(testDeviceId, userId)
-      // Workspace + membership required by migration 0020 FK + workspace-scoped handler.
-      await db.insert(workspacesTable).values({
-        id: '00000000-0000-0000-0000-000000000000',
-        name: 'test-workspace',
-        isPersonal: false,
-        ownerUserId: userId,
-      })
-      await db.insert(workspaceMembershipsTable).values({
-        id: 'membership-patch-deleted-at',
-        workspaceId: '00000000-0000-0000-0000-000000000000',
-        userId,
-        role: 'admin',
-      })
       await db.insert(promptsTable).values({
         id: 'prompt-to-soft-delete',
         title: 'My Prompt',
         prompt: 'Hello',
         modelId: 'gpt-4',
         userId,
-        workspaceId: '00000000-0000-0000-0000-000000000000',
       })
 
       const deletedAtIso = '2026-02-18T16:41:12.428Z'

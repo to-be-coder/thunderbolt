@@ -104,7 +104,6 @@ export type CreateChatInstanceDeps = {
  */
 export const createAgentRoutingFetch = (
   id: string,
-  workspaceId: string,
   saveMessages: SaveMessagesFunction,
   httpClient: HttpClient,
   getProxyFetch: () => FetchFn,
@@ -130,7 +129,7 @@ export const createAgentRoutingFetch = (
       return []
     }
     const instructionBySlug = new Map<string, string>()
-    for (const skill of await getAllSkills(getDb(), workspaceId)) {
+    for (const skill of await getAllSkills(getDb())) {
       if (skill.enabled === 1 && skill.name && skill.instruction) {
         instructionBySlug.set(skill.name, skill.instruction)
       }
@@ -175,7 +174,7 @@ export const createAgentRoutingFetch = (
         if (!chatThread) {
           return
         }
-        await updateChatThread(getDb(), workspaceId, chatThread.id, { acpSessionId: newSessionId })
+        await updateChatThread(getDb(), chatThread.id, { acpSessionId: newSessionId })
       }
 
       // Surface `connecting` only when routing to a different agent than this
@@ -231,14 +230,13 @@ export const createAgentRoutingFetch = (
 
 export const createChatInstance = (
   id: string,
-  workspaceId: string,
   messages: ThunderboltUIMessage[],
   saveMessages: SaveMessagesFunction,
   httpClient: HttpClient,
   getProxyFetch: () => FetchFn,
   deps: CreateChatInstanceDeps = {},
 ) => {
-  const customFetch = createAgentRoutingFetch(id, workspaceId, saveMessages, httpClient, getProxyFetch, deps)
+  const customFetch = createAgentRoutingFetch(id, saveMessages, httpClient, getProxyFetch, deps)
 
   let retryCount = 0
   let retryTimeout: ReturnType<typeof setTimeout> | null = null

@@ -39,7 +39,7 @@ describe('encryptionMiddleware', () => {
         name: '__enc:iv1:ct1',
         description: '__enc:iv2:ct2',
         instruction: '__enc:iv3:ct3',
-        workspace_id: 'ws-1',
+        pinned_order: '3',
       })
 
       const result = await encryptionMiddleware.transform(makeBucket(entry))
@@ -48,7 +48,7 @@ describe('encryptionMiddleware', () => {
       expect(row.name).toBe('decrypted(__enc:iv1:ct1)')
       expect(row.description).toBe('decrypted(__enc:iv2:ct2)')
       expect(row.instruction).toBe('decrypted(__enc:iv3:ct3)')
-      expect(row.workspace_id).toBe('ws-1')
+      expect(row.pinned_order).toBe('3')
     })
 
     it('decrypts __enc: values on a known table', async () => {

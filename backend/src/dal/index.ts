@@ -22,34 +22,6 @@ export { getActiveSessionByToken, linkSessionToDevice, revokeDeviceSessions } fr
 // Waitlist
 export { getWaitlistByEmail, createWaitlistEntry, approveWaitlistEntry } from './waitlist'
 
-// Workspaces
-export {
-  promotePendingMemberships,
-  countWorkspaceAdmins,
-  countWorkspaceMemberships,
-  deleteMembership,
-  deletePendingMembership,
-  deleteWorkspacePermission,
-  getMembershipById,
-  getPendingMembershipById,
-  getWorkspaceById,
-  getWorkspacePermissionById,
-  insertPersonalWorkspaceIfMissing,
-  isAdminOfAnyWorkspace,
-  isPersonalWorkspace,
-  isWorkspaceAdmin,
-  isWorkspaceMember,
-  syncMembershipDisplayInfo,
-  updateMembership,
-  updatePendingMembership,
-  updateWorkspace,
-  updateWorkspacePermission,
-  upsertMembership,
-  upsertPendingMembership,
-  upsertWorkspace,
-  upsertWorkspacePermission,
-} from './workspaces'
-
 // OTP Challenge (session binding)
 export {
   getOrCreateOtpChallenge,

@@ -151,8 +151,6 @@ const errorMessage = (error: unknown, fallback: string): string => (error instan
  *  real implementations and are overridable in tests. */
 export type UseMcpServerOAuthOptions = {
   db: AnyDrizzleDatabase
-  /** Active workspace id — used to scope the rollback delete on Add & Authorize failure. */
-  workspaceId: string | null | undefined
   /** Builds the proxy-routed fetch used for OAuth discovery/exchange. */
   buildOAuthFetch: () => FetchFn
   reconnectServer: (serverId: string) => Promise<unknown>
@@ -195,7 +193,6 @@ const initialState: OAuthStateShape = { cards: {}, dialogError: null, isAddAutho
 export const useMcpServerOAuth = (options: UseMcpServerOAuthOptions): UseMcpServerOAuthResult => {
   const {
     db,
-    workspaceId,
     buildOAuthFetch,
     reconnectServer,
     clearNavState,
@@ -274,12 +271,10 @@ export const useMcpServerOAuth = (options: UseMcpServerOAuthOptions): UseMcpServ
       return true
     } catch (error) {
       console.error('Failed to start MCP OAuth flow:', error)
-      if (workspaceId) {
-        try {
-          await deleteMcpServer(db, workspaceId, serverId)
-        } catch (rollbackError) {
-          console.error('Failed to roll back MCP server after authorization error:', rollbackError)
-        }
+      try {
+        await deleteMcpServer(db, serverId)
+      } catch (rollbackError) {
+        console.error('Failed to roll back MCP server after authorization error:', rollbackError)
       }
       dispatch({
         type: 'set-dialog-error',

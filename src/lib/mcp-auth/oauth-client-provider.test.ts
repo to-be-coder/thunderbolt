@@ -6,7 +6,7 @@ import type { OAuthClientInformationFull } from '@modelcontextprotocol/sdk/share
 import { getMcpServerCredentials, setMcpServerCredentials } from '@/dal/mcp-secrets'
 import { getDb } from '@/db/database'
 import { resetTestDatabase, setupTestDatabase, teardownTestDatabase } from '@/dal/test-utils'
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { createMcpOAuthClientProvider } from './oauth-client-provider'
 import { setMcpOAuthState } from './mcp-oauth-state'
 
@@ -32,6 +32,12 @@ afterAll(async () => {
 describe('McpOAuthClientProvider', () => {
   beforeEach(async () => {
     await resetTestDatabase()
+    localStorage.clear()
+  })
+
+  // bun shares localStorage across test files in one process — clear after the
+  // last test too so a persisted handshake can't leak into later files.
+  afterEach(() => {
     localStorage.clear()
   })
 

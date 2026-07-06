@@ -5,7 +5,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { createElement, type ReactNode } from 'react'
 import { BrowserRouter } from 'react-router'
-import { afterEach, afterAll, beforeAll, describe, expect, it } from 'bun:test'
+import { afterEach, afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { setupTestDatabase, teardownTestDatabase } from '@/dal/test-utils'
 import { clearMcpOAuthState, setMcpOAuthState } from '@/lib/mcp-auth/mcp-oauth-state'
 import { clearOAuthState, setOAuthState, type ReturnContext } from '@/lib/oauth-state'
@@ -26,8 +26,14 @@ afterAll(async () => {
   await teardownTestDatabase()
 })
 
-// Both OAuth flow slots live in localStorage; clear them between tests so a
-// nonce set by one routing test can't leak into another.
+// Both OAuth flow slots live in localStorage; clear them around every test so
+// a nonce set by one routing test — or leaked by an earlier test FILE (bun
+// shares localStorage across files in one process) — can't skew routing here.
+beforeEach(() => {
+  clearMcpOAuthState()
+  clearOAuthState()
+})
+
 afterEach(() => {
   clearMcpOAuthState()
   clearOAuthState()

@@ -36,11 +36,11 @@ export const SkillsList = ({
   skills: Skill[]
   activeSkillId: string | null
   isEnabled: (id: string) => boolean
-  /** Defaults to true. Mirrors the workspace `add_skills` permission. */
+  /** Defaults to true; gates the create affordance. */
   canCreate?: boolean
-  /** Defaults to true. Mirrors `add_skills`; gates row toggles + Edit menu items. */
+  /** Defaults to true; gates row toggles + Edit menu items. */
   canEdit?: boolean
-  /** Defaults to true. Mirrors the workspace `remove_skills` permission. */
+  /** Defaults to true; gates the delete affordance. */
   canDelete?: boolean
   onToggleEnabled: (id: string, next: boolean) => void
   onCreate: () => void

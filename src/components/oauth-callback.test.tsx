@@ -59,6 +59,9 @@ describe('OAuthCallback routing', () => {
 
   afterEach(() => {
     Object.defineProperty(window, 'location', { value: originalLocation, writable: true, configurable: true })
+    // bun shares localStorage across test files in one process — without this,
+    // the last test's MCP handshake leaks into later files' routing tests.
+    localStorage.clear()
   })
 
   it('claims a description-only error callback for the pending MCP handshake', async () => {

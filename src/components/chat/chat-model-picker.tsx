@@ -5,8 +5,7 @@
 import { useChatStore, useCurrentChatSession } from '@/chats/chat-store'
 import { ModelSelector } from '@/components/ui/model-selector'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { useWorkspacePermission as useWorkspacePermission_default } from '@/hooks/use-workspace-permission'
-import { useWorkspaceNavigate } from '@/lib/active-workspace'
+import { useNavigate } from 'react-router'
 
 /**
  * Model picker for the chat composer. Renders to the immediate right of the
@@ -18,23 +17,12 @@ import { useWorkspaceNavigate } from '@/lib/active-workspace'
  * ModeSelector sitting beside it, and mirrors its open direction (down on
  * desktop, up on mobile) so the two dropdowns stay consistent.
  */
-type ChatModelPickerProps = {
-  /** Test seam — defaults to the real hook. Pages exercise this via tests
-   *  that inject a fake to assert the gated-affordance is hidden. */
-  useWorkspacePermission?: typeof useWorkspacePermission_default
-}
-
-export const ChatModelPicker = ({
-  useWorkspacePermission = useWorkspacePermission_default,
-}: ChatModelPickerProps = {}) => {
+export const ChatModelPicker = () => {
   const models = useChatStore((state) => state.models)
   const setSelectedModel = useChatStore((state) => state.setSelectedModel)
-  const navigate = useWorkspaceNavigate()
+  const navigate = useNavigate()
   const { isMobile } = useIsMobile()
   const { id: chatThreadId, selectedAgent, selectedModel, chatThread } = useCurrentChatSession()
-  // Suppress the "Add Models" footer when the user can't add — they'd land on
-  // a settings page where the affordance is also hidden.
-  const { isAllowed: canAddModels } = useWorkspacePermission('add_models')
 
   if (selectedAgent.type !== 'built-in' || models.length === 0) {
     return null
@@ -51,7 +39,7 @@ export const ChatModelPicker = ({
       selectedModel={selectedModel ?? null}
       chatThread={chatThread ?? null}
       onModelChange={handleModelChange}
-      onAddModels={canAddModels ? () => navigate('/settings/models') : undefined}
+      onAddModels={() => navigate('/settings/models')}
       side={isMobile ? 'top' : 'bottom'}
       align="start"
     />

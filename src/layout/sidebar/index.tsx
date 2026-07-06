@@ -7,7 +7,6 @@ import type { DeleteChatDialogRef } from '@/components/delete-chat-dialog'
 import { Sidebar as SidebarRoot, useSidebar } from '@/components/ui/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useDatabase } from '@/contexts'
-import { stripWorkspacePrefix, useActiveWorkspaceId, useWorkspaceNavigate } from '@/lib/active-workspace'
 import { deleteAllChatThreads, deleteChatThread, getAllChatThreads, updateChatThread } from '@/dal'
 import { useDebounce } from '@/hooks/use-debounce'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -16,7 +15,7 @@ import { trackEvent } from '@/lib/posthog'
 import { useMutation } from '@tanstack/react-query'
 import { useQuery } from '@powersync/tanstack-react-query'
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation, useParams } from 'react-router'
+import { useLocation, useNavigate, useParams } from 'react-router'
 import { ChatSidebarContent } from './chat-sidebar'
 import { SettingsSidebarContent } from './settings-sidebar'
 import { toCompilableQuery } from '@powersync/drizzle-driver'
@@ -26,8 +25,7 @@ import { toCompilableQuery } from '@powersync/drizzle-driver'
  */
 export default function Sidebar() {
   const db = useDatabase()
-  const workspaceId = useActiveWorkspaceId()
-  const navigate = useWorkspaceNavigate()
+  const navigate = useNavigate()
   const location = useLocation()
   const { setOpenMobile, state, toggleSidebar } = useSidebar()
   const { isMobile } = useIsMobile()
@@ -39,9 +37,8 @@ export default function Sidebar() {
   const { chatThreadId: currentChatThreadId } = useParams()
 
   // Simple route check: any /settings/* sub-path triggers the settings sidebar
-  // variant on mobile. Strip the `/w/<id>` prefix first so the check works for
-  // both personal (`/settings/...`) and shared (`/w/<id>/settings/...`) URLs.
-  const isSettingsRoute = stripWorkspacePrefix(location.pathname).startsWith('/settings')
+  // variant on mobile.
+  const isSettingsRoute = location.pathname.startsWith('/settings')
 
   // Only use collapsed icon view on desktop, not mobile
   const isCollapsed = !isMobile && state === 'collapsed'
@@ -56,9 +53,8 @@ export default function Sidebar() {
   })
 
   // Remember the last chat path so the back-arrow in the settings sidebar can
-  // restore it. Recorded in its prefixed form (`/chats/...` or `/w/<id>/chats/...`)
-  // so `useWorkspaceNavigate` won't double-prefix when we navigate back.
-  if (stripWorkspacePrefix(location.pathname).startsWith('/chats/')) {
+  // restore it.
+  if (location.pathname.startsWith('/chats/')) {
     lastChatPathRef.current = location.pathname
   }
 
@@ -71,10 +67,9 @@ export default function Sidebar() {
   }, [showSearch, isCollapsed])
 
   const { data, isPending } = useQuery({
-    queryKey: ['chatThreads', workspaceId],
-    query: toCompilableQuery(getAllChatThreads(db, workspaceId ?? '')),
+    queryKey: ['chatThreads'],
+    query: toCompilableQuery(getAllChatThreads(db)),
     placeholderData: (previousData) => previousData,
-    enabled: !!workspaceId,
   })
 
   const chatThreads = useMemo(() => {
@@ -87,10 +82,7 @@ export default function Sidebar() {
 
   const deleteChatMutation = useMutation({
     mutationFn: async ({ id }: { id: string }) => {
-      if (!workspaceId) {
-        throw new Error('No active workspace')
-      }
-      await deleteChatThread(db, workspaceId, id)
+      await deleteChatThread(db, id)
     },
     onSuccess: async () => {
       const deletedChatId = threadIdRef.current
@@ -106,10 +98,7 @@ export default function Sidebar() {
 
   const renameChatMutation = useMutation({
     mutationFn: async ({ id, title }: { id: string; title: string }) => {
-      if (!workspaceId) {
-        throw new Error('No active workspace')
-      }
-      await updateChatThread(db, workspaceId, id, { title })
+      await updateChatThread(db, id, { title })
     },
   })
 
@@ -123,10 +112,7 @@ export default function Sidebar() {
 
   const deleteAllChatsMutation = useMutation({
     mutationFn: async () => {
-      if (!workspaceId) {
-        throw new Error('No active workspace')
-      }
-      await deleteAllChatThreads(db, workspaceId)
+      await deleteAllChatThreads(db)
     },
     onSuccess: async () => {
       trackEvent('chat_clear_all')

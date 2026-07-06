@@ -49,10 +49,10 @@ if (pgliteDataDir) {
 }
 
 // `uuid_ossp` is bundled with PGlite as an opt-in contrib extension but isn't
-// auto-loaded — the workspaces foundation migration uses `uuid_generate_v5`
-// for deterministic personal-workspace ids and would otherwise fail with
-// `extension "uuid-ossp" is not available`. The bun-test path (test-utils/
-// db.ts) registers the same extension; this keeps prod / e2e parity.
+// auto-loaded — historical migrations 0021/0022 use `uuid_generate_v5` and
+// would otherwise fail on fresh DBs with `extension "uuid-ossp" is not
+// available`. The bun-test path (test-utils/db.ts) registers the same
+// extension; this keeps prod / e2e parity.
 const pgliteOptions = { extensions: { uuid_ossp } } as const
 const pgliteClient = isPglite
   ? pgliteDataDir

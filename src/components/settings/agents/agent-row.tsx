@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { Card, CardHeader } from '@/components/ui/card'
-import { ScopeBadge } from '@/components/scope-badge'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -35,47 +34,27 @@ const badgeForAgent = (agent: Agent): string => {
 }
 
 /** Predicate for the delete action's visibility. Built-in and system agents
- *  are managed externally and must not be removable from the UI. For custom
- *  agents the rule depends on the row's scope:
- *  - `scope='user'`: owner-only (the BE rejects non-owner PATCH/DELETE).
- *  - `scope='workspace'`: any member with `remove_agents` permission.
+ *  are managed externally and must not be removable from the UI; any signed-in
+ *  user may remove their own custom agents.
  *
  *  Exported for unit testing without rendering the full row tree.
  */
-export const canDeleteAgent = (
-  agent: Agent,
-  currentUserId: string | null,
-  canRemoveAgents: boolean = true,
-): boolean => {
+export const canDeleteAgent = (agent: Agent, currentUserId: string | null): boolean => {
   if (agent.type === 'built-in') {
     return false
   }
   if (agent.isSystem === 1) {
     return false
   }
-  if (!currentUserId) {
-    return false
-  }
-  if (!canRemoveAgents) {
-    return false
-  }
-  if (agent.scope === 'user') {
-    return agent.userId === currentUserId
-  }
-  return true
+  return Boolean(currentUserId)
 }
 
 /** Predicate for the edit action's visibility. Mirrors `canDeleteAgent`:
  *  built-in is in-code, system agents are managed via env vars, and customs
- *  follow the scope rule (owner-only for `scope='user'`, any add-permitted
- *  member for `scope='workspace'`).
- *
- *  `canEditAgents` reflects the workspace `add_agents` permission — when
- *  false, no row's Edit affordance is shown regardless of ownership. Defaults
- *  to true so existing callers keep working.
+ *  are editable by their (sole) user.
  */
-export const canEditAgent = (agent: Agent, currentUserId: string | null, canEditAgents: boolean = true): boolean =>
-  canDeleteAgent(agent, currentUserId, canEditAgents)
+export const canEditAgent = (agent: Agent, currentUserId: string | null): boolean =>
+  canDeleteAgent(agent, currentUserId)
 
 /** Computes the toggle's disabled state and the corresponding "always available"
  *  tooltip text. Built-in is an in-code constant; system agents are configured
@@ -94,37 +73,17 @@ export const agentToggleDisabled = (agent: Agent): { disabled: boolean; disabled
 type AgentRowProps = {
   agent: Agent
   currentUserId: string | null
-  /** Defaults to true. Mirrors the workspace `add_agents` permission — also
-   *  used for the enable/disable toggle since toggling is a PATCH the BE
-   *  gates on `add_agents`. */
-  canEditAgents?: boolean
-  /** Defaults to true. Mirrors the workspace `remove_agents` permission. */
-  canRemoveAgents?: boolean
-  /** When true, the scope badge (Private / Shared) shows on `remote-acp` rows.
-   *  Resolved once at the page level via `useScopePickerEnabled()` and threaded
-   *  down — keeps the row purely visual + provider-free for tests. */
-  scopePickerEnabled?: boolean
   onToggle: (agent: Agent, enabled: boolean) => void
   onEdit: (agent: Agent) => void
   onDelete: (agent: Agent) => void
 }
 
-export const AgentRow = ({
-  agent,
-  currentUserId,
-  canEditAgents = true,
-  canRemoveAgents = true,
-  scopePickerEnabled = false,
-  onToggle,
-  onEdit,
-  onDelete,
-}: AgentRowProps) => {
+export const AgentRow = ({ agent, currentUserId, onToggle, onEdit, onDelete }: AgentRowProps) => {
   const Icon = iconForAgent(agent)
   const badge = badgeForAgent(agent)
-  const showEdit = canEditAgent(agent, currentUserId, canEditAgents)
-  const showDelete = canDeleteAgent(agent, currentUserId, canRemoveAgents)
+  const showEdit = canEditAgent(agent, currentUserId)
+  const showDelete = canDeleteAgent(agent, currentUserId)
   const { disabled: toggleDisabled, disabledTooltip } = agentToggleDisabled(agent)
-  const finalToggleDisabled = toggleDisabled || !canEditAgents
   const isEnabled = agent.enabled === 1
   const [deleteOpen, setDeleteOpen] = useState(false)
 
@@ -152,9 +111,6 @@ export const AgentRow = ({
               {agent.description && (
                 <p className="text-[length:var(--font-size-sm)] text-muted-foreground truncate">{agent.description}</p>
               )}
-              {agent.type === 'remote-acp' && (
-                <ScopeBadge scope={agent.scope} show={scopePickerEnabled} className="mt-1" />
-              )}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -164,7 +120,7 @@ export const AgentRow = ({
                   <Switch
                     data-testid={`agent-toggle-${agent.id}`}
                     checked={isEnabled}
-                    disabled={finalToggleDisabled}
+                    disabled={toggleDisabled}
                     onCheckedChange={(checked) => onToggle(agent, checked)}
                   />
                 </div>

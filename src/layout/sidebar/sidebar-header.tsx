@@ -11,10 +11,10 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { PowerSyncStatus } from '@/components/powersync-status'
+import { AppLogo } from '@/components/app-logo'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { PanelLeft } from 'lucide-react'
 import { useState } from 'react'
-import { WorkspaceSelector } from './workspace-selector'
 
 type SidebarHeaderProps = {
   onToggle: () => void
@@ -49,7 +49,12 @@ export const SidebarHeader = ({ onToggle }: SidebarHeaderProps) => {
             </SidebarGroupContent>
           </SidebarGroup>
         ) : (
-          <WorkspaceSelector collapsed={!isExpanded} />
+          <div className="flex items-center gap-2 px-2 min-w-0">
+            <AppLogo size={20} />
+            {isExpanded && (
+              <span className="truncate font-medium text-[length:var(--font-size-body)]">Thunderbolt</span>
+            )}
+          </div>
         )}
       </div>
       {isExpanded && (

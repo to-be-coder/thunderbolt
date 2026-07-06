@@ -137,9 +137,9 @@ export const useWaitlistState = ({ authClient, onVerified }: UseWaitlistStateOpt
       await onSignInSuccess(isNewUser, wasAnonymous)
       analytics.onPromotionSuccess(result.data.user.id)
 
-      // Post-auth pipeline: connect sync + resolve personal workspace + reconcile.
-      // Idempotent + deduped, so the `SessionToWorkspaceBootstrap` observer firing
-      // in parallel won't double-run.
+      // Post-auth pipeline: connect sync + reconcile defaults. Idempotent +
+      // deduped, so the auth-context session bootstrap observer firing in
+      // parallel won't double-run.
       try {
         await runPostAuthBootstrap({
           kind: 'server',

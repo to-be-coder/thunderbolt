@@ -6,7 +6,6 @@ import { type ReactNode } from 'react'
 import { Link } from 'react-router'
 
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
-import { useWorkspaceUrl } from '@/lib/active-workspace'
 
 /**
  * Hover-shows / hover-stays card anchored to a slash token in the chat
@@ -42,7 +41,6 @@ const openDelayMs = 120
 const closeDelayMs = 180
 
 export const SkillTokenPopover = ({ trigger, message, actionLabel, state }: SkillTokenPopoverProps) => {
-  const skillsUrl = useWorkspaceUrl('/settings/skills')
   return (
     <HoverCard openDelay={openDelayMs} closeDelay={closeDelayMs}>
       <HoverCardTrigger asChild>
@@ -57,7 +55,7 @@ export const SkillTokenPopover = ({ trigger, message, actionLabel, state }: Skil
         className="flex w-auto max-w-xs flex-col gap-2 p-3 text-[length:var(--font-size-sm)]"
       >
         <p className="text-foreground">{message}</p>
-        <Link to={skillsUrl} state={state} className="underline underline-offset-2 hover:text-foreground">
+        <Link to="/settings/skills" state={state} className="underline underline-offset-2 hover:text-foreground">
           {actionLabel}
         </Link>
       </HoverCardContent>

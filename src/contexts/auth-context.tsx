@@ -162,7 +162,7 @@ export const AuthProvider = ({ children, cloudUrl, authClient: overrideClient }:
   return (
     <AuthContext.Provider value={value}>
       <SessionToRegistryMirror />
-      <SessionToWorkspaceBootstrap />
+      <SessionBootstrap />
       {children}
     </AuthContext.Provider>
   )
@@ -201,8 +201,8 @@ const SessionToRegistryMirror = () => {
 }
 
 /**
- * Fires the post-auth bootstrap pipeline (connect sync → await personal
- * workspace → reconcile defaults) on the leading edge of a non-null session.
+ * Fires the post-auth bootstrap pipeline (connect sync → migrate → reconcile
+ * defaults) on the leading edge of a non-null session.
  *
  * Sign-in handlers (OTP form, waitlist OTP, magic-link verify) also invoke
  * `runPostAuthBootstrap` explicitly so their UI only finishes once the app is
@@ -211,7 +211,7 @@ const SessionToRegistryMirror = () => {
  * sign-in (post-v1). The function is in-flight-deduped so concurrent triggers
  * share a single run.
  */
-const SessionToWorkspaceBootstrap = () => {
+const SessionBootstrap = () => {
   const authClient = useAuth()
   const { data: session } = authClient.useSession()
   const userId = session?.user?.id
@@ -234,7 +234,7 @@ const SessionToWorkspaceBootstrap = () => {
     }
     lastBootstrappedForRef.current = userId
     void runPostAuthBootstrap({ kind: 'server', userId, isAnonymous }).catch((error) => {
-      console.error('SessionToWorkspaceBootstrap failed:', error)
+      console.error('SessionBootstrap failed:', error)
       lastBootstrappedForRef.current = null
       setBootstrapError(error instanceof Error ? error : new Error(String(error)))
     })

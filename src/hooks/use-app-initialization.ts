@@ -144,8 +144,8 @@ const executeInitializationSteps = async (httpClient?: HttpClient): Promise<Hand
     trackError(error, { initialization_step: 'trust_domain' })
     return { success: false, error }
   }
-  // Standalone end-to-end is deferred post-v1 (addendum §1 + §6): the DB lifecycle, the
-  // local-user surface, and the first-run workspace creation paths aren't wired yet.
+  // Standalone end-to-end is deferred post-v1 (addendum §1 + §6): the DB lifecycle and the
+  // local-user surface aren't wired yet.
   // The flag and the resolver branch ship now so the mode picker (PR 5) can exercise the
   // plumbing in dev — but we refuse the boot until the downstream wiring lands rather than
   // let it silently degrade into scattered no-auth / no-encryption failures.
@@ -247,7 +247,7 @@ const executeInitializationSteps = async (httpClient?: HttpClient): Promise<Hand
     }
   }
 
-  // Sync, personal-workspace resolution, default reconciliation, and data
+  // Sync, default reconciliation, and data
   // migrations are post-auth concerns — they require either an authenticated
   // session (server modes) or a local user id (standalone, post-v1). Running
   // them here would crash for users sitting at the waitlist / login screen.

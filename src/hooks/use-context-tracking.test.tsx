@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { createChatThread, createModel, getModel, updateChatThread } from '@/dal'
-import { resetTestDatabase, setupTestDatabase, teardownTestDatabase, wsId } from '@/dal/test-utils'
+import { resetTestDatabase, setupTestDatabase, teardownTestDatabase } from '@/dal/test-utils'
 import { getDb } from '@/db/database'
 import {
   renderWithReactivity,
@@ -72,7 +72,7 @@ describe('useContextTracking reactivity', () => {
     const modelId = uuidv7()
     const threadId = uuidv7()
 
-    await createModel(db, wsId, {
+    await createModel(db, {
       id: modelId,
       provider: 'openai',
       name: 'Test Model',
@@ -82,14 +82,13 @@ describe('useContextTracking reactivity', () => {
       contextWindow: 128000,
     })
 
-    const model = await getModel(db, wsId, modelId)
+    const model = await getModel(db, modelId)
     if (!model) {
       throw new Error('Model not found')
     }
 
     await createChatThread(
       db,
-      wsId,
       { id: threadId, title: 'Test', contextSize: null, triggeredBy: null, wasTriggeredByAutomation: 0 },
       model,
     )
@@ -106,7 +105,7 @@ describe('useContextTracking reactivity', () => {
       await getClock().runAllAsync()
     })
 
-    await updateChatThread(db, wsId, threadId, { contextSize: 500 })
+    await updateChatThread(db, threadId, { contextSize: 500 })
     triggerChange(['chat_threads'])
 
     await act(async () => {
@@ -126,7 +125,7 @@ describe('useContextTracking reactivity', () => {
     const threadId = uuidv7()
 
     // Tiny model: 100-token window. Easy to overflow with skill instructions.
-    await createModel(db, wsId, {
+    await createModel(db, {
       id: modelId,
       provider: 'openai',
       name: 'Tiny Model',
@@ -135,7 +134,7 @@ describe('useContextTracking reactivity', () => {
       enabled: 1,
       contextWindow: 100,
     })
-    const model = await getModel(db, wsId, modelId)
+    const model = await getModel(db, modelId)
     if (!model) {
       throw new Error('Model not found')
     }
@@ -143,7 +142,6 @@ describe('useContextTracking reactivity', () => {
     // 60 tokens already used in the thread.
     await createChatThread(
       db,
-      wsId,
       { id: threadId, title: 'Test', contextSize: 60, triggeredBy: null, wasTriggeredByAutomation: 0 },
       model,
     )
@@ -165,7 +163,7 @@ describe('useContextTracking reactivity', () => {
     const db = getDb()
     const modelId = uuidv7()
     const threadId = uuidv7()
-    await createModel(db, wsId, {
+    await createModel(db, {
       id: modelId,
       provider: 'openai',
       name: 'Big Model',
@@ -174,13 +172,12 @@ describe('useContextTracking reactivity', () => {
       enabled: 1,
       contextWindow: 100_000,
     })
-    const model = await getModel(db, wsId, modelId)
+    const model = await getModel(db, modelId)
     if (!model) {
       throw new Error('Model not found')
     }
     await createChatThread(
       db,
-      wsId,
       { id: threadId, title: 'Test', contextSize: 200, triggeredBy: null, wasTriggeredByAutomation: 0 },
       model,
     )

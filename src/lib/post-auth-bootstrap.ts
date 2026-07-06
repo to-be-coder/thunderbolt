@@ -2,7 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { ensurePersonalWorkspace } from '@/dal'
 import { getCurrentDatabase } from '@/db/database'
 import type { AnyDrizzleDatabase } from '@/db/database-interface'
 import { runDataMigrations } from '@/lib/data-migrations'
@@ -11,7 +10,7 @@ import { trackError, trackEvent } from '@/lib/posthog'
 import { reconcileDefaults } from '@/lib/reconcile-defaults'
 import { findLegacyDbFilename, runLocalDbMigration } from '@/migrations/pre-workspaces-attach'
 import { getActiveTrustDomain } from '@/stores/trust-domain-registry'
-import { computePersonalWorkspaceId } from '@shared/workspaces'
+import { create } from 'zustand'
 
 /**
  * Trigger context for the post-auth bootstrap. Either the user's id and
@@ -23,28 +22,39 @@ export type BootstrapContext =
 
 /**
  * Module-level inflight promise. Concurrent callers — e.g. an OTP submit handler
- * awaiting the bootstrap while the `SessionToWorkspaceBootstrap` observer also
- * fires on the same session change — share a single run instead of double-syncing,
- * double-reconciling, and racing for the active workspace store.
+ * awaiting the bootstrap while the `SessionBootstrap` observer also fires on the
+ * same session change — share a single run instead of double-syncing,
+ * double-reconciling, and double-migrating.
  */
 let inflight: Promise<void> | null = null
 
+type BootstrapReadinessStore = {
+  bootstrapped: boolean
+}
+
+/**
+ * Bootstrap-readiness barrier. Flips to `true` at the end of a successful
+ * `runPostAuthBootstrap` run; the router's `BootstrapGate` holds the main-app
+ * routes behind a loading screen until then, so DAL reads/writes never fire
+ * against a database the pre-Workspaces migration and default reconciliation
+ * haven't finished preparing.
+ */
+export const useBootstrapReadiness = create<BootstrapReadinessStore>()(() => ({ bootstrapped: false }))
+
 /**
  * Post-auth pipeline. Once authentication (real or anonymous) is established,
- * this resolves-or-creates the personal workspace locally, populates the
- * active workspace store, reconciles default rows, and runs idempotent data
- * migrations.
+ * this runs the pre-Workspaces local DB migration, reconciles default rows,
+ * runs idempotent data migrations, and flips the bootstrap-readiness flag the
+ * router gates on.
  *
  * Idempotent: safe to call multiple times. Subsequent calls during an in-flight
- * run return the same promise; calls after a completed run resolve the existing
- * local workspace (cheap) and re-reconcile defaults (no-op via defaultHash).
+ * run return the same promise; calls after a completed run re-reconcile
+ * defaults (no-op via defaultHash).
  *
  * Branches:
  *  - standalone (post-v1) → throws `NOT_IMPLEMENTED` for v1. The standalone
  *    branch lands in a separate ticket; v1 production never reaches it.
- *  - real or anonymous user → FE-creates the personal workspace locally with a
- *    deterministic id (shared/workspaces.ts) so concurrent multi-device first
- *    sign-ins upsert the same row instead of racing.
+ *  - real or anonymous user → runs the pipeline against the local DB.
  *
  * The caller is expected to ensure the database is initialized and the trust
  * domain is set — both are guaranteed by `useAppInitialization` having completed.
@@ -76,34 +86,22 @@ const runBootstrapInternal = async (ctx: BootstrapContext): Promise<void> => {
   }
 
   // Pre-Workspaces v1 data migration — step 3. ATTACH the legacy
-  // `thunderbolt-sync.db` onto the new `server-<id>.db` and copy rows into the
-  // workspace_id-stamped schema.
+  // `thunderbolt-sync.db` onto the new `server-<id>.db` and copy rows across.
   //
-  // ORDER IS LOAD-BEARING: this runs BEFORE `ensurePersonalWorkspace` because
-  // `<WorkspaceGate>` lives-queries the personal workspace row's existence as
-  // the bootstrap-complete signal. If we inserted the workspace row first,
-  // routes would render against an empty DB before the migration backfilled
-  // it — chat URLs would `navigate('/not-found')` from `use-hydrate-chat-store`
-  // and `OnboardingDialog` would fire on the default `user_has_completed_onboarding=false`.
-  // The FE schema has no FK from data tables → workspaces, so stamping rows
-  // with a workspace_id whose row doesn't exist yet is fine; `ensurePersonalWorkspace`
-  // below inserts it before any consumer looks for the workspace itself.
-  //
-  // BE-side state is already correct for the migration cohort: 0020 created
-  // the workspace + admin membership for every existing user at deploy time,
-  // so PowerSync's FIFO upload of the data rows (queued before the workspace
-  // row) passes `isWorkspaceMember` regardless of upload order.
+  // ORDER IS LOAD-BEARING: this runs before the readiness flag flips because
+  // `BootstrapGate` holds the routes until bootstrap completes. If routes
+  // rendered against an empty DB before the migration backfilled it, chat URLs
+  // would `navigate('/not-found')` from `use-hydrate-chat-store` and
+  // `OnboardingDialog` would fire on the default
+  // `user_has_completed_onboarding=false`.
   //
   // Server-only — the standalone branch threw above.
-  const personalWorkspaceId = computePersonalWorkspaceId(ctx.userId)
-
   if (trustDomain.kind === 'server') {
     try {
       const legacyDb = await findLegacyDbFilename()
       const dbMigration = await runLocalDbMigration({
         newDb: db,
         serverId: trustDomain.serverId,
-        personalWorkspaceId,
         legacyDb,
       })
       if (dbMigration.ranMigration) {
@@ -126,31 +124,21 @@ const runBootstrapInternal = async (ctx: BootstrapContext): Promise<void> => {
     }
   }
 
-  // Personal workspace is FE-created with a deterministic id (shared/workspaces.ts).
-  // Multi-device safety comes from the deterministic id: every device computes
-  // the same id, so concurrent uploads are upserts rather than racing for a
-  // partial-unique-index slot. Anonymous users follow the same path (post-v1) —
-  // anon never syncs, so the local workspace is the only one.
-  //
-  // No store update: the workspace row's existence in the local DB IS the
-  // readiness signal — `<WorkspaceGate>` lives-queries it, DAL inserts derive
-  // the active workspace id from URL or personal-lookup.
-  const workspace = await ensurePersonalWorkspace(db, ctx.userId)
-
-  await reconcileDefaults(db, workspace.id)
+  await reconcileDefaults(db)
 
   // Data migrations sit AFTER reconcileDefaults so any newly-seeded defaults
   // (e.g. the daily-brief skill) are present when a migration checks for slug
   // collisions. The runner swallows per-migration failures so it never throws.
-  await runDataMigrations(db, workspace.id)
+  await runDataMigrations(db)
+
+  useBootstrapReadiness.setState({ bootstrapped: true })
 }
 
 /**
- * Resets the inflight bootstrap so the next sign-in / sign-up triggers a fresh
- * run. The workspace-readiness signal (presence of the personal workspace row)
- * is reset by the DB wipe that sign-out / account-deletion / device-revocation
- * paths already perform — no separate state to clear here.
+ * Resets the inflight bootstrap and the readiness flag so the next sign-in /
+ * sign-up triggers a fresh run and the router re-gates until it completes.
  */
 export const resetPostAuthBootstrap = (): void => {
   inflight = null
+  useBootstrapReadiness.setState({ bootstrapped: false })
 }

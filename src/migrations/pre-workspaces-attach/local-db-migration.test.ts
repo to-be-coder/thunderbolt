@@ -5,7 +5,6 @@
 import { getDb } from '@/db/database'
 import { resetTestDatabase, setupTestDatabase, teardownTestDatabase } from '@/dal/test-utils'
 import {
-  agentsTable,
   chatMessagesTable,
   chatThreadsTable,
   mcpServersTable,
@@ -13,8 +12,8 @@ import {
   settingsTable,
   tasksTable,
 } from '@/db/tables'
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'bun:test'
-import { and, eq, sql } from 'drizzle-orm'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { eq, sql } from 'drizzle-orm'
 import type { LegacyBackend, LegacyReader } from './legacy-reader'
 import { runLocalDbMigration } from './local-db-migration'
 import {
@@ -27,7 +26,6 @@ import {
 
 const serverId = '00000000-0000-0000-0000-000000000aaa'
 const otherServerId = '00000000-0000-0000-0000-000000000bbb'
-const personalWorkspaceId = '00000000-0000-0000-0000-000000000ccc'
 
 /**
  * In-memory stand-in for the production `LegacyReader`. The production reader
@@ -118,6 +116,13 @@ describe('runLocalDbMigration', () => {
     await teardownTestDatabase()
   })
 
+  // Clear in beforeEach too: bun shares localStorage across test files in one
+  // process, and an earlier file's fire-and-forget `runPostAuthBootstrap` can
+  // leak completion flags that would short-circuit the migration under test.
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
   afterEach(async () => {
     localStorage.clear()
     await resetTestDatabase()
@@ -127,7 +132,6 @@ describe('runLocalDbMigration', () => {
     const result = await runLocalDbMigration({
       newDb: getDb(),
       serverId,
-      personalWorkspaceId,
       legacyDb: null,
     })
 
@@ -142,7 +146,6 @@ describe('runLocalDbMigration', () => {
     const result = await runLocalDbMigration({
       newDb: getDb(),
       serverId,
-      personalWorkspaceId,
       legacyDb: legacyDbHandle,
       openReader: openReaderFor(fullLegacySeed()),
     })
@@ -152,11 +155,10 @@ describe('runLocalDbMigration', () => {
     expect(threads).toHaveLength(0)
   })
 
-  it('copies rows from each legacy table and stamps workspace_id on the new schema', async () => {
+  it('copies rows from each legacy table into the new schema', async () => {
     const result = await runLocalDbMigration({
       newDb: getDb(),
       serverId,
-      personalWorkspaceId,
       legacyDb: legacyDbHandle,
       openReader: openReaderFor(fullLegacySeed()),
     })
@@ -173,49 +175,25 @@ describe('runLocalDbMigration', () => {
 
     const db = getDb()
     const threads = await db.select().from(chatThreadsTable).where(eq(chatThreadsTable.id, 't1'))
-    expect(threads[0]?.workspaceId).toBe(personalWorkspaceId)
     expect(threads[0]?.userId).toBe('user-A')
 
     const messages = await db.select().from(chatMessagesTable).where(eq(chatMessagesTable.id, 'm1'))
-    expect(messages[0]?.workspaceId).toBe(personalWorkspaceId)
     expect(messages[0]?.chatThreadId).toBe('t1')
 
     const tasks = await db.select().from(tasksTable).where(eq(tasksTable.id, 'task1'))
-    expect(tasks[0]?.workspaceId).toBe(personalWorkspaceId)
     expect(tasks[0]?.item).toBe('Buy milk')
 
     const mcp = await db.select().from(mcpServersTable).where(eq(mcpServersTable.id, 'mcp1'))
-    expect(mcp[0]?.workspaceId).toBe(personalWorkspaceId)
     expect(mcp[0]?.name).toBe('GitHub MCP')
 
     // THU-579: api_key now lives on models, copied from legacy.models_secrets.
     const model = await db.select().from(modelsTable).where(eq(modelsTable.id, 'mdl1'))
     expect(model[0]?.apiKey).toBe('sk-legacy')
 
-    // Settings is not workspace-scoped — workspaceId column doesn't exist on it.
     const settingsRow = await db.select().from(settingsTable).where(eq(settingsTable.key, 'theme'))
     expect(settingsRow[0]?.value).toBe('dark')
 
     expect(localStorage.getItem(`pre_workspaces_attach_completed__${serverId}`)).toBe('1')
-  })
-
-  it('stamps scope=workspace on scope-aware tables (models / agents)', async () => {
-    await runLocalDbMigration({
-      newDb: getDb(),
-      serverId,
-      personalWorkspaceId,
-      legacyDb: legacyDbHandle,
-      openReader: openReaderFor(fullLegacySeed()),
-    })
-
-    const db = getDb()
-    const model = await db.select().from(modelsTable).where(eq(modelsTable.id, 'mdl1'))
-    expect(model[0]?.scope).toBe('workspace')
-    expect(model[0]?.workspaceId).toBe(personalWorkspaceId)
-
-    const agent = await db.select().from(agentsTable).where(eq(agentsTable.id, 'ag1'))
-    expect(agent[0]?.scope).toBe('workspace')
-    expect(agent[0]?.workspaceId).toBe(personalWorkspaceId)
   })
 
   it('preserves existing rows in the new DB on PK conflict (sync-already-pulled-them-down case)', async () => {
@@ -224,14 +202,12 @@ describe('runLocalDbMigration', () => {
     await db.insert(chatThreadsTable).values({
       id: 't1',
       title: 'SYNCED-from-BE',
-      workspaceId: 'ws-from-sync',
       userId: 'user-A',
     })
 
     const result = await runLocalDbMigration({
       newDb: db,
       serverId,
-      personalWorkspaceId,
       legacyDb: legacyDbHandle,
       openReader: openReaderFor(fullLegacySeed()),
     })
@@ -240,7 +216,6 @@ describe('runLocalDbMigration', () => {
     expect(result.rowsInsertedByTable['chat_threads']).toBe(1)
     const t1 = await db.select().from(chatThreadsTable).where(eq(chatThreadsTable.id, 't1'))
     expect(t1[0]?.title).toBe('SYNCED-from-BE')
-    expect(t1[0]?.workspaceId).toBe('ws-from-sync')
   })
 
   it('skips tables that do not exist in the legacy DB without erroring', async () => {
@@ -256,7 +231,6 @@ describe('runLocalDbMigration', () => {
     const result = await runLocalDbMigration({
       newDb: getDb(),
       serverId,
-      personalWorkspaceId,
       legacyDb: legacyDbHandle,
       openReader: openReaderFor(sparseSeed),
     })
@@ -268,12 +242,11 @@ describe('runLocalDbMigration', () => {
     expect(result.modelApiKeysCopied).toBe(0)
   })
 
-  it('does not overwrite a pre-existing models.api_key from a sync download (cross-workspace)', async () => {
-    // Sync brought the same model down from BE before the migration ran — it
-    // already has an api_key. INSERT OR IGNORE on `models` skips the legacy
-    // row, so workspace_id stays whatever sync set. The api-key UPDATE filters
-    // on `workspace_id = personalWorkspaceId`, so a row living in a DIFFERENT
-    // workspace must not be touched.
+  it('does not overwrite an api_key already set on the new build', async () => {
+    // Re-run / partial-migration scenario: the row already has an api_key
+    // (user pasted it in on the new build before migration ran; or a previous
+    // migration pass left a sync-pulled value). Legacy holds a different
+    // value — migration must NOT clobber.
     const db = getDb()
     await db.insert(modelsTable).values({
       id: 'mdl1',
@@ -281,38 +254,6 @@ describe('runLocalDbMigration', () => {
       name: 'GPT-4',
       model: 'gpt-4',
       enabled: 1,
-      workspaceId: 'ws-from-sync',
-      apiKey: 'sk-from-sync',
-    })
-
-    await runLocalDbMigration({
-      newDb: db,
-      serverId,
-      personalWorkspaceId,
-      legacyDb: legacyDbHandle,
-      openReader: openReaderFor(fullLegacySeed()),
-    })
-
-    const fromSync = await db
-      .select()
-      .from(modelsTable)
-      .where(and(eq(modelsTable.id, 'mdl1'), eq(modelsTable.workspaceId, 'ws-from-sync')))
-    expect(fromSync[0]?.apiKey).toBe('sk-from-sync')
-  })
-
-  it('does not overwrite a same-workspace api_key already set on the new build', async () => {
-    // Re-run / partial-migration scenario: the personal-workspace row already
-    // has an api_key (user pasted it in on the new build before migration ran;
-    // or a previous migration pass left a sync-pulled value). Legacy holds a
-    // different value — migration must NOT clobber.
-    const db = getDb()
-    await db.insert(modelsTable).values({
-      id: 'mdl1',
-      provider: 'openai',
-      name: 'GPT-4',
-      model: 'gpt-4',
-      enabled: 1,
-      workspaceId: personalWorkspaceId,
       apiKey: 'sk-already-set',
     })
 
@@ -325,16 +266,12 @@ describe('runLocalDbMigration', () => {
     const result = await runLocalDbMigration({
       newDb: db,
       serverId,
-      personalWorkspaceId,
       legacyDb: legacyDbHandle,
       openReader: openReaderFor(seed),
     })
 
     expect(result.modelApiKeysCopied).toBe(0)
-    const model = await db
-      .select()
-      .from(modelsTable)
-      .where(and(eq(modelsTable.id, 'mdl1'), eq(modelsTable.workspaceId, personalWorkspaceId)))
+    const model = await db.select().from(modelsTable).where(eq(modelsTable.id, 'mdl1'))
     expect(model[0]?.apiKey).toBe('sk-already-set')
   })
 
@@ -352,7 +289,6 @@ describe('runLocalDbMigration', () => {
     const result = await runLocalDbMigration({
       newDb: getDb(),
       serverId,
-      personalWorkspaceId,
       legacyDb: legacyDbHandle,
       openReader: openReaderFor(seed),
     })
@@ -367,7 +303,6 @@ describe('runLocalDbMigration', () => {
     await runLocalDbMigration({
       newDb: getDb(),
       serverId,
-      personalWorkspaceId,
       legacyDb: legacyDbHandle,
       openReader: openReaderFor(fullLegacySeed()),
     })
@@ -376,13 +311,12 @@ describe('runLocalDbMigration', () => {
 
     // Sign-in on server B (same device): the per-server flag is unset, BUT the
     // device-global flag is set. The migration MUST short-circuit so user A's
-    // local rows don't bleed into user B's workspace, and must still mark the
+    // local rows don't bleed into user B's account, and must still mark the
     // per-server `completed` flag so the dedicated path is satisfied for B too.
     let openedAnything = false
     const result = await runLocalDbMigration({
       newDb: getDb(),
       serverId: otherServerId,
-      personalWorkspaceId,
       legacyDb: legacyDbHandle,
       openReader: async () => {
         openedAnything = true
@@ -402,7 +336,6 @@ describe('runLocalDbMigration', () => {
     await runLocalDbMigration({
       newDb: getDb(),
       serverId,
-      personalWorkspaceId,
       legacyDb: legacyDbHandle,
       openReader: openReaderFor(fullLegacySeed()),
     })
@@ -417,7 +350,6 @@ describe('runLocalDbMigration', () => {
     await runLocalDbMigration({
       newDb: getDb(),
       serverId,
-      personalWorkspaceId,
       legacyDb: null,
     })
     expect(isGlobalCompletionFlagSet()).toBe(true)
@@ -446,7 +378,6 @@ describe('runLocalDbMigration', () => {
     const result = await runLocalDbMigration({
       newDb: db,
       serverId,
-      personalWorkspaceId,
       legacyDb: legacyDbHandle,
       openReader: openReaderFor(seed),
     })
@@ -465,7 +396,6 @@ describe('runLocalDbMigration', () => {
     const result = await runLocalDbMigration({
       newDb: getDb(),
       serverId,
-      personalWorkspaceId,
       legacyDb: legacyDbHandle,
       openReader: openReaderFor(fullLegacySeed()),
     })
@@ -495,7 +425,6 @@ describe('runLocalDbMigration', () => {
     const result = await runLocalDbMigration({
       newDb: db,
       serverId,
-      personalWorkspaceId,
       legacyDb: legacyDbHandle,
       openReader: openReaderFor(seed),
     })
@@ -518,7 +447,6 @@ describe('runLocalDbMigration', () => {
     await runLocalDbMigration({
       newDb: getDb(),
       serverId,
-      personalWorkspaceId,
       legacyDb: legacyDbHandle,
       openReader: async () => {
         opened = makeFakeReader(fullLegacySeed())
@@ -554,7 +482,6 @@ describe('runLocalDbMigration', () => {
       runLocalDbMigration({
         newDb: getDb(),
         serverId,
-        personalWorkspaceId,
         legacyDb: legacyDbHandle,
         openReader: openReaderFor(seed),
       }),
@@ -595,7 +522,6 @@ describe('runLocalDbMigration', () => {
       runLocalDbMigration({
         newDb: db,
         serverId,
-        personalWorkspaceId,
         legacyDb: legacyDbHandle,
         openReader: async () => erroringReader,
       }),
@@ -613,7 +539,7 @@ describe('runLocalDbMigration', () => {
     // Boot 1 on server A: data copy + ps_crud replacement succeed, api-key
     // stamp throws. The global flag must land alongside the data flag — if it
     // only landed after the api-key stamp, signing into server B at this point
-    // would re-import the device-global legacy file into B's workspace.
+    // would re-import the device-global legacy file into B's account.
     const db = getDb()
     await db.run(sql.raw(`CREATE TABLE ps_crud (id INTEGER PRIMARY KEY, tx_id INTEGER, data TEXT)`))
     await db.run(sql.raw(`CREATE TABLE ps_tx (id INTEGER PRIMARY KEY, next_tx INTEGER)`))
@@ -636,7 +562,6 @@ describe('runLocalDbMigration', () => {
       runLocalDbMigration({
         newDb: db,
         serverId,
-        personalWorkspaceId,
         legacyDb: legacyDbHandle,
         openReader: async () => erroringReader,
       }),
@@ -651,7 +576,6 @@ describe('runLocalDbMigration', () => {
     const result = await runLocalDbMigration({
       newDb: getDb(),
       serverId: otherServerId,
-      personalWorkspaceId,
       legacyDb: legacyDbHandle,
       openReader: async () => {
         openedAnything = true
@@ -677,7 +601,6 @@ describe('runLocalDbMigration', () => {
       name: 'GPT-4',
       model: 'gpt-4',
       enabled: 1,
-      workspaceId: personalWorkspaceId,
     })
 
     setDataCompletionFlag(serverId)
@@ -686,7 +609,6 @@ describe('runLocalDbMigration', () => {
     const result = await runLocalDbMigration({
       newDb: db,
       serverId,
-      personalWorkspaceId,
       legacyDb: legacyDbHandle,
       openReader: openReaderFor(fullLegacySeed()),
     })
@@ -710,7 +632,7 @@ describe('runLocalDbMigration', () => {
     await db.run(sql.raw(`CREATE TABLE ps_tx (id INTEGER PRIMARY KEY, next_tx INTEGER)`))
     await db.run(sql.raw(`INSERT INTO ps_tx (id, next_tx) VALUES (1, 0)`))
     await db.run(sql.raw(`INSERT INTO ps_crud (id, tx_id, data) VALUES (42, 10, '{"interim":"user-write"}')`))
-    // Seed a personal-workspace model row so the api-key stamp has somewhere
+    // Seed a model row so the api-key stamp has somewhere
     // to land — the data-copy step is skipped this run.
     await db.insert(modelsTable).values({
       id: 'mdl1',
@@ -718,7 +640,6 @@ describe('runLocalDbMigration', () => {
       name: 'GPT-4',
       model: 'gpt-4',
       enabled: 1,
-      workspaceId: personalWorkspaceId,
     })
 
     setDataCompletionFlag(serverId)
@@ -732,7 +653,6 @@ describe('runLocalDbMigration', () => {
     const result = await runLocalDbMigration({
       newDb: db,
       serverId,
-      personalWorkspaceId,
       legacyDb: legacyDbHandle,
       openReader: openReaderFor(seed),
     })
@@ -745,7 +665,7 @@ describe('runLocalDbMigration', () => {
     const remaining = (await db.all(sql.raw(`SELECT id FROM ps_crud ORDER BY id`))) as readonly unknown[]
     expect(remaining).toHaveLength(1)
     // The api-key stamp still runs — independently idempotent — and lands on
-    // the seeded personal-workspace row.
+    // the seeded row.
     expect(result.modelApiKeysCopied).toBe(1)
     const model = await db.select().from(modelsTable).where(eq(modelsTable.id, 'mdl1'))
     expect(model[0]?.apiKey).toBe('sk-legacy')
@@ -775,7 +695,6 @@ describe('runLocalDbMigration', () => {
       runLocalDbMigration({
         newDb: getDb(),
         serverId,
-        personalWorkspaceId,
         legacyDb: legacyDbHandle,
         openReader: async () => erroringReader,
       }),

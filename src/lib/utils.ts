@@ -51,7 +51,6 @@ export const convertUIMessageToDbChatMessage = (
     metadata: metadata ?? null,
     deletedAt: null,
     userId: null,
-    workspaceId: null,
   }
 }
 

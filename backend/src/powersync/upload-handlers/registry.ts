@@ -5,24 +5,21 @@
 import type { db as DbType } from '@/db/client'
 import { type PowerSyncTableName } from '@shared/powersync-tables'
 import { createUserScopedHandler } from './user-scoped'
-import { createWorkspaceScopedHandler } from './workspace-scoped'
 import { UploadRejection, type RejectedOp, type UploadCtx, type UploadHandler, type UploadOp } from './types'
-import { workspacesHandler } from './workspaces'
-import { workspaceMembershipsHandler } from './workspace-memberships'
-import { workspacePendingMembershipsHandler } from './workspace-pending-memberships'
-import { workspacePermissionsHandler } from './workspace-permissions'
+
+// Stale clients from the workspaces era still send these columns on
+// PUT/PATCH payloads; strip them so writes don't fail on dropped columns.
+const staleWorkspaceColumns = ['workspace_id', 'scope'] as const
 
 /**
  * Per-table upload handler registry. The `Record<PowerSyncTableName, …>` shape
  * is the schema-drift pin (addendum §3.9): adding a new synced table to
  * `shared/powersync-tables.ts` without a matching handler here fails `tsc`.
  *
- * The user-scoped factory covers tables whose rows are owned by a single user;
- * the workspace tables have bespoke handlers because their permission model is
- * row-relational rather than row-owned.
+ * Every table is user-scoped: rows are owned by a single user and the handler
+ * pins `user_id = ctx.userId` on every write.
  */
 export const handlers: Record<PowerSyncTableName, UploadHandler> = {
-  // Account-level (user-scoped, not workspace-scoped).
   settings: createUserScopedHandler({ tableName: 'settings' }),
   // Devices are partially writable: server-managed columns are stripped, DELETE
   // goes through the dedicated revoke API (`/api/account/devices/:id`).
@@ -32,49 +29,29 @@ export const handlers: Record<PowerSyncTableName, UploadHandler> = {
     denyDelete: true,
   }),
 
-  // Workspace-scoped, user-private (only the row's author may read/write).
-  chat_threads: createWorkspaceScopedHandler({ tableName: 'chat_threads', userPrivate: true }),
-  chat_messages: createWorkspaceScopedHandler({ tableName: 'chat_messages', userPrivate: true }),
-  tasks: createWorkspaceScopedHandler({ tableName: 'tasks', userPrivate: true }),
+  chat_threads: createUserScopedHandler({ tableName: 'chat_threads', denyColumns: staleWorkspaceColumns }),
+  chat_messages: createUserScopedHandler({ tableName: 'chat_messages', denyColumns: staleWorkspaceColumns }),
+  tasks: createUserScopedHandler({ tableName: 'tasks', denyColumns: staleWorkspaceColumns }),
 
-  // Workspace-scoped, shared by default. `scopeAware: true` opts the table into
-  // THU-603's per-row visibility: `scope = 'workspace'` rows behave as today,
-  // `scope = 'user'` rows are user-private within the workspace (only the row
-  // owner may read or write).
-  models: createWorkspaceScopedHandler({
+  models: createUserScopedHandler({
     tableName: 'models',
-    userPrivate: false,
-    scopeAware: true,
-    addPermissionKey: 'add_models',
-    removePermissionKey: 'remove_models',
+    denyColumns: staleWorkspaceColumns,
     softDeleteColumn: 'deleted_at',
   }),
-  prompts: createWorkspaceScopedHandler({ tableName: 'prompts', userPrivate: false, scopeAware: true }),
-  skills: createWorkspaceScopedHandler({
+  prompts: createUserScopedHandler({ tableName: 'prompts', denyColumns: staleWorkspaceColumns }),
+  skills: createUserScopedHandler({
     tableName: 'skills',
-    userPrivate: false,
-    scopeAware: true,
-    addPermissionKey: 'add_skills',
-    removePermissionKey: 'remove_skills',
+    denyColumns: staleWorkspaceColumns,
     softDeleteColumn: 'deleted_at',
   }),
-  triggers: createWorkspaceScopedHandler({ tableName: 'triggers', userPrivate: false, scopeAware: true }),
-  modes: createWorkspaceScopedHandler({ tableName: 'modes', userPrivate: false, scopeAware: true }),
-  model_profiles: createWorkspaceScopedHandler({ tableName: 'model_profiles', userPrivate: false, scopeAware: true }),
-  agents: createWorkspaceScopedHandler({
+  triggers: createUserScopedHandler({ tableName: 'triggers', denyColumns: staleWorkspaceColumns }),
+  modes: createUserScopedHandler({ tableName: 'modes', denyColumns: staleWorkspaceColumns }),
+  model_profiles: createUserScopedHandler({ tableName: 'model_profiles', denyColumns: staleWorkspaceColumns }),
+  agents: createUserScopedHandler({
     tableName: 'agents',
-    userPrivate: false,
-    scopeAware: true,
-    addPermissionKey: 'add_agents',
-    removePermissionKey: 'remove_agents',
+    denyColumns: staleWorkspaceColumns,
     softDeleteColumn: 'deleted_at',
   }),
-
-  // Workspace registry tables — bespoke handlers (commit 2).
-  workspaces: workspacesHandler,
-  workspace_memberships: workspaceMembershipsHandler,
-  workspace_pending_memberships: workspacePendingMembershipsHandler,
-  workspace_permissions: workspacePermissionsHandler,
 }
 
 export type BatchResult =
