@@ -61,7 +61,7 @@ describe('AgentDetailPanel', () => {
     expect(screen.getByText('sales-mcp')).toBeInTheDocument()
   })
 
-  // Edit / Delete live behind the 3-dots menu next to the title. Radix opens on
+  // Delete lives behind the 3-dots menu next to the title. Radix opens on
   // pointerdown for a primary click.
   const openMenu = () => {
     const trigger = screen.getByRole('button', { name: 'Agent actions' })
@@ -69,15 +69,34 @@ describe('AgentDetailPanel', () => {
     fireEvent.pointerUp(trigger, { button: 0, pointerType: 'mouse' })
   }
 
-  it('Edit (in the menu) opens the agent form pre-filled from the agent', async () => {
-    renderPanel()
+  it('renaming the title reveals Save and PATCHes the name', async () => {
+    const calls = renderPanel()
     await flush()
 
-    openMenu()
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }))
+    // No Save bar until something changes.
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sales Agent' }))
+    fireEvent.change(screen.getByLabelText('Agent name'), { target: { value: 'Sales Bot' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await flush()
 
-    expect(screen.getByLabelText('ACP URL')).toHaveValue('wss://agents.test/sales')
+    const patch = calls.find((call) => call.method === 'PATCH' && call.path === '/v1/admin/agents/ag-sales')
+    expect(patch).toBeDefined()
+    expect((patch?.body as { name: string }).name).toBe('Sales Bot')
+  })
+
+  it('editing the endpoint reveals Save and PATCHes the acpUrl', async () => {
+    const calls = renderPanel()
+    await flush()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit endpoint' }))
+    fireEvent.change(screen.getByLabelText('ACP URL'), { target: { value: 'wss://new.test/acp' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await flush()
+
+    const patch = calls.find((call) => call.method === 'PATCH' && call.path === '/v1/admin/agents/ag-sales')
+    expect((patch?.body as { acpUrl: string }).acpUrl).toBe('wss://new.test/acp')
   })
 
   it('Delete (in the menu) removes the agent and closes the panel', async () => {
