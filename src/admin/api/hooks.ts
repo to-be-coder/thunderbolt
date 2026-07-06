@@ -13,8 +13,14 @@
 import { useHttpClient } from '@/contexts'
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query'
 import { useMemo } from 'react'
+import { isDemoMode } from '@/lib/demo-mode'
 import { createAdminApi, type AdminApi } from './admin-client'
+import { createDemoAdminApi } from './demo-admin-api'
 import type { AgentInput, AgentPatch, GrantInput, OrgPolicy } from './types'
+
+/** Lazily-built singleton demo API so its in-memory store survives re-renders. */
+let demoApi: AdminApi | null = null
+const getDemoAdminApi = (): AdminApi => (demoApi ??= createDemoAdminApi())
 
 export const adminKeys = {
   me: ['admin', 'me'] as const,
@@ -27,10 +33,12 @@ export const adminKeys = {
   audit: (action?: string) => ['admin', 'audit', action ?? 'all'] as const,
 }
 
-/** Memoized admin API bound to the app's authenticated HTTP client. */
+/** Memoized admin API bound to the app's authenticated HTTP client. In demo
+ *  mode it returns the in-memory demo API instead, so the console runs with no
+ *  admin-service backend. */
 export const useAdminApi = (): AdminApi => {
   const httpClient = useHttpClient()
-  return useMemo(() => createAdminApi(httpClient), [httpClient])
+  return useMemo(() => (isDemoMode() ? getDemoAdminApi() : createAdminApi(httpClient)), [httpClient])
 }
 
 /** Shared mutation-success invalidator: refresh the given lists + the audit log. */

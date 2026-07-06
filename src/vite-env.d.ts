@@ -14,6 +14,8 @@ interface ImportMetaEnv {
   readonly VITE_STANDALONE_MODE_ENABLED?: 'true' | 'false'
   /** Boot decision: when 'true', the mode picker lets the user point at a custom server URL. v1 production: 'false'. */
   readonly VITE_ALLOW_USER_ADDED_SERVERS?: 'true' | 'false'
+  /** Prototype demo mode: fake admin sign-in + seeded demo data + in-memory admin console. v1 production: unset/'false'. */
+  readonly VITE_DEMO_MODE?: 'true' | 'false'
 }
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions

@@ -6,6 +6,7 @@ import { useHttpClient } from '@/contexts/http-client-context'
 import { powersyncCredentialsInvalid } from '@/db/powersync/connector'
 import { usePowerSyncCredentialsInvalidListener } from '@/hooks/use-powersync-credentials-invalid-listener'
 import { isSsoMode } from '@/lib/auth-mode'
+import { demoUser, isDemoMode } from '@/lib/demo-mode'
 import { clearAuthToken, getAuthToken, onAuthTokenChangedInOtherTab, setAuthToken } from '@/lib/auth-token'
 import { getPlatform } from '@/lib/platform'
 import { runPostAuthBootstrap } from '@/lib/post-auth-bootstrap'
@@ -37,6 +38,41 @@ const createAuthClientInstance = (cloudUrl: string) => {
     sessionOptions: {
       refetchOnWindowFocus: false,
       refetchWhenOffline: false,
+    },
+  })
+}
+
+/**
+ * Demo mode (`VITE_DEMO_MODE`): present the underlying anonymous session as a
+ * signed-in admin. The real anonymous token still drives the backend/PowerSync;
+ * we only rewrite what `useSession` reports so the UI treats the user as a
+ * named, non-anonymous admin — which unhides the Agents page and the /admin
+ * gate (both key off `isAnonymous`) and shows the user in the sidebar.
+ */
+const wrapDemoAuthClient = (client: ReturnType<typeof createAuthClientInstance>) => {
+  // Better Auth's client is a Proxy with dynamic dispatch (signIn.*, useSession,
+  // $fetch, …). A shallow spread would drop those, so wrap it in a Proxy that
+  // forwards everything and only overrides `useSession`.
+  const demoUseSession: typeof client.useSession = ((...args: Parameters<typeof client.useSession>) => {
+    const session = client.useSession(...args)
+    if (!session.data?.user) {
+      return session
+    }
+    return {
+      ...session,
+      data: {
+        ...session.data,
+        user: { ...session.data.user, isAnonymous: false, name: demoUser.name, email: demoUser.email },
+      },
+    }
+  }) as typeof client.useSession
+
+  return new Proxy(client, {
+    get(target, prop, receiver) {
+      if (prop === 'useSession') {
+        return demoUseSession
+      }
+      return Reflect.get(target, prop, receiver)
     },
   })
 }
@@ -104,7 +140,7 @@ export const AuthProvider = ({ children, cloudUrl, authClient: overrideClient }:
     }
 
     const client = createAuthClientInstance(cloudUrl)
-    return { authClient: client }
+    return { authClient: isDemoMode() ? wrapDemoAuthClient(client) : client }
   }, [cloudUrl, overrideClient])
 
   // Consume any pending SSO anon-id alias from sessionStorage (written before the SSO redirect
