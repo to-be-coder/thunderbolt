@@ -109,7 +109,7 @@ const AdminDetail = ({ agent }: { agent: TeamAgentWithCapabilities }) => {
   const detail = detailQuery.data
 
   return (
-    <section className="flex flex-col gap-4 border-t border-border pt-5">
+    <section className="flex flex-col gap-4">
       <Field label="Endpoint">
         <code className="text-xs break-all">{agent.acpUrl}</code>
       </Field>
