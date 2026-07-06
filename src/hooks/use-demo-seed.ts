@@ -40,7 +40,12 @@ const demoTeamAgents: AgentCard[] = [
   },
 ]
 
-const demoPolicy: OrgPolicy = { personalAgentPolicy: 'all', userModelsAllowed: true, mcpAllowlist: [] }
+const demoPolicy: OrgPolicy = {
+  personalAgentPolicy: 'all',
+  userModelsAllowed: true,
+  mcpPolicy: 'allow',
+  mcpAllowlist: [],
+}
 
 /**
  * Demo mode: seed the device-local team-agents cache + org policy once the DB is

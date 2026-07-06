@@ -152,7 +152,7 @@ const seedStore = (): DemoStore => {
         deletedAt: null,
       },
     ],
-    policy: { personalAgentPolicy: 'all', userModelsAllowed: true, mcpAllowlist: [] },
+    policy: { personalAgentPolicy: 'all', userModelsAllowed: true, mcpPolicy: 'allowlist', mcpAllowlist: [] },
     audit: [
       {
         id: id(),

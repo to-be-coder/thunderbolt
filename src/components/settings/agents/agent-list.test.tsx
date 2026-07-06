@@ -50,7 +50,12 @@ const personalAgent: Agent = {
   userId: 'user-1',
 }
 
-const allPolicy: OrgPolicy = { personalAgentPolicy: 'all', userModelsAllowed: true, mcpAllowlist: [] }
+const allPolicy: OrgPolicy = {
+  personalAgentPolicy: 'all',
+  userModelsAllowed: true,
+  mcpPolicy: 'allow',
+  mcpAllowlist: [],
+}
 
 const renderList = (props: Partial<Parameters<typeof AgentList>[0]> = {}) =>
   render(

@@ -112,7 +112,12 @@ describe('team agents cache DAL', () => {
   describe('sign-out wipe', () => {
     it('clearLocalData clears the team agents cache and org policy', async () => {
       await replaceTeamAgentsCache(getDb(), [card('t1', 'Alpha Agent')])
-      await setOrgPolicy(getDb(), { personalAgentPolicy: 'company_only', userModelsAllowed: false, mcpAllowlist: [] })
+      await setOrgPolicy(getDb(), {
+        personalAgentPolicy: 'company_only',
+        userModelsAllowed: false,
+        mcpPolicy: 'allow',
+        mcpAllowlist: [],
+      })
 
       // Stub every side-effectful dep so only the cache-clear step touches the
       // (test) database — mirrors the DI approach in src/lib/cleanup.test.ts.

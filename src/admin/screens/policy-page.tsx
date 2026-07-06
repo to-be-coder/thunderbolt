@@ -6,15 +6,17 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/ui/page-header'
 import { Switch } from '@/components/ui/switch'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { X } from 'lucide-react'
 import { useReducer, useState } from 'react'
 import { usePolicy, useSavePolicy } from '../api/hooks'
-import type { OrgPolicy, PersonalAgentPolicy } from '../api/types'
+import type { McpPolicyMode, OrgPolicy, PersonalAgentPolicy } from '../api/types'
 
 type PolicyAction =
   | { type: 'HYDRATE'; payload: OrgPolicy }
   | { type: 'SET_PERSONAL'; payload: PersonalAgentPolicy }
   | { type: 'SET_USER_MODELS'; payload: boolean }
+  | { type: 'SET_MCP_POLICY'; payload: McpPolicyMode }
   | { type: 'ADD_MCP'; payload: string }
   | { type: 'REMOVE_MCP'; payload: string }
 
@@ -26,6 +28,8 @@ const policyReducer = (state: OrgPolicy, action: PolicyAction): OrgPolicy => {
       return { ...state, personalAgentPolicy: action.payload }
     case 'SET_USER_MODELS':
       return { ...state, userModelsAllowed: action.payload }
+    case 'SET_MCP_POLICY':
+      return { ...state, mcpPolicy: action.payload }
     case 'ADD_MCP':
       return state.mcpAllowlist.includes(action.payload)
         ? state
@@ -37,7 +41,12 @@ const policyReducer = (state: OrgPolicy, action: PolicyAction): OrgPolicy => {
   }
 }
 
-const emptyPolicy: OrgPolicy = { personalAgentPolicy: 'all', userModelsAllowed: true, mcpAllowlist: [] }
+const emptyPolicy: OrgPolicy = {
+  personalAgentPolicy: 'all',
+  userModelsAllowed: true,
+  mcpPolicy: 'allowlist',
+  mcpAllowlist: [],
+}
 
 /** S5 — Policy. User models allow/deny, personal-agent policy, MCP allowlist. */
 export const PolicyPage = () => {
@@ -125,38 +134,71 @@ export const PolicyPage = () => {
           </section>
 
           <section className="flex flex-col gap-3 rounded-lg border border-border p-4">
-            <h2 className="text-sm font-semibold">MCP allowlist</h2>
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="https://mcp.example.com"
-                className="max-w-sm"
-                value={mcpEntry}
-                aria-label="MCP server URL"
-                onChange={(event) => setMcpEntry(event.target.value)}
-                onKeyDown={(event) => event.key === 'Enter' && handleAddMcp()}
-              />
-              <Button variant="secondary" onClick={handleAddMcp} disabled={!mcpEntry.trim()}>
-                Add
-              </Button>
+            <div>
+              <h2 className="text-sm font-semibold">User-added MCP servers</h2>
+              <p className="text-sm text-muted-foreground">
+                Whether members may add their own MCP servers (and extensions). Third-party tools are a supply-chain
+                risk, so the launch default is an allowlist.
+              </p>
             </div>
-            <ul className="flex flex-col gap-1">
-              {draft.mcpAllowlist.length === 0 && (
-                <li className="text-sm text-muted-foreground">No MCP servers allowlisted.</li>
-              )}
-              {draft.mcpAllowlist.map((entry) => (
-                <li key={entry} className="flex items-center justify-between rounded-md bg-muted/40 px-2 py-1 text-sm">
-                  <span className="font-mono text-xs">{entry}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Remove ${entry}`}
-                    onClick={() => dispatch({ type: 'REMOVE_MCP', payload: entry })}
-                  >
-                    <X className="size-4" />
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              value={draft.mcpPolicy}
+              onValueChange={(value) => value && dispatch({ type: 'SET_MCP_POLICY', payload: value as McpPolicyMode })}
+              className="justify-start"
+            >
+              <ToggleGroupItem value="allow" className="px-4">
+                Allow all
+              </ToggleGroupItem>
+              <ToggleGroupItem value="allowlist" className="px-4">
+                Allowlist
+              </ToggleGroupItem>
+              <ToggleGroupItem value="block" className="px-4">
+                Block
+              </ToggleGroupItem>
+            </ToggleGroup>
+
+            {draft.mcpPolicy === 'allowlist' && (
+              <div className="flex flex-col gap-2 border-t border-border pt-3">
+                <div className="flex items-center gap-2">
+                  <Input
+                    placeholder="https://mcp.example.com"
+                    className="max-w-sm"
+                    value={mcpEntry}
+                    aria-label="MCP server URL"
+                    onChange={(event) => setMcpEntry(event.target.value)}
+                    onKeyDown={(event) => event.key === 'Enter' && handleAddMcp()}
+                  />
+                  <Button variant="secondary" onClick={handleAddMcp} disabled={!mcpEntry.trim()}>
+                    Add
                   </Button>
-                </li>
-              ))}
-            </ul>
+                </div>
+                <ul className="flex flex-col gap-1">
+                  {draft.mcpAllowlist.length === 0 && (
+                    <li className="text-sm text-muted-foreground">
+                      No servers allowlisted yet — members can't add any until you add one.
+                    </li>
+                  )}
+                  {draft.mcpAllowlist.map((entry) => (
+                    <li
+                      key={entry}
+                      className="flex items-center justify-between rounded-md bg-muted/40 px-2 py-1 text-sm"
+                    >
+                      <span className="font-mono text-xs">{entry}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Remove ${entry}`}
+                        onClick={() => dispatch({ type: 'REMOVE_MCP', payload: entry })}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </section>
 
           <div className="flex items-center gap-3">

@@ -36,7 +36,7 @@ describe('policy routes', () => {
 
   it('PUT upserts the policy and audits; GET reflects it', async () => {
     const app = buildApp(db)
-    const next = { personalAgentPolicy: 'company_only' as const, userModelsAllowed: false, mcpAllowlist: ['wss://ok'] }
+    const next = { personalAgentPolicy: 'company_only' as const, userModelsAllowed: false, mcpPolicy: 'allowlist', mcpAllowlist: ['wss://ok'] }
     const putRes = await app.handle(
       new Request('http://localhost/admin/policy', {
         method: 'PUT',

@@ -48,6 +48,7 @@ export const createPolicyRoutes = (deps: ServiceDeps) =>
         body: t.Object({
           personalAgentPolicy: t.Union([t.Literal('all'), t.Literal('no_native'), t.Literal('company_only')]),
           userModelsAllowed: t.Boolean(),
+          mcpPolicy: t.Union([t.Literal('allow'), t.Literal('allowlist'), t.Literal('block')]),
           mcpAllowlist: t.Array(t.String()),
         }),
       },

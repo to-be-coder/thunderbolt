@@ -11,6 +11,7 @@ import { resetTestDatabase, setupTestDatabase, teardownTestDatabase } from './te
 const orgPolicy: OrgPolicy = {
   personalAgentPolicy: 'no_native',
   userModelsAllowed: false,
+  mcpPolicy: 'allowlist',
   mcpAllowlist: ['https://mcp.acme.example'],
 }
 
@@ -45,11 +46,17 @@ describe('org policy DAL', () => {
 
   it('set overwrites the previously cached policy (one-row upsert)', async () => {
     await setOrgPolicy(getDb(), orgPolicy)
-    await setOrgPolicy(getDb(), { personalAgentPolicy: 'company_only', userModelsAllowed: true, mcpAllowlist: [] })
+    await setOrgPolicy(getDb(), {
+      personalAgentPolicy: 'company_only',
+      userModelsAllowed: true,
+      mcpPolicy: 'allow',
+      mcpAllowlist: [],
+    })
 
     expect(await getOrgPolicy(getDb())).toEqual({
       personalAgentPolicy: 'company_only',
       userModelsAllowed: true,
+      mcpPolicy: 'allow',
       mcpAllowlist: [],
     })
   })

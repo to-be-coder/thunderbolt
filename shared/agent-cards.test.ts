@@ -33,7 +33,7 @@ const agentCardKeys = [
 
 const agentCardCapabilityKeys = ['label', 'credentialMode', 'connected'] as const
 
-const orgPolicyKeys = ['personalAgentPolicy', 'userModelsAllowed', 'mcpAllowlist'] as const
+const orgPolicyKeys = ['personalAgentPolicy', 'userModelsAllowed', 'mcpPolicy', 'mcpAllowlist'] as const
 
 // Type-level assertions — these lines stop compiling on any key drift.
 const agentCardKeySetIsFrozen: AssertExactKeys<AgentCard, (typeof agentCardKeys)[number]> = true
@@ -75,6 +75,11 @@ describe('agent-cards frozen contract', () => {
   })
 
   it('defaultOrgPolicy is the documented consumer/no-org default', () => {
-    expect(defaultOrgPolicy).toEqual({ personalAgentPolicy: 'all', userModelsAllowed: true, mcpAllowlist: [] })
+    expect(defaultOrgPolicy).toEqual({
+      personalAgentPolicy: 'all',
+      userModelsAllowed: true,
+      mcpPolicy: 'allow',
+      mcpAllowlist: [],
+    })
   })
 })

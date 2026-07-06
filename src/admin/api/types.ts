@@ -104,9 +104,13 @@ export type GrantInput = {
 
 export type PersonalAgentPolicy = 'all' | 'no_native' | 'company_only'
 
+export type McpPolicyMode = 'allow' | 'allowlist' | 'block'
+
 export type OrgPolicy = {
   personalAgentPolicy: PersonalAgentPolicy
   userModelsAllowed: boolean
+  /** P0-8: allow / allowlist (launch default) / block for user-added MCP servers. */
+  mcpPolicy: McpPolicyMode
   mcpAllowlist: string[]
 }
 

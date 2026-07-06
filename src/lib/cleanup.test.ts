@@ -193,7 +193,12 @@ describe('clearLocalData — agent-access cache clearing (T2)', () => {
 
   it('clears the team-agents cache and org policy', async () => {
     await replaceTeamAgentsCache(getDb(), [sampleCard])
-    await setOrgPolicy(getDb(), { personalAgentPolicy: 'company_only', userModelsAllowed: false, mcpAllowlist: [] })
+    await setOrgPolicy(getDb(), {
+      personalAgentPolicy: 'company_only',
+      userModelsAllowed: false,
+      mcpPolicy: 'allow',
+      mcpAllowlist: [],
+    })
 
     // Sanity: both caches are populated before the wipe.
     expect(await getTeamAgentsCache(getDb())).toHaveLength(1)

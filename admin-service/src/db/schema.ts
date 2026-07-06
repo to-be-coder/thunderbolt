@@ -144,6 +144,10 @@ export const orgPolicy = pgTable('org_policy', {
     .notNull()
     .default('all'),
   userModelsAllowed: boolean('user_models_allowed').notNull().default(true),
+  // P0-8: user-added MCP policy — allowlist is the launch default for an org.
+  mcpPolicy: text('mcp_policy', { enum: ['allow', 'allowlist', 'block'] })
+    .notNull()
+    .default('allowlist'),
   mcpAllowlist: jsonb('mcp_allowlist').$type<string[]>().notNull().default([]),
   updatedAt: timestamp('updated_at')
     .defaultNow()

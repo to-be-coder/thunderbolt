@@ -5,20 +5,40 @@
 import { describe, expect, it } from 'bun:test'
 import { isMcpServerAllowed } from './mcp-policy'
 
+const server = { url: 'https://a.example', name: 'A' }
+
 describe('isMcpServerAllowed', () => {
-  it('allows any server when the allowlist is empty (unrestricted)', () => {
-    expect(isMcpServerAllowed({ url: 'https://a.example', name: 'A' }, [])).toBe(true)
+  it('allow mode permits any server', () => {
+    expect(isMcpServerAllowed(server, { mcpPolicy: 'allow', mcpAllowlist: [] })).toBe(true)
+    expect(isMcpServerAllowed({ url: 'https://b.example', name: 'B' }, { mcpPolicy: 'allow', mcpAllowlist: [] })).toBe(
+      true,
+    )
   })
 
-  it('allows a server whose URL is in the allowlist', () => {
-    expect(isMcpServerAllowed({ url: 'https://a.example', name: 'A' }, ['https://a.example'])).toBe(true)
+  it('block mode permits nothing', () => {
+    expect(isMcpServerAllowed(server, { mcpPolicy: 'block', mcpAllowlist: ['https://a.example'] })).toBe(false)
   })
 
-  it('allows a server whose name is in the allowlist', () => {
-    expect(isMcpServerAllowed({ url: null, name: 'Approved' }, ['Approved'])).toBe(true)
+  it('allowlist mode permits a server by URL', () => {
+    expect(isMcpServerAllowed(server, { mcpPolicy: 'allowlist', mcpAllowlist: ['https://a.example'] })).toBe(true)
   })
 
-  it('rejects a server absent from a non-empty allowlist', () => {
-    expect(isMcpServerAllowed({ url: 'https://b.example', name: 'B' }, ['https://a.example'])).toBe(false)
+  it('allowlist mode permits a server by name', () => {
+    expect(
+      isMcpServerAllowed({ url: null, name: 'Approved' }, { mcpPolicy: 'allowlist', mcpAllowlist: ['Approved'] }),
+    ).toBe(true)
+  })
+
+  it('allowlist mode rejects a server absent from the list', () => {
+    expect(
+      isMcpServerAllowed(
+        { url: 'https://b.example', name: 'B' },
+        { mcpPolicy: 'allowlist', mcpAllowlist: ['https://a.example'] },
+      ),
+    ).toBe(false)
+  })
+
+  it('allowlist mode with an empty list blocks everything (secure default)', () => {
+    expect(isMcpServerAllowed(server, { mcpPolicy: 'allowlist', mcpAllowlist: [] })).toBe(false)
   })
 })

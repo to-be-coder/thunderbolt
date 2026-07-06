@@ -3,23 +3,29 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * MCP ALLOWLIST GATING (Stage 5, T6).
+ * USER-ADDED MCP GATING (P0-8).
  *
- * `OrgPolicy.mcpAllowlist` is the set of MCP servers the org permits members to
- * enable. An EMPTY allowlist means "no restriction" (consumer / no-org mode);
- * a non-empty allowlist is exhaustive — only servers whose URL or name appears
- * in it may be enabled. Everything else surfaces "not allowed by your
- * organization" rather than silently toggling.
+ * The org policy for user-added MCP servers is one of three modes:
+ *   - `allow`     → unrestricted (consumer / no-org mode).
+ *   - `allowlist` → only servers whose URL or name is in `mcpAllowlist` (the
+ *                   launch default; an empty allowlist blocks everything until
+ *                   the admin adds entries).
+ *   - `block`     → no user-added MCP servers at all.
+ * A disallowed server surfaces "not allowed by your organization" rather than
+ * silently toggling.
  */
 
-/** True when the org policy permits enabling this MCP server. Empty allowlist =
- *  unrestricted. Matches on URL first (the stable identity), then display name. */
+/** True when the org policy permits enabling this MCP server, per the mode.
+ *  Matches on URL first (the stable identity), then display name. */
 export const isMcpServerAllowed = (
   server: { url: string | null; name: string },
-  allowlist: readonly string[],
+  policy: { mcpPolicy: 'allow' | 'allowlist' | 'block'; mcpAllowlist: readonly string[] },
 ): boolean => {
-  if (allowlist.length === 0) {
+  if (policy.mcpPolicy === 'allow') {
     return true
   }
-  return allowlist.some((entry) => entry === server.url || entry === server.name)
+  if (policy.mcpPolicy === 'block') {
+    return false
+  }
+  return policy.mcpAllowlist.some((entry) => entry === server.url || entry === server.name)
 }

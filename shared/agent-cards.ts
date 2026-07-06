@@ -57,6 +57,11 @@ export type AgentCard = {
 export type OrgPolicy = {
   personalAgentPolicy: 'all' | 'no_native' | 'company_only'
   userModelsAllowed: boolean
+  /** Org policy for user-added MCP servers (and extensions when addable), per
+   *  P0-8: `allow` (unrestricted), `allowlist` (only `mcpAllowlist` entries —
+   *  the launch default), or `block` (none). `mcpAllowlist` applies only in
+   *  `allowlist` mode. */
+  mcpPolicy: 'allow' | 'allowlist' | 'block'
   mcpAllowlist: string[]
 }
 
@@ -70,5 +75,7 @@ export type DiscoveryResponse = {
 export const defaultOrgPolicy: OrgPolicy = {
   personalAgentPolicy: 'all',
   userModelsAllowed: true,
+  // No-org / consumer mode is unrestricted; an org's launch default is `allowlist`.
+  mcpPolicy: 'allow',
   mcpAllowlist: [],
 }

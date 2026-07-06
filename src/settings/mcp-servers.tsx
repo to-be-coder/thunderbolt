@@ -784,7 +784,7 @@ export default function McpServersPage({ deps = {} }: { deps?: McpServersPageDep
         {servers.map((server) => {
           const status = getConnectionStatus(server)
           const isEnabled = server.enabled === 1
-          const orgAllowsServer = isMcpServerAllowed(server, orgPolicy.mcpAllowlist)
+          const orgAllowsServer = isMcpServerAllowed(server, orgPolicy)
           const oauthState = getOAuthCardState(server)
           const isAuthorizing = oauthState?.phase === 'authorizing'
           const showAuthorize = oauthState?.phase === 'needs-auth' || oauthState?.phase === 'error'

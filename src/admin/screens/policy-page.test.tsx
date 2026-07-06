@@ -9,7 +9,12 @@ import type { OrgPolicy } from '../api/types'
 import { createRecordingClient, flush, renderAdmin } from '../test-utils'
 import { PolicyPage } from './policy-page'
 
-const serverPolicy: OrgPolicy = { personalAgentPolicy: 'all', userModelsAllowed: true, mcpAllowlist: [] }
+const serverPolicy: OrgPolicy = {
+  personalAgentPolicy: 'all',
+  userModelsAllowed: true,
+  mcpPolicy: 'allowlist',
+  mcpAllowlist: [],
+}
 
 describe('PolicyPage', () => {
   afterEach(cleanup)
@@ -35,6 +40,7 @@ describe('PolicyPage', () => {
     expect(put?.body).toEqual({
       personalAgentPolicy: 'all',
       userModelsAllowed: true,
+      mcpPolicy: 'allowlist',
       mcpAllowlist: ['https://mcp.example.com'],
     })
   })
