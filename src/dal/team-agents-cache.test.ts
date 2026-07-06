@@ -118,6 +118,7 @@ describe('team agents cache DAL', () => {
         mcpPolicy: 'allow',
         mcpAllowlist: [],
         blockedExtensions: [],
+        blockedIntegrations: [],
       })
 
       // Stub every side-effectful dep so only the cache-clear step touches the

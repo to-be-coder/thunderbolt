@@ -67,6 +67,10 @@ export type OrgPolicy = {
    *  allowed. A blocked extension can't be enabled by members and never applies
    *  to an agent (the extension half of P0-8). */
   blockedExtensions: string[]
+  /** OAuth integration provider ids (e.g. 'google', 'microsoft') the org has
+   *  blocked. Empty = all allowed. A blocked provider can't be connected by
+   *  members. (Beyond the PRD's v1 admin list — a data-governance extension.) */
+  blockedIntegrations: string[]
 }
 
 /** Envelope returned by org agent discovery (Stage 3 endpoint). */
@@ -83,4 +87,5 @@ export const defaultOrgPolicy: OrgPolicy = {
   mcpPolicy: 'allow',
   mcpAllowlist: [],
   blockedExtensions: [],
+  blockedIntegrations: [],
 }

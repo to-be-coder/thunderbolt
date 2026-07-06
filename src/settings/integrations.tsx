@@ -18,6 +18,8 @@ import { type OAuthProvider } from '@/lib/auth'
 import { useDatabase } from '@/contexts'
 import { deleteIntegrationCredentials, setIntegrationEnabled, updateSettings } from '@/dal'
 import { useIntegrationStatus } from '@/hooks/use-integration-status'
+import { useOrgPolicy } from '@/dal/use-org-policy'
+import { isIntegrationAllowed } from '@/dal/integration-policy'
 import { useOAuthConnect } from '@/hooks/use-oauth-connect'
 import { useSettings } from '@/hooks/use-settings'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -57,6 +59,7 @@ export default function IntegrationsPage() {
     integrations_pro_is_enabled: false,
   })
   const { data: integrationStatusData } = useIntegrationStatus()
+  const orgPolicy = useOrgPolicy()
 
   const { data: proStatus, isLoading: proStatusLoading } = useQuery({
     queryKey: ['proStatus'],
@@ -207,7 +210,7 @@ export default function IntegrationsPage() {
                   <Button onClick={handleGetPro} className="w-full">
                     {integration.connectLabel}
                   </Button>
-                ) : (
+                ) : isIntegrationAllowed(integration.provider, orgPolicy.blockedIntegrations) ? (
                   <ConnectProviderButton
                     provider={integration.provider as OAuthProvider}
                     isConnected={false}
@@ -219,6 +222,8 @@ export default function IntegrationsPage() {
                     className="w-full"
                     connectLabel={integration.connectLabel}
                   />
+                ) : (
+                  <p className="text-center text-sm text-muted-foreground">Not allowed by your organization</p>
                 )}
               </CardContent>
             )}

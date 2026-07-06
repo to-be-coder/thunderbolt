@@ -114,6 +114,8 @@ export type OrgPolicy = {
   mcpAllowlist: string[]
   /** Built-in extension ids blocked org-wide (empty = all allowed). */
   blockedExtensions: string[]
+  /** OAuth integration provider ids blocked org-wide (empty = all allowed). */
+  blockedIntegrations: string[]
 }
 
 export type AuditEvent = {

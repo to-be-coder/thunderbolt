@@ -12,7 +12,7 @@ import { buildDeps, fakeUser } from '../test-utils/harness'
 import { createTestDb } from '../test-utils/db'
 import { createDiscoveryRoutes } from './routes'
 
-const orgPolicyKeys = ['personalAgentPolicy', 'userModelsAllowed', 'mcpPolicy', 'mcpAllowlist', 'blockedExtensions'].sort()
+const orgPolicyKeys = ['personalAgentPolicy', 'userModelsAllowed', 'mcpPolicy', 'mcpAllowlist', 'blockedExtensions', 'blockedIntegrations'].sort()
 const agentCardKeys = [
   'id',
   'name',
@@ -96,6 +96,7 @@ describe('GET /admin/discovery', () => {
       mcpPolicy: 'allow',
       mcpAllowlist: [],
       blockedExtensions: [],
+      blockedIntegrations: [],
     })
 
     expect(body.agents).toHaveLength(1)

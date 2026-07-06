@@ -56,6 +56,7 @@ const allPolicy: OrgPolicy = {
   mcpPolicy: 'allow',
   mcpAllowlist: [],
   blockedExtensions: [],
+  blockedIntegrations: [],
 }
 
 const renderList = (props: Partial<Parameters<typeof AgentList>[0]> = {}) =>

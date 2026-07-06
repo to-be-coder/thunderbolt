@@ -51,6 +51,7 @@ export const createPolicyRoutes = (deps: ServiceDeps) =>
           mcpPolicy: t.Union([t.Literal('allow'), t.Literal('allowlist'), t.Literal('block')]),
           mcpAllowlist: t.Array(t.String()),
           blockedExtensions: t.Array(t.String()),
+          blockedIntegrations: t.Array(t.String()),
         }),
       },
     )

@@ -158,6 +158,7 @@ const seedStore = (): DemoStore => {
       mcpPolicy: 'allowlist',
       mcpAllowlist: [],
       blockedExtensions: [],
+      blockedIntegrations: [],
     },
     audit: [
       {

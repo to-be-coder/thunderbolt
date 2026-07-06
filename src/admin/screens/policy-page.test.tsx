@@ -15,6 +15,7 @@ const serverPolicy: OrgPolicy = {
   mcpPolicy: 'allowlist',
   mcpAllowlist: [],
   blockedExtensions: [],
+  blockedIntegrations: [],
 }
 
 describe('PolicyPage', () => {
@@ -44,6 +45,7 @@ describe('PolicyPage', () => {
       mcpPolicy: 'allowlist',
       mcpAllowlist: ['https://mcp.example.com'],
       blockedExtensions: [],
+      blockedIntegrations: [],
     })
   })
 

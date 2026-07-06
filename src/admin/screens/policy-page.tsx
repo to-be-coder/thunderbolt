@@ -11,6 +11,8 @@ import { X } from 'lucide-react'
 import { useReducer, useState } from 'react'
 import { builtInExtensions } from '@/extensions/registry'
 import { isExtensionAllowed } from '@/dal/extension-policy'
+import { isIntegrationAllowed } from '@/dal/integration-policy'
+import { governableIntegrations } from '@/integrations/registry'
 import { usePolicy, useSavePolicy } from '../api/hooks'
 import type { McpPolicyMode, OrgPolicy, PersonalAgentPolicy } from '../api/types'
 
@@ -22,6 +24,7 @@ type PolicyAction =
   | { type: 'ADD_MCP'; payload: string }
   | { type: 'REMOVE_MCP'; payload: string }
   | { type: 'SET_EXTENSION_ALLOWED'; payload: { id: string; allowed: boolean } }
+  | { type: 'SET_INTEGRATION_ALLOWED'; payload: { id: string; allowed: boolean } }
 
 const policyReducer = (state: OrgPolicy, action: PolicyAction): OrgPolicy => {
   switch (action.type) {
@@ -48,6 +51,15 @@ const policyReducer = (state: OrgPolicy, action: PolicyAction): OrgPolicy => {
             ? state.blockedExtensions
             : [...state.blockedExtensions, action.payload.id],
       }
+    case 'SET_INTEGRATION_ALLOWED':
+      return {
+        ...state,
+        blockedIntegrations: action.payload.allowed
+          ? state.blockedIntegrations.filter((id) => id !== action.payload.id)
+          : state.blockedIntegrations.includes(action.payload.id)
+            ? state.blockedIntegrations
+            : [...state.blockedIntegrations, action.payload.id],
+      }
     default:
       return state
   }
@@ -59,6 +71,7 @@ const emptyPolicy: OrgPolicy = {
   mcpPolicy: 'allowlist',
   mcpAllowlist: [],
   blockedExtensions: [],
+  blockedIntegrations: [],
 }
 
 /** S5 — Policy. User models allow/deny, personal-agent policy, MCP allowlist. */
@@ -238,6 +251,36 @@ export const PolicyPage = () => {
                       dispatch({ type: 'SET_EXTENSION_ALLOWED', payload: { id: extension.id, allowed } })
                     }
                     aria-label={`Allow ${extension.name}`}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="flex flex-col gap-3 rounded-lg border border-border p-4">
+            <div>
+              <h2 className="text-sm font-semibold">Integrations</h2>
+              <p className="text-sm text-muted-foreground">
+                Account connections members can link so agents act as them. Turn one off to stop members connecting it
+                org-wide.
+              </p>
+            </div>
+            <ul className="flex flex-col gap-1">
+              {governableIntegrations.map((integration) => (
+                <li
+                  key={integration.id}
+                  className="flex items-center justify-between gap-4 rounded-md bg-muted/40 px-3 py-2"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{integration.name}</p>
+                    <p className="text-sm text-muted-foreground">{integration.description}</p>
+                  </div>
+                  <Switch
+                    checked={isIntegrationAllowed(integration.id, draft.blockedIntegrations)}
+                    onCheckedChange={(allowed) =>
+                      dispatch({ type: 'SET_INTEGRATION_ALLOWED', payload: { id: integration.id, allowed } })
+                    }
+                    aria-label={`Allow ${integration.name}`}
                   />
                 </li>
               ))}
