@@ -30,6 +30,11 @@ Events follow the pattern: `<feature>_<action>`
 
 - `model_select` - User selects a different AI model
 
+#### Agents (`agent_*`)
+
+- `agent_select` - User selects a different agent for a chat thread
+- `agent_seal_hit` - User pressed `/` in a thread bound to a sealed company agent or a personal ACP agent (which have no skills surface). A P2 demand signal for extensibility on sealed agents; fired once alongside the one-time educational note.
+
 #### Settings (`settings_*`)
 
 - `settings_theme_set` - User changes the application theme
