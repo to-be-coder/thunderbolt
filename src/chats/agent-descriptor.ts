@@ -146,8 +146,16 @@ export const isSealedForSlash = (descriptor: AgentDescriptor): boolean =>
  * is injectable so component tests can drive fixture cards.
  */
 export const useAgentDescriptor = (useTeamAgents = useTeamAgents_default): AgentDescriptor => {
-  const { chatThread, selectedAgent } = useCurrentChatSession()
+  const { chatThread, selectedAgent, selectedAgentKind } = useCurrentChatSession()
   const teamCards = useTeamAgents()
-  const agentRef: AgentRef = chatThread ? getAgentRef(chatThread) : { kind: 'thunderbolt', agentId: null }
+  // Prefer the persisted thread ref; fall back to the session's in-memory
+  // selected kind so a draft / brand-new chat (no thread row yet) still resolves
+  // a TEAM agent instead of collapsing to 'personal' (which advertises nothing,
+  // so the composer would wrongly show "Set by your organization").
+  const agentRef: AgentRef = chatThread
+    ? getAgentRef(chatThread)
+    : selectedAgentKind === 'thunderbolt'
+      ? { kind: 'thunderbolt', agentId: null }
+      : { kind: selectedAgentKind, agentId: selectedAgent.id }
   return resolveAgentDescriptor({ agentRef, selectedAgent, teamCards })
 }
