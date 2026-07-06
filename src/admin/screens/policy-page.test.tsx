@@ -38,4 +38,40 @@ describe('PolicyPage', () => {
       mcpAllowlist: ['https://mcp.example.com'],
     })
   })
+
+  const renderAndSave = async (interact: () => void) => {
+    const { client, calls } = createRecordingClient((call) =>
+      call.method === 'GET' && call.path === '/v1/admin/policy' ? serverPolicy : call.body,
+    )
+    renderAdmin(<PolicyPage />, client)
+    await flush()
+    interact()
+    fireEvent.click(screen.getByRole('button', { name: 'Save policy' }))
+    await flush()
+    return calls.find((call) => call.method === 'PUT' && call.path === '/v1/admin/policy')
+  }
+
+  it('turning off "Allow personal agents" saves company_only', async () => {
+    const put = await renderAndSave(() => {
+      fireEvent.click(screen.getByLabelText('Allow personal agents'))
+    })
+    expect((put?.body as OrgPolicy).personalAgentPolicy).toBe('company_only')
+  })
+
+  it('turning off the built-in agent (personal still on) saves no_native', async () => {
+    const put = await renderAndSave(() => {
+      fireEvent.click(screen.getByLabelText('Allow the built-in Thunderbolt agent'))
+    })
+    expect((put?.body as OrgPolicy).personalAgentPolicy).toBe('no_native')
+  })
+
+  it('the built-in-agent switch is disabled once personal agents are off', async () => {
+    const { client } = createRecordingClient((call) =>
+      call.method === 'GET' && call.path === '/v1/admin/policy' ? serverPolicy : call.body,
+    )
+    renderAdmin(<PolicyPage />, client)
+    await flush()
+    fireEvent.click(screen.getByLabelText('Allow personal agents')) // → company_only
+    expect(screen.getByLabelText('Allow the built-in Thunderbolt agent')).toBeDisabled()
+  })
 })

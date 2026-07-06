@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/ui/page-header'
 import { Switch } from '@/components/ui/switch'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { X } from 'lucide-react'
 import { useReducer, useState } from 'react'
 import { usePolicy, useSavePolicy } from '../api/hooks'
@@ -40,12 +39,6 @@ const policyReducer = (state: OrgPolicy, action: PolicyAction): OrgPolicy => {
 
 const emptyPolicy: OrgPolicy = { personalAgentPolicy: 'all', userModelsAllowed: true, mcpAllowlist: [] }
 
-const personalOptions: { value: PersonalAgentPolicy; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'no_native', label: 'No native' },
-  { value: 'company_only', label: 'Company only' },
-]
-
 /** S5 — Policy. User models allow/deny, personal-agent policy, MCP allowlist. */
 export const PolicyPage = () => {
   const policyQuery = usePolicy()
@@ -71,6 +64,15 @@ export const PolicyPage = () => {
     setMcpEntry('')
   }
 
+  // The PRD's three-way personal-agent policy expressed as two switches:
+  //   personal on  + native on  → 'all'
+  //   personal on  + native off → 'no_native'
+  //   personal off (native forced off) → 'company_only'
+  const personalAllowed = draft.personalAgentPolicy !== 'company_only'
+  const nativeAllowed = draft.personalAgentPolicy === 'all'
+  const setPersonalAllowed = (on: boolean) => dispatch({ type: 'SET_PERSONAL', payload: on ? 'all' : 'company_only' })
+  const setNativeAllowed = (on: boolean) => dispatch({ type: 'SET_PERSONAL', payload: on ? 'all' : 'no_native' })
+
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <PageHeader title="Policy" />
@@ -79,26 +81,35 @@ export const PolicyPage = () => {
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : (
         <>
-          <section className="flex flex-col gap-2 rounded-lg border border-border p-4">
-            <h2 className="text-sm font-semibold">Personal agents</h2>
-            <p className="text-sm text-muted-foreground">
-              Which personal agents members may use alongside company agents.
-            </p>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              value={draft.personalAgentPolicy}
-              onValueChange={(value) =>
-                value && dispatch({ type: 'SET_PERSONAL', payload: value as PersonalAgentPolicy })
-              }
-              className="justify-start"
-            >
-              {personalOptions.map((option) => (
-                <ToggleGroupItem key={option.value} value={option.value} className="px-4">
-                  {option.label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+          <section className="flex flex-col gap-4 rounded-lg border border-border p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-sm font-semibold">Allow personal agents</h2>
+                <p className="text-sm text-muted-foreground">
+                  Let members connect their own ACP agents alongside company agents. Off = company agents only.
+                </p>
+              </div>
+              <Switch
+                checked={personalAllowed}
+                onCheckedChange={setPersonalAllowed}
+                aria-label="Allow personal agents"
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-sm font-semibold">Built-in Thunderbolt agent</h2>
+                <p className="text-sm text-muted-foreground">
+                  Give members the built-in assistant. {personalAllowed ? '' : 'Turn on personal agents to enable.'}
+                </p>
+              </div>
+              <Switch
+                checked={nativeAllowed}
+                disabled={!personalAllowed}
+                onCheckedChange={setNativeAllowed}
+                aria-label="Allow the built-in Thunderbolt agent"
+              />
+            </div>
           </section>
 
           <section className="flex items-center justify-between rounded-lg border border-border p-4">
