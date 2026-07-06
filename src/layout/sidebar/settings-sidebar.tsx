@@ -64,7 +64,7 @@ export const SettingsSidebarContent = ({
       <SidebarSeparator className="m-0" />
 
       <SidebarGroup>
-        <SidebarGroupLabel>Extensions</SidebarGroupLabel>
+        <SidebarGroupLabel>Library</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
             <SidebarMenuItem>

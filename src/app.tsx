@@ -85,6 +85,7 @@ const DevicesSettingsPage = lazy(() => import('@/settings/devices'))
 const McpServersPage = lazy(() => import('@/settings/mcp-servers'))
 const SkillsPage = lazy(() => import('@/settings/skills'))
 const AgentsSettingsPage = lazy(() => import('@/routes/settings/agents'))
+const AgentDetailPage = lazy(() => import('@/routes/settings/agents/detail'))
 const IntegrationsPage = lazy(() => import('@/settings/integrations'))
 
 // Lazily import SSO components so non-enterprise deployments don't pay
@@ -130,6 +131,7 @@ const renderMainRoutes = ({ experimentalFeatureTasks }: { experimentalFeatureTas
       <Route path="mcp-servers" element={<McpServersPage />} />
       <Route path="skills" element={<SkillsPage />} />
       <Route path="agents" element={<AgentsSettingsPage />} />
+      <Route path="agents/:agentId" element={<AgentDetailPage />} />
       <Route path="integrations" element={<IntegrationsPage />} />
       {import.meta.env.DEV && <Route path="dev-settings" element={<DevSettingsPage />} />}
     </Route>

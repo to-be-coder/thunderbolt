@@ -120,10 +120,10 @@ describe('AgentsSettingsPage — Add Custom Agent affordance', () => {
     localStorage.clear()
   })
 
-  it('renders the "Add Custom Agent" button', () => {
+  it('renders the "Connect an agent" primary action (the only add path)', () => {
     const authClient = createMockAuthClient({ session: authedSession })
     renderPage(authClient, onTauri)
 
-    expect(screen.getByRole('button', { name: /add custom agent/i })).toBeInTheDocument()
+    expect(screen.getByTestId('connect-an-agent')).toHaveTextContent(/connect an agent/i)
   })
 })

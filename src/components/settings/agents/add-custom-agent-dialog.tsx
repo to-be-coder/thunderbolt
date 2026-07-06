@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { useReducer } from 'react'
+import { useReducer, type ReactNode } from 'react'
 import { Check, Loader2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -82,6 +82,10 @@ type AddCustomAgentDialogProps = {
   isIos?: () => boolean
   /** Test/DI override for the connection probe. Production callers omit this. */
   testAcpConnection?: TestAcpConnectionFn
+  /** Optional read-only ACP catalog rendered as the browse path inside the add
+   *  flow (agents-page-spec §1). The page passes `<AgentCatalog />`; omitted in
+   *  unit tests so the dialog stays context-free. */
+  catalogSlot?: ReactNode
 }
 
 type AgentDialogState = {
@@ -162,6 +166,7 @@ export const AddCustomAgentDialog = ({
   editingAgent,
   isIos,
   testAcpConnection = defaultTestAcpConnection,
+  catalogSlot,
 }: AddCustomAgentDialogProps) => {
   const isEditing = !!editingAgent
   // Lazy init seeds the form from the agent on first mount. The parent varies
@@ -313,6 +318,9 @@ export const AddCustomAgentDialog = ({
             </p>
           )}
         </div>
+        {catalogSlot && (
+          <div className="border-t border-border pt-4 mt-2 max-h-[280px] overflow-y-auto">{catalogSlot}</div>
+        )}
         <div className="flex justify-end gap-3 pt-2">
           <Button variant="ghost" onClick={() => handleOpenChange(false)}>
             Cancel

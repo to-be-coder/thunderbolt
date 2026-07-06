@@ -218,6 +218,10 @@ export type EventType =
   | 'sync_upload'
   | 'sync_upload_error'
   | 'sync_status_change'
+  // Agents page (Stage 5) — demand signal for reintroducing per-agent config.
+  // Fired when a member taps "Manage in Library →" from an agent context
+  // (agents-page-spec §6). Payload: { agentKind, agentId }.
+  | 'agent_manage_library_tap'
   // Skills v1 (THU-535) — see docs/architecture/skills-v1 spec §6.
   | 'skill_used'
   | 'skill_created'

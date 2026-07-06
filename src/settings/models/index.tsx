@@ -37,6 +37,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useDatabase } from '@/contexts'
 import { useActiveUserId } from '@/stores/trust-domain-registry'
 import { createModel as createModelDAL, deleteModel, getAllModels, resetModelToDefault, updateModel } from '@/dal'
+import { useOrgPolicy } from '@/dal/use-org-policy'
 import { defaultModels } from '@/defaults/models'
 import { isModelModified } from '@/defaults/utils'
 import { fetch } from '@/lib/fetch'
@@ -366,6 +367,13 @@ export default function ModelsPage() {
     queryKey: ['models'],
     query: toCompilableQuery(getAllModels(db)),
   })
+
+  // BYO (bring-your-own) model gate (Stage 4/5 T6). When the org forbids user
+  // models, the add path — which only ever creates BYO (`isSystem: 0`) models —
+  // is unavailable and annotated. Company-supplied models are unaffected; the
+  // DAL still enforces this via `assertByoModelAllowed`.
+  const policy = useOrgPolicy()
+  const byoModelsAllowed = policy.userModelsAllowed
 
   const toggleModelMutation = useMutation({
     mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
@@ -889,268 +897,291 @@ export default function ModelsPage() {
   return (
     <div className="flex flex-col gap-6 p-4 pb-12 w-full max-w-[760px] mx-auto">
       <PageHeader title="Models">
-        <Dialog open={isAddDialogOpen} onOpenChange={handleDialogOpenChange}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="icon" className="rounded-lg">
-              <Plus />
-            </Button>
-          </DialogTrigger>
-          <ResponsiveModalContentComposable className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-            <ResponsiveModalHeader>
-              <ResponsiveModalTitle>Add Model</ResponsiveModalTitle>
-              <ResponsiveModalDescription className="sr-only">Add a new AI model</ResponsiveModalDescription>
-            </ResponsiveModalHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} onKeyDown={handleKeyDown} className="grid gap-4 pt-4 pb-2">
-                <FormField
-                  control={form.control}
-                  name="provider"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Provider</FormLabel>
-                      <FormControl>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger className="w-full rounded-lg">
-                            <SelectValue placeholder="Select provider" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="thunderbolt">Thunderbolt</SelectItem>
-                            <SelectItem value="tinfoil">Tinfoil</SelectItem>
-                            <SelectItem value="openai">OpenAI</SelectItem>
-                            <SelectItem value="openrouter">OpenRouter</SelectItem>
-                            <SelectItem value="anthropic">Anthropic</SelectItem>
-                            <SelectItem value="custom">Custom</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* URL for OpenAI Compatible */}
-                {form.watch('provider') === 'custom' && (
+        {!byoModelsAllowed ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button variant="outline" size="icon" className="rounded-lg" disabled data-testid="add-model-blocked">
+                    <Plus />
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>Not allowed by your organization</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <Dialog open={isAddDialogOpen} onOpenChange={handleDialogOpenChange}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon" className="rounded-lg">
+                <Plus />
+              </Button>
+            </DialogTrigger>
+            <ResponsiveModalContentComposable className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+              <ResponsiveModalHeader>
+                <ResponsiveModalTitle>Add Model</ResponsiveModalTitle>
+                <ResponsiveModalDescription className="sr-only">Add a new AI model</ResponsiveModalDescription>
+              </ResponsiveModalHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} onKeyDown={handleKeyDown} className="grid gap-4 pt-4 pb-2">
                   <FormField
                     control={form.control}
-                    name="url"
+                    name="provider"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>URL</FormLabel>
+                        <FormLabel>Provider</FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <Input {...field} placeholder="http://localhost:11434/v1" className="pr-10 rounded-lg" />
-                            {isLoadingModels && (
-                              <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
-                            )}
-                          </div>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger className="w-full rounded-lg">
+                              <SelectValue placeholder="Select provider" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="thunderbolt">Thunderbolt</SelectItem>
+                              <SelectItem value="tinfoil">Tinfoil</SelectItem>
+                              <SelectItem value="openai">OpenAI</SelectItem>
+                              <SelectItem value="openrouter">OpenRouter</SelectItem>
+                              <SelectItem value="anthropic">Anthropic</SelectItem>
+                              <SelectItem value="custom">Custom</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </FormControl>
-                        {modelLoadError && (
-                          <p className="text-sm text-destructive mt-1 whitespace-pre-line">{modelLoadError}</p>
-                        )}
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                )}
 
-                {/* API Key */}
-                {form.watch('provider') !== 'thunderbolt' && (
-                  <FormField
-                    control={form.control}
-                    name="apiKey"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>API Key{form.watch('provider') === 'custom' ? ' (Optional)' : ''}</FormLabel>
-                        <FormControl>
-                          <Input type="password" {...field} placeholder="sk-..." className="rounded-lg" />
-                        </FormControl>
-                        {modelLoadError && form.watch('provider') !== 'custom' && (
-                          <p className="text-sm text-destructive mt-1 whitespace-pre-line">{modelLoadError}</p>
-                        )}
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                {/* Model Selection with Autocomplete - Show based on provider and API key */}
-                {(() => {
-                  const provider = form.watch('provider')
-                  const apiKey = form.watch('apiKey')
-                  const url = form.watch('url')
-
-                  // Show model selection if:
-                  // 1. Thunderbolt / Tinfoil (no API key needed)
-                  // 1. Anthropic (API key required for testing - model list is hardwired)
-                  // 2. Other providers with API key
-                  // 3. OpenAI Compatible with URL (API key optional)
-                  const showModelSelection =
-                    !modelLoadError &&
-                    (['thunderbolt', 'tinfoil', 'anthropic'].includes(provider) ||
-                      (provider && apiKey) ||
-                      (provider === 'custom' && url))
-
-                  if (!showModelSelection) {
-                    return null
-                  }
-
-                  return (
+                  {/* URL for OpenAI Compatible */}
+                  {form.watch('provider') === 'custom' && (
                     <FormField
                       control={form.control}
-                      name="model"
-                      render={() => (
-                        <FormItem className="flex flex-col">
+                      name="url"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>URL</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Input {...field} placeholder="http://localhost:11434/v1" className="pr-10 rounded-lg" />
+                              {isLoadingModels && (
+                                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                              )}
+                            </div>
+                          </FormControl>
+                          {modelLoadError && (
+                            <p className="text-sm text-destructive mt-1 whitespace-pre-line">{modelLoadError}</p>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {/* API Key */}
+                  {form.watch('provider') !== 'thunderbolt' && (
+                    <FormField
+                      control={form.control}
+                      name="apiKey"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>API Key{form.watch('provider') === 'custom' ? ' (Optional)' : ''}</FormLabel>
+                          <FormControl>
+                            <Input type="password" {...field} placeholder="sk-..." className="rounded-lg" />
+                          </FormControl>
+                          {modelLoadError && form.watch('provider') !== 'custom' && (
+                            <p className="text-sm text-destructive mt-1 whitespace-pre-line">{modelLoadError}</p>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {/* Model Selection with Autocomplete - Show based on provider and API key */}
+                  {(() => {
+                    const provider = form.watch('provider')
+                    const apiKey = form.watch('apiKey')
+                    const url = form.watch('url')
+
+                    // Show model selection if:
+                    // 1. Thunderbolt / Tinfoil (no API key needed)
+                    // 1. Anthropic (API key required for testing - model list is hardwired)
+                    // 2. Other providers with API key
+                    // 3. OpenAI Compatible with URL (API key optional)
+                    const showModelSelection =
+                      !modelLoadError &&
+                      (['thunderbolt', 'tinfoil', 'anthropic'].includes(provider) ||
+                        (provider && apiKey) ||
+                        (provider === 'custom' && url))
+
+                    if (!showModelSelection) {
+                      return null
+                    }
+
+                    return (
+                      <FormField
+                        control={form.control}
+                        name="model"
+                        render={() => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel>Model</FormLabel>
+                            <FormControl>
+                              <Combobox
+                                items={comboboxItems}
+                                value={selectedModelId || undefined}
+                                onValueChange={(id) => handleSelectModel(id)}
+                                placeholder="Select model..."
+                                searchPlaceholder="Search models..."
+                                emptyMessage="No models found."
+                                loading={isLoadingModels}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )
+                  })()}
+
+                  {/* Custom Model Input */}
+                  {selectedModelId === 'custom' && (
+                    <FormField
+                      control={form.control}
+                      name="customModel"
+                      render={({ field }) => (
+                        <FormItem>
                           <FormLabel>Model</FormLabel>
                           <FormControl>
-                            <Combobox
-                              items={comboboxItems}
-                              value={selectedModelId || undefined}
-                              onValueChange={(id) => handleSelectModel(id)}
-                              placeholder="Select model..."
-                              searchPlaceholder="Search models..."
-                              emptyMessage="No models found."
-                              loading={isLoadingModels}
+                            <Input
+                              {...field}
+                              placeholder="e.g., gpt-4-turbo-preview"
+                              className="rounded-lg"
+                              onChange={(e) => {
+                                field.onChange(e)
+                                form.setValue('model', e.target.value)
+                              }}
                             />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  )
-                })()}
+                  )}
 
-                {/* Custom Model Input */}
-                {selectedModelId === 'custom' && (
-                  <FormField
-                    control={form.control}
-                    name="customModel"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Model</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="e.g., gpt-4-turbo-preview"
-                            className="rounded-lg"
-                            onChange={(e) => {
-                              field.onChange(e)
-                              form.setValue('model', e.target.value)
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                  {/* Display Name - Only show when model is selected */}
+                  {(watchedModel || selectedModelId === 'custom') && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Display Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g., GPT-4 Turbo" className="rounded-lg" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="toolUsage"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <div className="flex items-center gap-3">
+                                <Checkbox checked={field.value} onCheckedChange={field.onChange} id="toolUsage" />
+                                <FormLabel htmlFor="toolUsage">Enable tool use</FormLabel>
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
 
-                {/* Display Name - Only show when model is selected */}
-                {(watchedModel || selectedModelId === 'custom') && (
-                  <>
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Display Name</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="e.g., GPT-4 Turbo" className="rounded-lg" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                  {/* Warning when model lacks tool support */}
+                  {!supportsToolsSelected && (watchedModel || selectedModelId === 'custom') && (
+                    <StatusCard
+                      title={
+                        <>
+                          <X className="h-5 w-5 text-red-600" />
+                          Model may not be compatible
+                        </>
+                      }
+                      description="This model does not seem to support tool usage."
                     />
-                    <FormField
-                      control={form.control}
-                      name="toolUsage"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <div className="flex items-center gap-3">
-                              <Checkbox checked={field.value} onCheckedChange={field.onChange} id="toolUsage" />
-                              <FormLabel htmlFor="toolUsage">Enable tool use</FormLabel>
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
+                  )}
+
+                  {/* Test Connection Button */}
+                  {canTestConnection && (
+                    <Button
+                      type="button"
+                      onClick={testConnection}
+                      disabled={isTestingConnection}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      {isTestingConnection ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Testing Model...
+                        </>
+                      ) : (
+                        'Test Model'
                       )}
+                    </Button>
+                  )}
+
+                  {/* Connection Status Messages */}
+                  {connectionStatus === 'success' && (
+                    <StatusCard
+                      title={
+                        <>
+                          <Check className="h-5 w-5 text-green-600" />
+                          Test successful!
+                        </>
+                      }
+                      description="Successfully got a response from the model."
+                      className="border-green-200/50 dark:border-green-500/20"
                     />
-                  </>
-                )}
+                  )}
 
-                {/* Warning when model lacks tool support */}
-                {!supportsToolsSelected && (watchedModel || selectedModelId === 'custom') && (
-                  <StatusCard
-                    title={
-                      <>
-                        <X className="h-5 w-5 text-red-600" />
-                        Model may not be compatible
-                      </>
-                    }
-                    description="This model does not seem to support tool usage."
-                  />
-                )}
+                  {connectionStatus === 'error' && (
+                    <StatusCard
+                      title={
+                        <>
+                          <X className="h-5 w-5 text-red-600" />
+                          Test failed
+                        </>
+                      }
+                      description={connectionError || 'Received an error while testing the model.'}
+                      className="bg-red-50/50 dark:bg-red-500/10 border-red-200/50 dark:border-red-500/20"
+                    />
+                  )}
 
-                {/* Test Connection Button */}
-                {canTestConnection && (
-                  <Button
-                    type="button"
-                    onClick={testConnection}
-                    disabled={isTestingConnection}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    {isTestingConnection ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Testing Model...
-                      </>
-                    ) : (
-                      'Test Model'
-                    )}
-                  </Button>
-                )}
-
-                {/* Connection Status Messages */}
-                {connectionStatus === 'success' && (
-                  <StatusCard
-                    title={
-                      <>
-                        <Check className="h-5 w-5 text-green-600" />
-                        Test successful!
-                      </>
-                    }
-                    description="Successfully got a response from the model."
-                    className="border-green-200/50 dark:border-green-500/20"
-                  />
-                )}
-
-                {connectionStatus === 'error' && (
-                  <StatusCard
-                    title={
-                      <>
-                        <X className="h-5 w-5 text-red-600" />
-                        Test failed
-                      </>
-                    }
-                    description={connectionError || 'Received an error while testing the model.'}
-                    className="bg-red-50/50 dark:bg-red-500/10 border-red-200/50 dark:border-red-500/20"
-                  />
-                )}
-
-                <div className="flex justify-end gap-3 pt-2">
-                  <Button type="button" variant="ghost" onClick={() => handleDialogOpenChange(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={addModelMutation.isPending}>
-                    {addModelMutation.isPending ? 'Adding...' : 'Add Model'}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </ResponsiveModalContentComposable>
-        </Dialog>
+                  <div className="flex justify-end gap-3 pt-2">
+                    <Button type="button" variant="ghost" onClick={() => handleDialogOpenChange(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={addModelMutation.isPending}>
+                      {addModelMutation.isPending ? 'Adding...' : 'Add Model'}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </ResponsiveModalContentComposable>
+          </Dialog>
+        )}
       </PageHeader>
+
+      {!byoModelsAllowed && (
+        <p className="text-[length:var(--font-size-sm)] text-muted-foreground" data-testid="models-policy-note">
+          Adding your own models is not allowed by your organization.
+        </p>
+      )}
 
       <div className="grid gap-4">
         {models.map((model) => {
@@ -1276,10 +1307,12 @@ export default function ModelsPage() {
               <Cpu className="size-10 text-muted-foreground mb-4" />
               <h3 className="font-medium text-foreground mb-1">No models configured</h3>
               <p className="text-sm text-muted-foreground mb-4">Get started by adding your first AI model.</p>
-              <Button onClick={() => handleDialogOpenChange(true)} variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Model
-              </Button>
+              {byoModelsAllowed && (
+                <Button onClick={() => handleDialogOpenChange(true)} variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Model
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}

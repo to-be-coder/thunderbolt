@@ -17,6 +17,12 @@ import { defaultOrgPolicy, type OrgPolicy } from '@shared/agent-cards'
 
 const orgPolicyRowId = 'org-policy'
 
+/** Drizzle select for the single cached policy row. Shared by the imperative
+ *  {@link getOrgPolicy} and the live `useOrgPolicy` hook (which wraps it in
+ *  `toCompilableQuery`). Returns 0 or 1 rows. */
+export const getOrgPolicyQuery = (db: AnyDrizzleDatabase) =>
+  db.select().from(orgPolicyTable).where(eq(orgPolicyTable.id, orgPolicyRowId))
+
 /** The cached org policy, or the consumer/no-org default when none is cached. */
 export const getOrgPolicy = async (db: AnyDrizzleDatabase): Promise<OrgPolicy> => {
   const row = await db.select().from(orgPolicyTable).where(eq(orgPolicyTable.id, orgPolicyRowId)).get()

@@ -58,6 +58,8 @@ import { parseMcpServersConfig, type ParsedMcpServer } from '@/lib/mcp-config-im
 import { validateMcpServerUrl } from '@/lib/mcp-url-validation'
 import { useMcpServerOAuth, type McpOAuthCallback, type OAuthCardState } from '@/hooks/use-mcp-server-oauth'
 import { generateServerName, useAddServerForm } from '@/hooks/use-add-server-form'
+import { useOrgPolicy } from '@/dal/use-org-policy'
+import { isMcpServerAllowed } from '@/dal/mcp-policy'
 
 export { generateServerName }
 
@@ -188,6 +190,10 @@ export default function McpServersPage({ deps = {} }: { deps?: McpServersPageDep
   const classifyAuth = deps.classifyMcpServerAuth ?? classifyMcpServerAuth
   const db = useDatabase()
   const cloudUrl = useActiveCloudUrl() ?? ''
+  // Org MCP allowlist (T6): a non-empty allowlist restricts which servers a
+  // member may enable; disallowed servers surface "not allowed by your
+  // organization" instead of a working toggle.
+  const orgPolicy = useOrgPolicy()
   // Read provider connection state read-only for status display. Sync ownership
   // lives in the single global useMcpSync() in AppContent — running it here too
   // would re-run the reconciliation effect and double-register servers.
@@ -778,6 +784,7 @@ export default function McpServersPage({ deps = {} }: { deps?: McpServersPageDep
         {servers.map((server) => {
           const status = getConnectionStatus(server)
           const isEnabled = server.enabled === 1
+          const orgAllowsServer = isMcpServerAllowed(server, orgPolicy.mcpAllowlist)
           const oauthState = getOAuthCardState(server)
           const isAuthorizing = oauthState?.phase === 'authorizing'
           const showAuthorize = oauthState?.phase === 'needs-auth' || oauthState?.phase === 'error'
@@ -898,16 +905,24 @@ export default function McpServersPage({ deps = {} }: { deps?: McpServersPageDep
                       <TooltipTrigger asChild>
                         <div>
                           <Switch
-                            checked={isEnabled}
+                            checked={isEnabled && orgAllowsServer}
+                            disabled={!orgAllowsServer}
                             onCheckedChange={(checked) =>
                               toggleServerMutation.mutate({ id: server.id, enabled: checked })
                             }
                             className="cursor-pointer"
+                            data-testid={`mcp-toggle-${server.id}`}
                           />
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
-                        <p>{isEnabled ? 'Disable server' : 'Enable server'}</p>
+                        <p>
+                          {!orgAllowsServer
+                            ? 'Not allowed by your organization'
+                            : isEnabled
+                              ? 'Disable server'
+                              : 'Enable server'}
+                        </p>
                       </TooltipContent>
                     </Tooltip>
                     <Popover

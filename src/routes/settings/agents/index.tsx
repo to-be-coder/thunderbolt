@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { useState } from 'react'
-import { Navigate } from 'react-router'
+import { Navigate, useNavigate } from 'react-router'
 import { v7 as uuidv7 } from 'uuid'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -12,12 +12,13 @@ import { AgentList } from '@/components/settings/agents/agent-list'
 import { AgentCatalog } from '@/components/settings/agents/agent-catalog'
 import { AddCustomAgentDialog, type AddCustomAgentPayload } from '@/components/settings/agents/add-custom-agent-dialog'
 import { testAcpConnection } from '@/acp'
-import { createAgent, deleteAgent, updateAgent, useAllAgents } from '@/dal'
-import { useDatabase } from '@/contexts'
-import { useAuth } from '@/contexts'
+import { createAgent } from '@/dal'
+import { useAgents } from '@/dal/agents'
+import { useTeamAgents } from '@/dal/use-team-agents'
+import { useOrgPolicy } from '@/dal/use-org-policy'
+import { useDatabase, useAuth } from '@/contexts'
 import { selectAllowCustomAgents, useConfigStore } from '@/api/config-store'
 import { useAgentsSettingsHidden } from '@/hooks/use-agents-settings-hidden'
-import type { Agent } from '@/types/acp'
 
 type AgentsSettingsPageProps = {
   /** Test seam — production omits; the hidden-check hook falls back to
@@ -28,15 +29,19 @@ type AgentsSettingsPageProps = {
 }
 
 /**
- * Settings page listing every agent the user can chat with: the built-in
- * Thunderbolt assistant (always first, immutable), system-provided agents
- * synced from `/agents` discovery (read-only), and user-added custom remote
- * ACP endpoints. The composition lives in `useAllAgents` — this page is just
- * a thin orchestrator wiring DAL writes to UI events.
+ * The Agents list (agents-page-spec §1): two labeled sections — the trusted org
+ * set then the member's own agents — each row opening a READ-ONLY detail view.
+ * The only add path is "＋ Connect an agent" (the native agent is auto-created,
+ * company agents arrive via grants). Nothing here is editable; there is no
+ * create-native, no duplicate, no search. Sections and the connect button honor
+ * the personal-agent policy by absence (spec §5).
  */
 export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageProps = {}) {
   const db = useDatabase()
-  const agents = useAllAgents()
+  const navigate = useNavigate()
+  const teamCards = useTeamAgents()
+  const personalAgents = useAgents()
+  const policy = useOrgPolicy()
   const authClient = useAuth()
   const { data: session } = authClient.useSession()
   const currentUserId = session?.user?.id ?? null
@@ -44,45 +49,18 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
   const allowCustomAgents = useConfigStore((state) => selectAllowCustomAgents(state.config))
 
   const [dialogOpen, setDialogOpen] = useState(false)
-  // `null` ⇒ Add mode; an Agent ⇒ Edit mode. The dialog receives a `key`
-  // derived from the agent id so its reducer remounts when switching targets.
-  const [editingAgent, setEditingAgent] = useState<Agent | null>(null)
 
   // Defence against direct URL / bookmark when the entry is hidden in the
-  // sidebar. Anonymous users behind the proxy can't reach managed agents, so
-  // sending them back to the settings index keeps the UI honest.
+  // sidebar. Anonymous users behind the proxy can't reach managed agents.
   if (agentsHidden) {
     return <Navigate to="/settings" replace />
   }
 
-  const handleToggle = async (_agent: Agent, _enabled: boolean) => {
-    // Personal agents no longer carry an `enabled` flag — the row is either
-    // present (usable) or soft-deleted. The toggle affordance goes away with
-    // the Stage 2 agent-access UI; until then this is a no-op.
-  }
-
-  const handleDelete = async (agent: Agent) => {
-    await deleteAgent(db, agent.id)
-  }
-
-  const handleEdit = (agent: Agent) => {
-    setEditingAgent(agent)
-    setDialogOpen(true)
-  }
+  // §5: "company agents only" hides the YOURS section AND the connect button.
+  const canConnect = policy.personalAgentPolicy !== 'company_only' && allowCustomAgents && !!currentUserId
 
   const handleSubmit = async (payload: AddCustomAgentPayload) => {
-    if (editingAgent) {
-      // Only customs are editable; system / built-in rows never reach this
-      // path (the row hides the Edit affordance).
-      await updateAgent(db, editingAgent.id, {
-        name: payload.name,
-        acpUrl: payload.url,
-      })
-      return
-    }
     if (!currentUserId) {
-      // Anonymous sessions can't sync custom agents — the page hides the
-      // dialog trigger in that case, but the guard keeps the write safe.
       return
     }
     await createAgent(db, {
@@ -93,51 +71,35 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
     })
   }
 
-  const handleDialogOpenChange = (next: boolean) => {
-    setDialogOpen(next)
-    if (!next) {
-      // Drop the edit target so a follow-up "+" opens a fresh Add dialog.
-      setEditingAgent(null)
-    }
-  }
-
   return (
     <div className="flex flex-col gap-6 p-4 w-full max-w-[760px] mx-auto">
-      <PageHeader title="Agents">
-        {allowCustomAgents && (
-          <Button
-            variant="outline"
-            size="icon"
-            className="rounded-lg"
-            aria-label="Add Custom Agent"
-            onClick={() => {
-              setEditingAgent(null)
-              setDialogOpen(true)
-            }}
-            disabled={!currentUserId}
-          >
-            <Plus />
-          </Button>
-        )}
-      </PageHeader>
+      <PageHeader title="Agents" />
 
       <AgentList
-        agents={agents}
-        currentUserId={currentUserId}
-        onToggle={handleToggle}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
+        teamCards={teamCards}
+        personalAgents={personalAgents}
+        policy={policy}
+        onOpenAgent={(agentId) => navigate(`/settings/agents/${agentId}`)}
       />
 
-      <AgentCatalog />
+      {canConnect && (
+        <Button
+          variant="outline"
+          className="self-start rounded-lg"
+          onClick={() => setDialogOpen(true)}
+          data-testid="connect-an-agent"
+        >
+          <Plus className="size-4" />
+          Connect an agent
+        </Button>
+      )}
 
       <AddCustomAgentDialog
-        key={editingAgent?.id ?? 'new'}
         open={dialogOpen}
-        onOpenChange={handleDialogOpenChange}
+        onOpenChange={setDialogOpen}
         onSubmit={handleSubmit}
-        editingAgent={editingAgent}
         testAcpConnection={testAcpConnection}
+        catalogSlot={<AgentCatalog />}
       />
     </div>
   )
