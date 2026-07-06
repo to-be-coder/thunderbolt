@@ -22,7 +22,6 @@ import { useAgentEndpointDetail, useDeleteAgent } from '../api/hooks'
 import type { TeamAgentWithCapabilities } from '../api/types'
 import { AgentForm } from './agent-form'
 import { AgentConnectionIndicator } from './connection-status'
-import { StatusPill } from './status-pill'
 
 /**
  * S1a — Agent detail, shown inline in the Registry's detail column (a
@@ -108,12 +107,16 @@ const AdminDetail = ({ agent }: { agent: TeamAgentWithCapabilities }) => {
     <section className="flex flex-col gap-4">
       <Field label="Status">
         <div>
-          <AgentConnectionIndicator acpUrl={agent.acpUrl} />
+          <span className="inline-flex rounded-md bg-muted px-2 py-0.5">
+            <AgentConnectionIndicator acpUrl={agent.acpUrl} />
+          </span>
         </div>
       </Field>
       <Field label="Category">
         <div>
-          <StatusPill tone={agent.category === 'sealed' ? 'muted' : 'info'}>{agent.category}</StatusPill>
+          <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-sm capitalize">
+            {agent.category}
+          </span>
         </div>
       </Field>
       <Field label="Endpoint">
