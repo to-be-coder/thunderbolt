@@ -56,7 +56,6 @@ describe('AgentDetailPanel', () => {
     expect(probe?.method).toBe('POST')
     expect(probe?.body).toEqual({ acpUrl: 'wss://agents.test/sales' })
 
-    expect(screen.getByText('Admin view')).toBeInTheDocument()
     expect(screen.getByText('wss://agents.test/sales')).toBeInTheDocument()
     expect(screen.getByText('claude-opus-4-8')).toBeInTheDocument()
     expect(screen.getByText('sales-mcp')).toBeInTheDocument()

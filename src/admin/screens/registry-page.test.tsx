@@ -59,12 +59,11 @@ describe('RegistryPage', () => {
     await flush()
 
     // No detail rendered until a card is selected.
-    expect(screen.queryByText('Admin view')).not.toBeInTheDocument()
+    expect(screen.queryByText('wss://a.test/acp')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByTestId('agent-card-ag1'))
     await flush()
 
-    expect(screen.getByText('Admin view')).toBeInTheDocument()
     expect(screen.getByText('wss://a.test/acp')).toBeInTheDocument()
   })
 

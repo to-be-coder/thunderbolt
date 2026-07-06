@@ -103,13 +103,6 @@ const AdminDetail = ({ agent }: { agent: TeamAgentWithCapabilities }) => {
 
   return (
     <section className="flex flex-col gap-4 border-t border-border pt-5">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-sm font-semibold">Admin view</h2>
-        <p className="text-xs text-muted-foreground">
-          Fetched live from the endpoint · admin-only · not stored or synced to members.
-        </p>
-      </div>
-
       <Field label="Endpoint">
         <code className="text-xs break-all">{agent.acpUrl}</code>
       </Field>
