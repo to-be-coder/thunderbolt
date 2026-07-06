@@ -14,10 +14,11 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/ui/page-header'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { X } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import { useState } from 'react'
 import {
   useAddGroupMember,
@@ -37,6 +38,7 @@ export const GroupsPage = () => {
   const deleteGroup = useDeleteGroup()
   const [name, setName] = useState('')
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   const groups = groupsQuery.data ?? []
   const selectedGroup = groups.find((group) => group.id === selectedGroupId) ?? null
@@ -49,28 +51,44 @@ export const GroupsPage = () => {
     const created = await createGroup.mutateAsync(trimmed)
     setName('')
     setSelectedGroupId(created.id)
+    setDialogOpen(false)
   }
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <PageHeader title="Groups" />
+      <PageHeader title="Groups">
+        <Button
+          variant="outline"
+          size="icon"
+          className="rounded-lg"
+          onClick={() => setDialogOpen(true)}
+          aria-label="Create a group"
+        >
+          <Plus />
+        </Button>
+      </PageHeader>
 
-      <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
-        <h2 className="text-sm font-semibold">Create a group</h2>
-        <div className="flex flex-wrap items-center gap-3">
-          <Input
-            placeholder="Group name (e.g. Legal)"
-            className="max-w-xs"
-            value={name}
-            aria-label="Group name"
-            onChange={(event) => setName(event.target.value)}
-            onKeyDown={(event) => event.key === 'Enter' && handleCreate()}
-          />
-          <Button onClick={handleCreate} disabled={createGroup.isPending || !name.trim()}>
-            {createGroup.isPending ? 'Creating…' : 'Create group'}
-          </Button>
-        </div>
-      </div>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create a group</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            <Input
+              placeholder="Group name (e.g. Legal)"
+              value={name}
+              aria-label="Group name"
+              onChange={(event) => setName(event.target.value)}
+              onKeyDown={(event) => event.key === 'Enter' && handleCreate()}
+            />
+            <div className="flex justify-end">
+              <Button onClick={handleCreate} disabled={createGroup.isPending || !name.trim()}>
+                {createGroup.isPending ? 'Creating…' : 'Create group'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="flex flex-col gap-2 rounded-lg border border-border p-4">

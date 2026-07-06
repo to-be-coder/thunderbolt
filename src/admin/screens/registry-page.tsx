@@ -14,6 +14,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Plus } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useState } from 'react'
@@ -47,7 +48,15 @@ export const RegistryPage = () => {
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <PageHeader title="Registry">
-        <Button onClick={() => setEditing({ mode: 'new' })}>Register agent</Button>
+        <Button
+          variant="outline"
+          size="icon"
+          className="rounded-lg"
+          onClick={() => setEditing({ mode: 'new' })}
+          aria-label="Register agent"
+        >
+          <Plus />
+        </Button>
       </PageHeader>
 
       <div className="rounded-lg border border-border">

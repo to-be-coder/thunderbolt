@@ -14,9 +14,11 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { PageHeader } from '@/components/ui/page-header'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useAgents, useCreateGrant, useGrants, useGroups, useMembers, useRevokeGrant } from '../api/hooks'
 import type { Grant, GrantTargetType } from '../api/types'
@@ -39,6 +41,7 @@ export const GrantsPage = () => {
   const [agentId, setAgentId] = useState('')
   const [targetType, setTargetType] = useState<GrantTargetType>('group')
   const [targetId, setTargetId] = useState('')
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   const agents = useMemo(() => agentsQuery.data ?? [], [agentsQuery.data])
   const groups = useMemo(() => groupsQuery.data ?? [], [groupsQuery.data])
@@ -61,6 +64,7 @@ export const GrantsPage = () => {
       ...(needsTarget ? { targetId } : {}),
     })
     setTargetId('')
+    setDialogOpen(false)
   }
 
   const describeTarget = (grant: Grant): string => {
@@ -75,93 +79,109 @@ export const GrantsPage = () => {
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <PageHeader title="Grants" />
+      <PageHeader title="Grants">
+        <Button
+          variant="outline"
+          size="icon"
+          className="rounded-lg"
+          onClick={() => setDialogOpen(true)}
+          aria-label="Grant an agent"
+        >
+          <Plus />
+        </Button>
+      </PageHeader>
 
-      <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
-        <h2 className="text-sm font-semibold">Grant an agent</h2>
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1 text-sm">
-            Agent
-            <Select value={agentId} onValueChange={setAgentId}>
-              <SelectTrigger className="w-52" aria-label="Agent">
-                <SelectValue placeholder="Select agent…" />
-              </SelectTrigger>
-              <SelectContent>
-                {agents.map((agent) => (
-                  <SelectItem key={agent.id} value={agent.id}>
-                    {agent.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            Target
-            <Select
-              value={targetType}
-              onValueChange={(value) => {
-                setTargetType(value as GrantTargetType)
-                setTargetId('')
-              }}
-            >
-              <SelectTrigger className="w-40" aria-label="Target type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="group">Group</SelectItem>
-                <SelectItem value="everyone">Everyone</SelectItem>
-                <SelectItem value="member">Member (exception)</SelectItem>
-              </SelectContent>
-            </Select>
-          </label>
-
-          {targetType === 'group' && (
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Grant an agent</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              Group
-              <Select value={targetId} onValueChange={setTargetId}>
-                <SelectTrigger className="w-52" aria-label="Group">
-                  <SelectValue placeholder="Select group…" />
+              Agent
+              <Select value={agentId} onValueChange={setAgentId}>
+                <SelectTrigger className="w-52" aria-label="Agent">
+                  <SelectValue placeholder="Select agent…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {groups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {group.name}
+                  {agents.map((agent) => (
+                    <SelectItem key={agent.id} value={agent.id}>
+                      {agent.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </label>
-          )}
 
-          {targetType === 'member' && (
             <label className="flex flex-col gap-1 text-sm">
-              Member
-              <Select value={targetId} onValueChange={setTargetId}>
-                <SelectTrigger className="w-52" aria-label="Member">
-                  <SelectValue placeholder="Select member…" />
+              Target
+              <Select
+                value={targetType}
+                onValueChange={(value) => {
+                  setTargetType(value as GrantTargetType)
+                  setTargetId('')
+                }}
+              >
+                <SelectTrigger className="w-40" aria-label="Target type">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {members.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.email}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="group">Group</SelectItem>
+                  <SelectItem value="everyone">Everyone</SelectItem>
+                  <SelectItem value="member">Member (exception)</SelectItem>
                 </SelectContent>
               </Select>
             </label>
-          )}
 
-          <Button onClick={handleGrant} disabled={!canGrant || createGrant.isPending}>
-            {createGrant.isPending ? 'Granting…' : 'Grant'}
-          </Button>
-        </div>
-        {createGrant.isError && (
-          <p className="text-sm text-destructive" role="alert">
-            Could not create this grant. It may already exist.
-          </p>
-        )}
-      </div>
+            {targetType === 'group' && (
+              <label className="flex flex-col gap-1 text-sm">
+                Group
+                <Select value={targetId} onValueChange={setTargetId}>
+                  <SelectTrigger className="w-52" aria-label="Group">
+                    <SelectValue placeholder="Select group…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups.map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+            )}
+
+            {targetType === 'member' && (
+              <label className="flex flex-col gap-1 text-sm">
+                Member
+                <Select value={targetId} onValueChange={setTargetId}>
+                  <SelectTrigger className="w-52" aria-label="Member">
+                    <SelectValue placeholder="Select member…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {members.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+            )}
+
+            {createGrant.isError && (
+              <p className="text-sm text-destructive" role="alert">
+                Could not create this grant. It may already exist.
+              </p>
+            )}
+            <div className="flex justify-end">
+              <Button onClick={handleGrant} disabled={!canGrant || createGrant.isPending}>
+                {createGrant.isPending ? 'Granting…' : 'Grant'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="rounded-lg border border-border">
         <Table>

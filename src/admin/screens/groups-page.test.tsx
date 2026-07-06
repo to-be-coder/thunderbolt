@@ -24,6 +24,8 @@ describe('GroupsPage', () => {
     renderAdmin(<GroupsPage />, client)
     await flush()
 
+    // The create form lives in a modal opened by the "+" action in the title row.
+    fireEvent.click(screen.getByRole('button', { name: 'Create a group' }))
     fireEvent.change(screen.getByLabelText('Group name'), { target: { value: 'Legal' } })
     fireEvent.click(screen.getByRole('button', { name: 'Create group' }))
     await flush()

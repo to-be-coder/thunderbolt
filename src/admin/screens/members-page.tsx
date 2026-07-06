@@ -53,8 +53,14 @@ export const MembersPage = () => {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <PageHeader title="Members">
-        <Button size="icon" className="rounded-lg" onClick={() => setDialogOpen(true)} aria-label="Invite a member">
-          <Plus className="size-4" />
+        <Button
+          variant="outline"
+          size="icon"
+          className="rounded-lg"
+          onClick={() => setDialogOpen(true)}
+          aria-label="Invite a member"
+        >
+          <Plus />
         </Button>
       </PageHeader>
 
