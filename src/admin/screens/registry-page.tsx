@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Plus } from 'lucide-react'
+import { Link } from 'react-router'
 import { PageHeader } from '@/components/ui/page-header'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useState } from 'react'
@@ -89,10 +90,10 @@ export const RegistryPage = () => {
             {agents.map((agent) => (
               <TableRow key={agent.id}>
                 <TableCell className="font-medium">
-                  <span className="mr-2" aria-hidden>
-                    {agent.icon || '🤖'}
-                  </span>
-                  {agent.name}
+                  <Link to={`/admin/agents/${agent.id}`} className="inline-flex items-center gap-2 hover:underline">
+                    <span aria-hidden>{agent.icon || '🤖'}</span>
+                    {agent.name}
+                  </Link>
                 </TableCell>
                 <TableCell>
                   <StatusPill tone={agent.category === 'sealed' ? 'muted' : 'info'}>{agent.category}</StatusPill>

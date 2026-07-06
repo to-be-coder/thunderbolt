@@ -28,6 +28,7 @@ export const adminKeys = {
   groups: ['admin', 'groups'] as const,
   groupMembers: (groupId: string) => ['admin', 'groups', groupId, 'members'] as const,
   agents: ['admin', 'agents'] as const,
+  agentEndpoint: (acpUrl: string) => ['admin', 'agents', 'endpoint', acpUrl] as const,
   grants: ['admin', 'grants'] as const,
   policy: ['admin', 'policy'] as const,
   audit: (action?: string) => ['admin', 'audit', action ?? 'all'] as const,
@@ -137,6 +138,18 @@ export const useRemoveGroupMember = (groupId: string) => {
 export const useAgents = () => {
   const api = useAdminApi()
   return useQuery({ queryKey: adminKeys.agents, queryFn: api.listAgents })
+}
+
+/** Admin-only live descriptor for one agent's ACP endpoint (models, MCP, tools,
+ *  credentials). Fetched on demand; never persisted or synced to members. */
+export const useAgentEndpointDetail = (acpUrl: string | undefined) => {
+  const api = useAdminApi()
+  return useQuery({
+    queryKey: adminKeys.agentEndpoint(acpUrl ?? ''),
+    queryFn: () => api.describeEndpoint(acpUrl ?? ''),
+    enabled: acpUrl !== undefined && acpUrl !== '',
+    staleTime: 60_000,
+  })
 }
 
 export const useCreateAgent = () => {

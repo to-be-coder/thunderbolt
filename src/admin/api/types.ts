@@ -85,6 +85,24 @@ export type AgentPatch = Partial<AgentInput>
 
 export type ConnectionTestResult = { reachable: true; name?: string } | { reachable: false; error: string }
 
+/**
+ * Live, admin-only technical descriptor fetched from an agent's ACP endpoint on
+ * demand. This is the wiring the display-only card deliberately CANNOT carry
+ * (INVARIANT 2 in `@shared/agent-cards`): it is never persisted on the team
+ * agent and never synced to members — the admin console fetches it fresh when
+ * an admin opens the agent's detail page.
+ */
+export type AgentEndpointDetail = {
+  /** Model NAMES the endpoint runs (e.g. 'claude-opus-4-8'). */
+  models: string[]
+  /** MCP servers the agent is wired to (display names). */
+  mcpServers: string[]
+  /** Tool/function names the agent can invoke. */
+  tools: string[]
+  /** External credentials the agent uses, and whose identity they run under. */
+  credentials: { label: string; mode: CredentialMode }[]
+}
+
 export type GrantTargetType = 'group' | 'everyone' | 'member'
 
 export type Grant = {

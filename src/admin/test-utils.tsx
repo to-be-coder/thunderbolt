@@ -8,7 +8,7 @@ import { getClock } from '@/testing-library'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, render } from '@testing-library/react'
 import type { ReactElement, ReactNode } from 'react'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, Route, Routes } from 'react-router'
 
 export type RecordedCall = { method: string; path: string; search: string; body: unknown }
 
@@ -61,13 +61,28 @@ const AdminTestProviders = ({ client, children }: { client: HttpClient; children
   })
   return (
     <QueryClientProvider client={queryClient}>
-      <HttpClientProvider httpClient={client}>
-        <MemoryRouter>{children}</MemoryRouter>
-      </HttpClientProvider>
+      <HttpClientProvider httpClient={client}>{children}</HttpClientProvider>
     </QueryClientProvider>
   )
 }
 
 /** Render an admin screen with a recording client + the providers it depends on. */
 export const renderAdmin = (ui: ReactElement, client: HttpClient) =>
-  render(<AdminTestProviders client={client}>{ui}</AdminTestProviders>)
+  render(
+    <AdminTestProviders client={client}>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </AdminTestProviders>,
+  )
+
+/** Render a routed admin screen so `useParams` resolves: mount `element` at
+ *  `routePath` and start the router at `initialPath`. */
+export const renderAdminAt = (initialPath: string, routePath: string, element: ReactElement, client: HttpClient) =>
+  render(
+    <AdminTestProviders client={client}>
+      <MemoryRouter initialEntries={[initialPath]}>
+        <Routes>
+          <Route path={routePath} element={element} />
+        </Routes>
+      </MemoryRouter>
+    </AdminTestProviders>,
+  )

@@ -17,6 +17,7 @@
 import type { AdminApi } from './admin-client'
 import type {
   AdminIdentity,
+  AgentEndpointDetail,
   AgentInput,
   AgentPatch,
   AuditEvent,
@@ -309,6 +310,21 @@ export const createDemoAdminApi = (): AdminApi => {
       const label = new URL(acpUrl).hostname.split('.')[0] ?? ''
       const name = label ? label.charAt(0).toUpperCase() + label.slice(1) : ''
       return { reachable: true, name } as const
+    },
+    describeEndpoint: async (acpUrl: string): Promise<AgentEndpointDetail> => {
+      // A live server returns its own wiring; the demo derives a plausible,
+      // per-endpoint descriptor from the URL so each agent reads differently.
+      const seed = acpUrl.split('/').filter(Boolean).pop() ?? 'agent'
+      const workspace = seed.charAt(0).toUpperCase() + seed.slice(1)
+      return {
+        models: ['claude-opus-4-8', 'claude-haiku-4-5'],
+        mcpServers: [`${seed}-mcp`, 'shared-knowledge-mcp'],
+        tools: [`search_${seed}`, `summarize_${seed}`, 'create_note'],
+        credentials: [
+          { label: `${workspace} workspace`, mode: 'as_you' },
+          { label: 'Org service account', mode: 'service_account' },
+        ],
+      }
     },
 
     listGrants: async () => live(store.grants),

@@ -15,6 +15,7 @@
 import type { HttpClient } from '@/contexts'
 import type {
   AdminIdentity,
+  AgentEndpointDetail,
   AgentInput,
   AgentPatch,
   AuditEvent,
@@ -59,6 +60,9 @@ export const createAdminApi = (httpClient: HttpClient) => ({
   deleteAgent: (id: string) => httpClient.delete(`admin/agents/${id}`).json<{ success: true }>(),
   testConnection: (acpUrl: string) =>
     httpClient.post('admin/agents/connection-test', { json: { acpUrl } }).json<ConnectionTestResult>(),
+  // Admin-only live descriptor — fetched fresh, never persisted or synced.
+  describeEndpoint: (acpUrl: string) =>
+    httpClient.post('admin/agents/describe', { json: { acpUrl } }).json<AgentEndpointDetail>(),
 
   // Grants
   listGrants: () => httpClient.get('admin/grants').json<Grant[]>(),
