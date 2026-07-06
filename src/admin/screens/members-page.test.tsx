@@ -43,7 +43,7 @@ describe('MembersPage', () => {
 
     // The invite form lives in a modal opened by the "+" action in the title row.
     fireEvent.click(screen.getByRole('button', { name: 'Invite a member' }))
-    fireEvent.change(screen.getByLabelText('Member email'), { target: { value: 'new@corp.test' } })
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'new@corp.test' } })
     fireEvent.click(screen.getByRole('button', { name: 'Invite' }))
     await flush()
 

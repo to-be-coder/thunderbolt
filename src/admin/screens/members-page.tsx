@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { PageHeader } from '@/components/ui/page-header'
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -71,14 +72,17 @@ export const MembersPage = () => {
             <DialogDescription>They'll join your org and activate on first sign-in.</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4">
-            <Input
-              type="email"
-              placeholder="teammate@company.com"
-              value={email}
-              aria-label="Member email"
-              onChange={(event) => setEmail(event.target.value)}
-              onKeyDown={(event) => event.key === 'Enter' && handleInvite()}
-            />
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="member-email">Email</Label>
+              <Input
+                id="member-email"
+                type="email"
+                placeholder="teammate@company.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                onKeyDown={(event) => event.key === 'Enter' && handleInvite()}
+              />
+            </div>
             <label className="flex items-center gap-2 text-sm">
               <Switch checked={asAdmin} onCheckedChange={setAsAdmin} aria-label="Invite as admin" />
               Admin
