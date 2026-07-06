@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { ChevronLeft, type LucideIcon } from 'lucide-react'
+import { X, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 
@@ -28,24 +28,28 @@ type AgentDetailLayoutProps = {
 }
 
 export const AgentDetailLayout = ({ icon: Icon, name, subtitle, body, actions, onBack }: AgentDetailLayoutProps) => (
-  <div className="flex flex-col gap-6 p-4 w-full max-w-[760px] mx-auto" data-testid="agent-detail">
-    <Button
-      variant="ghost"
-      size="sm"
-      className="self-start -ml-2 text-muted-foreground"
-      onClick={onBack}
-      data-testid="agent-detail-back"
-    >
-      <ChevronLeft className="size-4" />
-      Agents
-    </Button>
-
-    <div className="flex items-center gap-3">
-      <Icon className="size-8 text-muted-foreground shrink-0" aria-hidden="true" />
-      <div className="min-w-0">
-        <h1 className="text-xl font-medium truncate">{name}</h1>
-        <div className="text-[length:var(--font-size-sm)] text-muted-foreground">{subtitle}</div>
+  <div
+    className="flex h-full flex-col gap-6 overflow-y-auto rounded-lg border border-border p-6"
+    data-testid="agent-detail"
+  >
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <Icon className="size-8 text-muted-foreground shrink-0" aria-hidden="true" />
+        <div className="min-w-0">
+          <h1 className="text-xl font-medium truncate">{name}</h1>
+          <div className="text-[length:var(--font-size-sm)] text-muted-foreground">{subtitle}</div>
+        </div>
       </div>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="shrink-0 text-muted-foreground"
+        onClick={onBack}
+        aria-label="Close details"
+        data-testid="agent-detail-back"
+      >
+        <X className="size-4" />
+      </Button>
     </div>
 
     <div className="flex flex-col gap-6">{body}</div>
