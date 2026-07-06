@@ -137,8 +137,8 @@ export const PolicyPage = () => {
             <div>
               <h2 className="text-sm font-semibold">User-added MCP servers</h2>
               <p className="text-sm text-muted-foreground">
-                Whether members may add their own MCP servers (and extensions). Third-party tools are a supply-chain
-                risk, so the launch default is an allowlist.
+                Whether members may connect their own MCP servers. Third-party servers are a supply-chain risk, so the
+                launch default is an allowlist. (Extensions are built-in, not user-added, so they aren't governed here.)
               </p>
             </div>
             <ToggleGroup
