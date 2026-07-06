@@ -172,7 +172,7 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
             value={state.category}
             onValueChange={(value) => dispatch({ type: 'SET_CATEGORY', value: value as AgentCategory })}
           >
-            <SelectTrigger className="w-full" aria-label="Category">
+            <SelectTrigger className="w-fit" aria-label="Category">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
