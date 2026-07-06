@@ -25,29 +25,32 @@ const agentResponse = (name: string) => ({
 describe('RegistryPage', () => {
   afterEach(cleanup)
 
-  it('connection Test POSTs the ACP URL to /v1/admin/agents/connection-test', async () => {
+  it('register connects to the endpoint and derives the name when Name is blank', async () => {
     const { client, calls } = createRecordingClient((call) => {
       if (call.path === '/v1/admin/agents/connection-test') {
-        return { reachable: true }
+        return { reachable: true, name: 'Research' }
       }
-      return []
+      if (call.method === 'GET' && call.path === '/v1/admin/agents') {
+        return []
+      }
+      return agentResponse('Research')
     })
     renderAdmin(<RegistryPage />, client)
     await flush()
 
     fireEvent.click(screen.getByRole('button', { name: 'Register an agent' }))
-    fireEvent.change(screen.getByLabelText('ACP URL'), { target: { value: 'wss://agent.test/acp' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Connect' }))
+    fireEvent.change(screen.getByLabelText('ACP URL'), { target: { value: 'wss://research.company.com/acp' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Register agent' }))
     await flush()
 
-    const test = calls.find((call) => call.path === '/v1/admin/agents/connection-test')
-    expect(test).toBeDefined()
-    expect(test?.method).toBe('POST')
-    expect(test?.body).toEqual({ acpUrl: 'wss://agent.test/acp' })
-    expect(screen.getByText('Reachable')).toBeInTheDocument()
+    const probe = calls.find((call) => call.path === '/v1/admin/agents/connection-test')
+    expect(probe?.method).toBe('POST')
+    expect(probe?.body).toEqual({ acpUrl: 'wss://research.company.com/acp' })
+    const post = calls.find((call) => call.method === 'POST' && call.path === '/v1/admin/agents')
+    expect((post?.body as { name: string }).name).toBe('Research')
   })
 
-  it('register POSTs the new agent to /v1/admin/agents', async () => {
+  it('register POSTs a typed name without probing the endpoint', async () => {
     const { client, calls } = createRecordingClient((call) => {
       if (call.method === 'GET' && call.path === '/v1/admin/agents') {
         return []
@@ -63,6 +66,7 @@ describe('RegistryPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Register agent' }))
     await flush()
 
+    expect(calls.find((call) => call.path === '/v1/admin/agents/connection-test')).toBeUndefined()
     const post = calls.find((call) => call.method === 'POST' && call.path === '/v1/admin/agents')
     expect(post).toBeDefined()
     const body = post?.body as { name: string; acpUrl: string; category: string; status: string }
@@ -71,23 +75,5 @@ describe('RegistryPage', () => {
     expect(body.category).toBe('sealed')
     // v1 has no draft/published control (that's P1-2); new agents register live.
     expect(body.status).toBe('published')
-  })
-
-  it('derives the name from a reachable endpoint into an empty Name field', async () => {
-    const { client } = createRecordingClient((call) => {
-      if (call.path === '/v1/admin/agents/connection-test') {
-        return { reachable: true, name: 'Research' }
-      }
-      return []
-    })
-    renderAdmin(<RegistryPage />, client)
-    await flush()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Register an agent' }))
-    fireEvent.change(screen.getByLabelText('ACP URL'), { target: { value: 'wss://research.company.com/acp' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Connect' }))
-    await flush()
-
-    expect(screen.getByLabelText('Name')).toHaveValue('Research')
   })
 })

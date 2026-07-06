@@ -6,17 +6,17 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { useReducer, useState } from 'react'
+import { useReducer } from 'react'
 import { useAdminApi, useCreateAgent, useUpdateAgent } from '../api/hooks'
-import type { AgentCategory, AgentInput, ConnectionTestResult, TeamAgentWithCapabilities } from '../api/types'
+import type { AgentCategory, AgentInput, TeamAgentWithCapabilities } from '../api/types'
 
 /**
  * v1 admin agent form (PRD Rev 3.2). Company agents are ACP endpoints that
  * "arrive pre-configured": their name, icon, description, capabilities, and
  * advertised models all come from the agent's own card — none are authored
  * here. The admin only points at the endpoint and picks the category
- * (sealed/extensible, admin-set per Rev 3.2). The display name is derived from
- * the endpoint's card on a successful connection test (editable if needed).
+ * (sealed/extensible, admin-set per Rev 3.2). Registering connects to the
+ * endpoint and derives the display name from its card when none is typed.
  *
  * Deliberately absent: draft/published status (a P1 fast-follow, P1-2) and any
  * editing of description / capabilities / advertised models / icon / managed-by.
@@ -60,36 +60,30 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
   const api = useAdminApi()
   const createAgent = useCreateAgent()
   const updateAgent = useUpdateAgent()
-  const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null)
-  const [testing, setTesting] = useState(false)
 
-  const handleTest = async () => {
-    setTesting(true)
-    setTestResult(null)
-    try {
-      const result = await api.testConnection(state.acpUrl.trim())
-      setTestResult(result)
-      // The name derives from the endpoint's card; only fill an empty field so
-      // an admin's manual override is never clobbered.
-      if (result.reachable && result.name && state.name.trim() === '') {
-        dispatch({ type: 'SET', field: 'name', value: result.name })
-      }
-    } finally {
-      setTesting(false)
+  // The name comes from the endpoint's card — only fall back to it when the
+  // admin hasn't typed one, so a manual override is never clobbered.
+  const resolveName = async (acpUrl: string): Promise<string> => {
+    const typed = state.name.trim()
+    if (typed) {
+      return typed
     }
+    const result = await api.testConnection(acpUrl)
+    return result.reachable && result.name ? result.name : ''
   }
 
   const handleSave = async () => {
+    const acpUrl = state.acpUrl.trim()
     if (agent) {
       // Patch only the admin-set fields; the card's own fields are left as-is.
       await updateAgent.mutateAsync({
         id: agent.id,
-        patch: { name: state.name.trim(), acpUrl: state.acpUrl.trim(), category: state.category },
+        patch: { name: state.name.trim(), acpUrl, category: state.category },
       })
     } else {
       const input: AgentInput = {
-        name: state.name.trim(),
-        acpUrl: state.acpUrl.trim(),
+        name: await resolveName(acpUrl),
+        acpUrl,
         category: state.category,
         // Non-authored card fields: defaults until a live card fetch populates them.
         icon: DEFAULT_ICON,
@@ -104,7 +98,7 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
   }
 
   const saving = createAgent.isPending || updateAgent.isPending
-  const canSave = state.name.trim() !== '' && state.acpUrl.trim() !== ''
+  const canSave = state.acpUrl.trim() !== '' && (!agent || state.name.trim() !== '')
 
   return (
     <div className="flex flex-col gap-4">
@@ -112,25 +106,12 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="agent-acp-url">ACP URL</Label>
-        <div className="flex items-center gap-2">
-          <Input
-            id="agent-acp-url"
-            placeholder="wss://agent.company.com/acp"
-            value={state.acpUrl}
-            onChange={(event) => dispatch({ type: 'SET', field: 'acpUrl', value: event.target.value })}
-          />
-          <Button variant="secondary" onClick={handleTest} disabled={testing || state.acpUrl.trim() === ''}>
-            {testing ? 'Connecting…' : 'Connect'}
-          </Button>
-        </div>
-        {testResult && (
-          <p
-            className={testResult.reachable ? 'text-sm text-green-600 dark:text-green-400' : 'text-sm text-destructive'}
-            role="status"
-          >
-            {testResult.reachable ? 'Reachable' : `Unreachable: ${testResult.error}`}
-          </p>
-        )}
+        <Input
+          id="agent-acp-url"
+          placeholder="wss://agent.company.com/acp"
+          value={state.acpUrl}
+          onChange={(event) => dispatch({ type: 'SET', field: 'acpUrl', value: event.target.value })}
+        />
       </div>
 
       <div className="flex flex-col gap-1">
