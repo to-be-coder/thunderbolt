@@ -38,10 +38,7 @@ export const AgentConnectionIndicator = ({ acpUrl }: { acpUrl: string }) => {
   const meta = META[state]
 
   return (
-    <span
-      className={cn('inline-flex items-center gap-1.5 text-[length:var(--font-size-sm)]', meta.text)}
-      data-testid="agent-connection-status"
-    >
+    <span className={cn('inline-flex items-center gap-1.5 text-sm', meta.text)} data-testid="agent-connection-status">
       <span className={cn('inline-block size-2 rounded-full', meta.dot, meta.pulse && 'animate-pulse')} aria-hidden />
       {meta.label}
     </span>

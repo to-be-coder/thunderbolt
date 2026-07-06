@@ -18,7 +18,7 @@ const toneClasses: Record<PillTone, string> = {
 export const StatusPill = ({ tone, children }: { tone: PillTone; children: ReactNode }) => (
   <span
     className={cn(
-      'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize',
+      'inline-flex items-center rounded-full px-2 py-0.5 text-sm font-medium capitalize',
       toneClasses[tone],
     )}
   >

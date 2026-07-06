@@ -111,7 +111,7 @@ const AdminDetail = ({ agent }: { agent: TeamAgentWithCapabilities }) => {
   return (
     <section className="flex flex-col gap-4">
       <Field label="Endpoint">
-        <code className="text-xs break-all">{agent.acpUrl}</code>
+        <code className="text-sm break-all">{agent.acpUrl}</code>
       </Field>
 
       {detailQuery.isPending && <p className="text-sm text-muted-foreground">Connecting to the endpoint…</p>}
@@ -135,7 +135,7 @@ const AdminDetail = ({ agent }: { agent: TeamAgentWithCapabilities }) => {
 
 const Field = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="flex flex-col gap-1">
-    <p className="text-xs font-medium text-muted-foreground">{label}</p>
+    <p className="text-sm font-medium text-muted-foreground">{label}</p>
     {children}
   </div>
 )
@@ -146,7 +146,7 @@ const TagList = ({ items }: { items: string[] }) =>
   ) : (
     <div className="flex flex-wrap gap-1.5">
       {items.map((item) => (
-        <span key={item} className="rounded-md bg-muted px-2 py-0.5 text-xs">
+        <span key={item} className="rounded-md bg-muted px-2 py-0.5 text-sm">
           {item}
         </span>
       ))}
