@@ -6,8 +6,9 @@
  * In-memory {@link AdminApi} for prototype demo mode (see `@/lib/demo-mode`).
  *
  * Serves the same typed contract as the real HTTP-backed `createAdminApi`, but
- * against a module-level store seeded with a small demo org. Every mutation
- * updates the store and writes an audit row, so the six console screens are
+ * against a per-instance in-memory store seeded with a small demo org (the app
+ * memoizes one instance). Every mutation updates the store and writes an audit
+ * row, so the six console screens are
  * fully clickable — invite a member, create a group, register + grant an agent,
  * revoke, edit policy — and the changes reflect immediately (for the session;
  * a reload re-seeds). Never imported unless `isDemoMode()` is true.
