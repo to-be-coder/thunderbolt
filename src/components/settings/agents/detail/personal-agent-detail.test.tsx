@@ -67,6 +67,10 @@ describe('PersonalAgentDetail', () => {
   it('removes the reference (nothing remote) after confirmation', () => {
     const onRemove = mock(() => {})
     renderDetail({ onRemove })
+    // Remove lives behind the 3-dots menu; Radix opens on pointerdown.
+    const trigger = screen.getByTestId('personal-menu')
+    fireEvent.pointerDown(trigger, { button: 0, pointerType: 'mouse' })
+    fireEvent.pointerUp(trigger, { button: 0, pointerType: 'mouse' })
     fireEvent.click(screen.getByTestId('personal-remove'))
     fireEvent.click(screen.getByTestId('personal-remove-confirm'))
     expect(onRemove).toHaveBeenCalledTimes(1)

@@ -3,9 +3,19 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { useState } from 'react'
-import { Globe, Loader2 } from 'lucide-react'
+import { Globe, Loader2, MoreHorizontal } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useAcpAgentStatus as useAcpAgentStatus_default, type AcpAgentStatus } from '@/hooks/use-acp-agent-status'
 import type { Agent } from '@/types/acp'
 import { AgentDetailLayout, DetailSection } from './agent-detail-layout'
@@ -68,72 +78,86 @@ export const PersonalAgentDetail = ({
   }
 
   return (
-    <AgentDetailLayout
-      icon={Globe}
-      name={agent.name}
-      subtitle={personalProvenanceLine(agent.url)}
-      body={
-        <>
-          <dl className="flex flex-col gap-3">
-            <div className="flex items-baseline gap-4">
-              <dt className="w-24 shrink-0 text-[length:var(--font-size-sm)] text-muted-foreground">Endpoint</dt>
-              <dd className="min-w-0 break-all text-[length:var(--font-size-body)]" data-testid="personal-endpoint">
-                {agent.url}
-              </dd>
-            </div>
-            <div className="flex items-center gap-4">
-              <dt className="w-24 shrink-0 text-[length:var(--font-size-sm)] text-muted-foreground">Status</dt>
-              <dd className="flex items-center gap-3 text-[length:var(--font-size-body)]">
-                <StatusValue status={status} />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={refresh}
-                  disabled={status === 'checking'}
-                  data-testid="personal-test"
-                >
-                  Test
-                </Button>
-              </dd>
-            </div>
-          </dl>
+    <>
+      <AgentDetailLayout
+        icon={Globe}
+        name={agent.name}
+        subtitle={personalProvenanceLine(agent.url)}
+        menu={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label="Agent actions" data-testid="personal-menu">
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => setConfirmOpen(true)}
+                data-testid="personal-remove"
+              >
+                Remove agent
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+        body={
+          <>
+            <dl className="flex flex-col gap-3">
+              <div className="flex items-baseline gap-4">
+                <dt className="w-24 shrink-0 text-[length:var(--font-size-sm)] text-muted-foreground">Endpoint</dt>
+                <dd className="min-w-0 break-all text-[length:var(--font-size-body)]" data-testid="personal-endpoint">
+                  {agent.url}
+                </dd>
+              </div>
+              <div className="flex items-center gap-4">
+                <dt className="w-24 shrink-0 text-[length:var(--font-size-sm)] text-muted-foreground">Status</dt>
+                <dd className="flex items-center gap-3 text-[length:var(--font-size-body)]">
+                  <StatusValue status={status} />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={refresh}
+                    disabled={status === 'checking'}
+                    data-testid="personal-test"
+                  >
+                    Test
+                  </Button>
+                </dd>
+              </div>
+            </dl>
 
-          <DetailSection title="About">
-            <p className="text-[length:var(--font-size-body)] text-muted-foreground">
-              This agent is configured on its own server — its model, skills, and tools come with it. Your Library items
-              don&apos;t apply here.
-            </p>
-          </DetailSection>
-        </>
-      }
-      actions={
-        <Popover open={confirmOpen} onOpenChange={setConfirmOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="destructive" data-testid="personal-remove">
-              Remove agent
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80" align="start">
-            <div className="space-y-3">
-              <div>
-                <h4 className="font-medium">Remove {agent.name}?</h4>
-                <p className="text-[length:var(--font-size-sm)] text-muted-foreground">
-                  This removes the connection from Thunderbolt only. Nothing on the remote server is changed.
-                </p>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={() => setConfirmOpen(false)}>
-                  Cancel
-                </Button>
-                <Button variant="destructive" size="sm" onClick={handleRemove} data-testid="personal-remove-confirm">
-                  Remove
-                </Button>
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-      }
-      onBack={onBack}
-    />
+            <DetailSection title="About">
+              <p className="text-[length:var(--font-size-body)] text-muted-foreground">
+                This agent is configured on its own server — its model, skills, and tools come with it. Your Library
+                items don&apos;t apply here.
+              </p>
+            </DetailSection>
+          </>
+        }
+        onBack={onBack}
+      />
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {agent.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the connection from Thunderbolt only. Nothing on the remote server is changed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRemove}
+              data-testid="personal-remove-confirm"
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

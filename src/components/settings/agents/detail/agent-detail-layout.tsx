@@ -24,21 +24,33 @@ type AgentDetailLayoutProps = {
   /** Bottom action row (Start a chat / Remove). Absent when the view is a bare
    *  revoked/collapsed state. */
   actions?: ReactNode
+  /** Optional 3-dots menu rendered next to the title (e.g. personal-agent
+   *  management — company/native views omit it). */
+  menu?: ReactNode
   onBack: () => void
 }
 
-export const AgentDetailLayout = ({ icon: Icon, name, subtitle, body, actions, onBack }: AgentDetailLayoutProps) => (
+export const AgentDetailLayout = ({
+  icon: Icon,
+  name,
+  subtitle,
+  body,
+  actions,
+  menu,
+  onBack,
+}: AgentDetailLayoutProps) => (
   <div
     className="flex h-full flex-col gap-6 overflow-y-auto rounded-lg border border-border p-6"
     data-testid="agent-detail"
   >
     <div className="flex items-start justify-between gap-3">
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 items-center gap-2">
         <Icon className="size-8 text-muted-foreground shrink-0" aria-hidden="true" />
         <div className="min-w-0">
           <h1 className="text-xl font-medium truncate">{name}</h1>
           <div className="text-[length:var(--font-size-sm)] text-muted-foreground">{subtitle}</div>
         </div>
+        {menu}
       </div>
       <Button
         variant="ghost"

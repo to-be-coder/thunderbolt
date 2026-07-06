@@ -61,24 +61,34 @@ describe('AgentDetailPanel', () => {
     expect(screen.getByText('sales-mcp')).toBeInTheDocument()
   })
 
-  it('Edit opens the agent form pre-filled from the agent', async () => {
+  // Edit / Delete live behind the 3-dots menu next to the title. Radix opens on
+  // pointerdown for a primary click.
+  const openMenu = () => {
+    const trigger = screen.getByRole('button', { name: 'Agent actions' })
+    fireEvent.pointerDown(trigger, { button: 0, pointerType: 'mouse' })
+    fireEvent.pointerUp(trigger, { button: 0, pointerType: 'mouse' })
+  }
+
+  it('Edit (in the menu) opens the agent form pre-filled from the agent', async () => {
     renderPanel()
     await flush()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }))
     await flush()
 
     expect(screen.getByLabelText('ACP URL')).toHaveValue('wss://agents.test/sales')
   })
 
-  it('Delete removes the agent and closes the panel', async () => {
+  it('Delete (in the menu) removes the agent and closes the panel', async () => {
     let closed = false
     const calls = renderPanel(() => {
       closed = true
     })
     await flush()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }))
     fireEvent.click(screen.getByRole('button', { name: 'Delete agent' }))
     await flush()
 

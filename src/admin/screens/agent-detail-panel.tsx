@@ -11,11 +11,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { X } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { MoreHorizontal, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { useAgentEndpointDetail, useDeleteAgent } from '../api/hooks'
@@ -35,6 +35,7 @@ import { StatusPill } from './status-pill'
 export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapabilities; onClose: () => void }) => {
   const deleteAgent = useDeleteAgent()
   const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const handleDelete = async () => {
     await deleteAgent.mutateAsync(agent.id)
@@ -45,7 +46,22 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
     <div className="flex h-full flex-col gap-5 overflow-y-auto rounded-lg border border-border p-6">
       <div className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-3">
-          <h2 className="text-xl font-semibold">{agent.name}</h2>
+          <div className="flex min-w-0 items-center gap-1">
+            <h2 className="truncate text-xl font-semibold">{agent.name}</h2>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon-sm" aria-label="Agent actions">
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onClick={() => setEditOpen(true)}>Edit</DropdownMenuItem>
+                <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
           <Button variant="ghost" size="icon-sm" aria-label="Close details" onClick={onClose}>
             <X className="size-4" />
           </Button>
@@ -54,35 +70,26 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
           <StatusPill tone={agent.category === 'sealed' ? 'muted' : 'info'}>{agent.category}</StatusPill>
           <AgentConnectionIndicator acpUrl={agent.acpUrl} />
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-            Edit
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                Delete
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete {agent.name}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This removes the agent and all grants to it. This cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className="bg-destructive text-white hover:bg-destructive/90">
-                  Delete agent
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
       </div>
 
       <AdminDetail agent={agent} />
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {agent.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the agent and all grants to it. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-white hover:bg-destructive/90">
+              Delete agent
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
