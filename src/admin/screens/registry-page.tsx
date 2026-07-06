@@ -44,8 +44,8 @@ export const RegistryPage = () => {
   const open = selectedAgent !== null
 
   return (
-    <div className="flex w-full">
-      <div className="min-w-0 flex-1">
+    <div className="flex h-full w-full min-h-0">
+      <div className="min-w-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
           <PageHeader title="Registry">
             <Button
@@ -99,19 +99,19 @@ export const RegistryPage = () => {
       </div>
 
       <aside
-        className="shrink-0 overflow-hidden transition-[width] duration-300 motion-reduce:transition-none"
+        className="h-full shrink-0 overflow-hidden transition-[width] duration-300 motion-reduce:transition-none"
         style={{ width: open ? DETAIL_WIDTH : '0px', transitionTimingFunction: SLIDE }}
         aria-hidden={!open}
       >
         <div
-          className="transition-transform duration-300 motion-reduce:transition-none"
+          className="h-full transition-transform duration-300 motion-reduce:transition-none"
           style={{
             width: DETAIL_WIDTH,
             transform: open ? 'translateX(0)' : 'translateX(100%)',
             transitionTimingFunction: SLIDE,
           }}
         >
-          <div className="pl-6">
+          <div className="h-full pl-6">
             {panelAgent && <AgentDetailPanel agent={panelAgent} onClose={() => setSelectedId(null)} />}
           </div>
         </div>

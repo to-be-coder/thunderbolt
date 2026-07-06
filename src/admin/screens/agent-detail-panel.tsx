@@ -42,7 +42,7 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
   }
 
   return (
-    <div className="flex flex-col gap-5 rounded-lg border border-border p-6">
+    <div className="flex h-full flex-col gap-5 overflow-y-auto rounded-lg border border-border p-6">
       <div className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-3">
           <h2 className="text-xl font-semibold">{agent.name}</h2>
