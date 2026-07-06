@@ -66,10 +66,6 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
             <X className="size-4" />
           </Button>
         </div>
-        <div className="flex items-center gap-3">
-          <StatusPill tone={agent.category === 'sealed' ? 'muted' : 'info'}>{agent.category}</StatusPill>
-          <AgentConnectionIndicator acpUrl={agent.acpUrl} />
-        </div>
       </div>
 
       <AdminDetail agent={agent} />
@@ -110,6 +106,16 @@ const AdminDetail = ({ agent }: { agent: TeamAgentWithCapabilities }) => {
 
   return (
     <section className="flex flex-col gap-4">
+      <Field label="Category">
+        <div>
+          <StatusPill tone={agent.category === 'sealed' ? 'muted' : 'info'}>{agent.category}</StatusPill>
+        </div>
+      </Field>
+      <Field label="Status">
+        <div>
+          <AgentConnectionIndicator acpUrl={agent.acpUrl} />
+        </div>
+      </Field>
       <Field label="Endpoint">
         <code className="text-sm break-all">{agent.acpUrl}</code>
       </Field>
