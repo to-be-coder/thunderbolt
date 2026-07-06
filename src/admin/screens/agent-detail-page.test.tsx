@@ -61,14 +61,12 @@ const renderDetail = () => {
 describe('AgentDetailPage', () => {
   afterEach(cleanup)
 
-  it('shows the member-facing summary and capability labels', async () => {
+  it('shows the agent summary and no member-preview section', async () => {
     renderDetail()
     await flush()
 
-    expect(screen.getByText('What members see')).toBeInTheDocument()
-    // The summary appears at the top and again inside the member card.
-    expect(screen.getAllByText('Drafts outreach and summarizes accounts.').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText('Searches the web')).toBeInTheDocument()
+    expect(screen.getByText('Drafts outreach and summarizes accounts.')).toBeInTheDocument()
+    expect(screen.queryByText('What members see')).not.toBeInTheDocument()
   })
 
   it('fetches and shows the admin-only endpoint wiring', async () => {

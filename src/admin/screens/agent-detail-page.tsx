@@ -25,17 +25,11 @@ import { AgentForm } from './agent-form'
 import { AgentConnectionIndicator } from './connection-status'
 import { StatusPill } from './status-pill'
 
-/** Demo icon names → emoji; a real card carries a proper icon. */
-const ICON_EMOJI: Record<string, string> = { bot: '🤖', chart: '📊', book: '📖' }
-const iconFor = (icon: string): string => ICON_EMOJI[icon] ?? (icon || '🤖')
-
 /**
- * S1a — Agent detail. Two faithful views of one team agent:
- *  - "Admin view": the live technical wiring (models, MCP servers, tools,
- *    credentials) fetched fresh from the ACP endpoint. Admin-only; never stored
- *    or synced — the display-only card can't carry it (INVARIANT 2).
- *  - "What members see": the sanitized display card a granted member gets in the
- *    app — what the agent does and its capability labels, no security detail.
+ * S1a — Agent detail. The admin's view of one team agent: its summary plus the
+ * live technical wiring (models, MCP servers, tools, credentials) fetched fresh
+ * from the ACP endpoint. Admin-only; never stored or synced — the display-only
+ * card can't carry it (INVARIANT 2). Edit / Delete live in the header.
  */
 export const AgentDetailPage = () => {
   const { agentId } = useParams()
@@ -101,10 +95,7 @@ export const AgentDetailPage = () => {
       </div>
       <p className="text-sm text-muted-foreground">{agent.description || 'No description provided.'}</p>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <AdminDetail agent={agent} />
-        <MemberView agent={agent} />
-      </div>
+      <AdminDetail agent={agent} />
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
@@ -178,47 +169,6 @@ const AdminDetail = ({ agent }: { agent: TeamAgentWithCapabilities }) => {
     </section>
   )
 }
-
-/** The sanitized display-only card a granted member sees in the app. */
-const MemberView = ({ agent }: { agent: TeamAgentWithCapabilities }) => (
-  <section className="flex flex-col gap-4 rounded-lg border border-border p-4">
-    <div className="flex flex-col gap-1">
-      <h2 className="text-sm font-semibold">What members see</h2>
-      <p className="text-xs text-muted-foreground">
-        The display-only card in the app — no endpoint, credentials, or model details.
-      </p>
-    </div>
-
-    <div className="rounded-lg border border-border p-4">
-      <div className="flex items-start gap-3">
-        <span className="text-2xl" aria-hidden>
-          {iconFor(agent.icon)}
-        </span>
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{agent.name}</span>
-            <StatusPill tone={agent.category === 'sealed' ? 'muted' : 'info'}>{agent.category}</StatusPill>
-          </div>
-          <p className="text-sm text-muted-foreground">{agent.description}</p>
-        </div>
-      </div>
-
-      {agent.capabilities.length > 0 && (
-        <div className="mt-4 flex flex-col gap-1">
-          <p className="text-xs font-medium text-muted-foreground">Can</p>
-          <ul className="flex flex-col gap-1 text-sm">
-            {agent.capabilities.map((capability) => (
-              <li key={capability.id} className="flex items-start gap-2">
-                <span className="text-muted-foreground">•</span>
-                {capability.label}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  </section>
-)
 
 const Field = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="flex flex-col gap-1">
