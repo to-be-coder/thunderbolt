@@ -5,23 +5,27 @@
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { PageHeader } from '@/components/ui/page-header'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Building2, ChevronRight, Plus } from 'lucide-react'
-import { Link } from 'react-router'
 import { useState } from 'react'
 import { useAgents } from '../api/hooks'
+import { AgentDetailPanel } from './agent-detail-panel'
 import { AgentForm } from './agent-form'
 import { AgentConnectionIndicator } from './connection-status'
 
 /**
  * S1 — Registry. A card list of team agents; each card shows the agent's live
- * ACP connection status and opens its detail view (where Edit / Delete live).
- * The `+` opens the register form in a modal.
+ * ACP connection status and opens its detail in a right-side slide-in panel on
+ * the same page (Edit / Delete live in the panel). The `+` opens the register
+ * form in a modal.
  */
 export const RegistryPage = () => {
   const agentsQuery = useAgents()
   const [registering, setRegistering] = useState(false)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const agents = agentsQuery.data ?? []
+  const selectedAgent = agents.find((agent) => agent.id === selectedId) ?? null
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -52,11 +56,13 @@ export const RegistryPage = () => {
           <p className="text-sm text-muted-foreground">No agents registered yet.</p>
         )}
         {agents.map((agent) => (
-          <Link
+          <button
             key={agent.id}
-            to={`/admin/agents/${agent.id}`}
+            type="button"
+            onClick={() => setSelectedId(agent.id)}
             data-testid={`agent-card-${agent.id}`}
-            className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 transition-colors hover:bg-secondary/50"
+            aria-label={`Open ${agent.name}`}
+            className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 text-left transition-colors hover:bg-secondary/50"
           >
             <Building2 className="size-5 shrink-0 text-muted-foreground" aria-hidden />
             <div className="min-w-0 flex-1">
@@ -64,9 +70,15 @@ export const RegistryPage = () => {
               <AgentConnectionIndicator acpUrl={agent.acpUrl} />
             </div>
             <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-          </Link>
+          </button>
         ))}
       </div>
+
+      <Sheet open={selectedAgent !== null} onOpenChange={(open) => !open && setSelectedId(null)}>
+        <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-xl">
+          {selectedAgent && <AgentDetailPanel agent={selectedAgent} onClose={() => setSelectedId(null)} />}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

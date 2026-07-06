@@ -25,7 +25,7 @@ const agentResponse = (name: string) => ({
 describe('RegistryPage', () => {
   afterEach(cleanup)
 
-  it('renders a card per agent showing its live connection status and a link to detail', async () => {
+  it('renders a card per agent showing its live connection status', async () => {
     const { client } = createRecordingClient((call) => {
       if (call.method === 'GET' && call.path === '/v1/admin/agents') {
         return [agentResponse('Sales Agent')]
@@ -40,7 +40,32 @@ describe('RegistryPage', () => {
 
     expect(screen.getByText('Sales Agent')).toBeInTheDocument()
     expect(screen.getByText('Ready')).toBeInTheDocument()
-    expect(screen.getByTestId('agent-card-ag1')).toHaveAttribute('href', '/admin/agents/ag1')
+  })
+
+  it('selecting a card slides in the detail panel on the same page', async () => {
+    const { client } = createRecordingClient((call) => {
+      if (call.method === 'GET' && call.path === '/v1/admin/agents') {
+        return [agentResponse('Sales Agent')]
+      }
+      if (call.path === '/v1/admin/agents/status') {
+        return { state: 'ready' }
+      }
+      if (call.path === '/v1/admin/agents/describe') {
+        return { models: ['m1'], mcpServers: ['s1'], tools: ['t1'], credentials: [] }
+      }
+      return {}
+    })
+    renderAdmin(<RegistryPage />, client)
+    await flush()
+
+    // No detail panel until a card is selected.
+    expect(screen.queryByText('Admin view')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('agent-card-ag1'))
+    await flush()
+
+    expect(screen.getByText('Admin view')).toBeInTheDocument()
+    expect(screen.getByText('wss://a.test/acp')).toBeInTheDocument()
   })
 
   it('register connects to the endpoint and derives the name when Name is blank', async () => {

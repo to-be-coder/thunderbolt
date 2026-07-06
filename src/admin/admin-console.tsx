@@ -4,7 +4,6 @@
 
 import { Navigate, Route, Routes } from 'react-router'
 import { AdminConsoleLayout } from './admin-console-layout'
-import { AgentDetailPage } from './screens/agent-detail-page'
 import { AuditPage } from './screens/audit-page'
 import { GrantsPage } from './screens/grants-page'
 import { GroupsPage } from './screens/groups-page'
@@ -23,7 +22,6 @@ const AdminConsole = () => (
   <AdminConsoleLayout>
     <Routes>
       <Route index element={<RegistryPage />} />
-      <Route path="agents/:agentId" element={<AgentDetailPage />} />
       <Route path="members" element={<MembersPage />} />
       <Route path="groups" element={<GroupsPage />} />
       <Route path="grants" element={<GrantsPage />} />
