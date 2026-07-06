@@ -124,6 +124,7 @@ describe('AgentsSettingsPage — Add Custom Agent affordance', () => {
     const authClient = createMockAuthClient({ session: authedSession })
     renderPage(authClient, onTauri)
 
-    expect(screen.getByTestId('connect-an-agent')).toHaveTextContent(/connect an agent/i)
+    // Icon-only button in the page-header row; identity is carried by aria-label.
+    expect(screen.getByTestId('connect-an-agent')).toHaveAttribute('aria-label', 'Connect an agent')
   })
 })

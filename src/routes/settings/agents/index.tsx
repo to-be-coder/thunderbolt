@@ -77,12 +77,13 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
         {canConnect && (
           <Button
             variant="outline"
+            size="icon"
             className="rounded-lg"
             onClick={() => setDialogOpen(true)}
             data-testid="connect-an-agent"
+            aria-label="Connect an agent"
           >
             <Plus className="size-4" />
-            Connect an agent
           </Button>
         )}
       </PageHeader>
