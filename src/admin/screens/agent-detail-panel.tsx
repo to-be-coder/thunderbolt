@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { SheetTitle } from '@/components/ui/sheet'
+import { X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { useAgentEndpointDetail, useDeleteAgent } from '../api/hooks'
@@ -25,11 +25,12 @@ import { AgentConnectionIndicator } from './connection-status'
 import { StatusPill } from './status-pill'
 
 /**
- * S1a — Agent detail, shown in a right-side slide-in panel on the Registry. The
- * admin's view of one team agent: name, category, live status, and the technical
- * wiring (models, MCP servers, tools) fetched fresh from the ACP endpoint.
- * Admin-only; never stored or synced — the display-only card can't carry it
- * (INVARIANT 2). Edit / Delete live in the header; Delete closes the panel.
+ * S1a — Agent detail, shown inline in the Registry's detail column (a
+ * master-detail split, not an overlay). The admin's view of one team agent:
+ * name, category, live status, and the technical wiring (models, MCP servers,
+ * tools) fetched fresh from the ACP endpoint. Admin-only; never stored or synced
+ * — the display-only card can't carry it (INVARIANT 2). Edit / Delete live in
+ * the header; Delete clears the selection.
  */
 export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapabilities; onClose: () => void }) => {
   const deleteAgent = useDeleteAgent()
@@ -41,9 +42,14 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
   }
 
   return (
-    <div className="flex h-full flex-col gap-6 overflow-y-auto p-6">
+    <div className="flex flex-col gap-5 rounded-lg border border-border p-6">
       <div className="flex flex-col gap-3">
-        <SheetTitle className="pr-8 text-xl">{agent.name}</SheetTitle>
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="text-xl font-semibold">{agent.name}</h2>
+          <Button variant="ghost" size="icon-sm" aria-label="Close details" onClick={onClose}>
+            <X className="size-4" />
+          </Button>
+        </div>
         <div className="flex items-center gap-3">
           <StatusPill tone={agent.category === 'sealed' ? 'muted' : 'info'}>{agent.category}</StatusPill>
           <AgentConnectionIndicator acpUrl={agent.acpUrl} />
@@ -96,7 +102,7 @@ const AdminDetail = ({ agent }: { agent: TeamAgentWithCapabilities }) => {
   const detail = detailQuery.data
 
   return (
-    <section className="flex flex-col gap-4 rounded-lg border border-border p-4">
+    <section className="flex flex-col gap-4 border-t border-border pt-5">
       <div className="flex flex-col gap-1">
         <h2 className="text-sm font-semibold">Admin view</h2>
         <p className="text-xs text-muted-foreground">

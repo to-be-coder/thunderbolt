@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import '@testing-library/jest-dom'
-import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { cleanup, fireEvent, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'bun:test'
 import { createRecordingClient, flush, renderAdmin } from '../test-utils'
@@ -42,15 +41,7 @@ const renderPanel = (onClose: () => void = () => {}) => {
     }
     return []
   })
-  // The panel renders a SheetTitle, so it must live inside a Sheet.
-  renderAdmin(
-    <Sheet open>
-      <SheetContent>
-        <AgentDetailPanel agent={agent} onClose={onClose} />
-      </SheetContent>
-    </Sheet>,
-    client,
-  )
+  renderAdmin(<AgentDetailPanel agent={agent} onClose={onClose} />, client)
   return calls
 }
 
