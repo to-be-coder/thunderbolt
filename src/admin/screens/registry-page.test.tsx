@@ -35,7 +35,7 @@ describe('RegistryPage', () => {
     renderAdmin(<RegistryPage />, client)
     await flush()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Register agent' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Register an agent' }))
     fireEvent.change(screen.getByLabelText('ACP URL'), { target: { value: 'wss://agent.test/acp' } })
     fireEvent.click(screen.getByRole('button', { name: 'Test' }))
     await flush()
@@ -57,7 +57,7 @@ describe('RegistryPage', () => {
     renderAdmin(<RegistryPage />, client)
     await flush()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Register agent' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Register an agent' }))
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Research Bot' } })
     fireEvent.change(screen.getByLabelText('ACP URL'), { target: { value: 'wss://agent.test/acp' } })
     fireEvent.click(screen.getByRole('button', { name: 'Register agent' }))
@@ -78,7 +78,7 @@ describe('RegistryPage', () => {
     renderAdmin(<RegistryPage />, client)
     await flush()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Register agent' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Register an agent' }))
 
     // No technical countermeasures in v1 — just the admin-facing posture warning
     // sitting with the card/description editor.

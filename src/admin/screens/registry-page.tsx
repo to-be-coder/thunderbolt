@@ -14,6 +14,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Plus } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -33,18 +34,6 @@ export const RegistryPage = () => {
 
   const agents = agentsQuery.data ?? []
 
-  if (editing.mode !== 'closed') {
-    return (
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <PageHeader title={editing.mode === 'new' ? 'Register agent' : 'Edit agent'} />
-        <AgentForm
-          agent={editing.mode === 'edit' ? editing.agent : null}
-          onDone={() => setEditing({ mode: 'closed' })}
-        />
-      </div>
-    )
-  }
-
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <PageHeader title="Registry">
@@ -53,11 +42,25 @@ export const RegistryPage = () => {
           size="icon"
           className="rounded-lg"
           onClick={() => setEditing({ mode: 'new' })}
-          aria-label="Register agent"
+          aria-label="Register an agent"
         >
           <Plus />
         </Button>
       </PageHeader>
+
+      <Dialog open={editing.mode !== 'closed'} onOpenChange={(open) => !open && setEditing({ mode: 'closed' })}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{editing.mode === 'edit' ? 'Edit agent' : 'Register agent'}</DialogTitle>
+          </DialogHeader>
+          {editing.mode !== 'closed' && (
+            <AgentForm
+              agent={editing.mode === 'edit' ? editing.agent : null}
+              onDone={() => setEditing({ mode: 'closed' })}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="rounded-lg border border-border">
         <Table>
