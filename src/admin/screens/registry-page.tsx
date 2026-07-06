@@ -65,7 +65,6 @@ export const RegistryPage = () => {
             <TableRow>
               <TableHead>Agent</TableHead>
               <TableHead>Category</TableHead>
-              <TableHead>Status</TableHead>
               <TableHead>Capabilities</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -73,14 +72,14 @@ export const RegistryPage = () => {
           <TableBody>
             {agentsQuery.isPending && (
               <TableRow>
-                <TableCell colSpan={5} className="text-muted-foreground">
+                <TableCell colSpan={4} className="text-muted-foreground">
                   Loading…
                 </TableCell>
               </TableRow>
             )}
             {!agentsQuery.isPending && agents.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-muted-foreground">
+                <TableCell colSpan={4} className="text-muted-foreground">
                   No agents registered yet.
                 </TableCell>
               </TableRow>
@@ -95,9 +94,6 @@ export const RegistryPage = () => {
                 </TableCell>
                 <TableCell>
                   <StatusPill tone={agent.category === 'sealed' ? 'muted' : 'info'}>{agent.category}</StatusPill>
-                </TableCell>
-                <TableCell>
-                  <StatusPill tone={agent.status === 'published' ? 'success' : 'muted'}>{agent.status}</StatusPill>
                 </TableCell>
                 <TableCell className="text-muted-foreground">{agent.capabilities.length}</TableCell>
                 <TableCell className="text-right">
