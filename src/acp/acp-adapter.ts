@@ -190,11 +190,15 @@ export const connectAcpAdapter = async (
   ctx: AcpAdapterContext,
   deps: AcpAdapterDeps = {},
 ): Promise<AgentAdapter> => {
-  if (!agent.url) {
-    throw new Error(`ACP agent ${agent.id} has no url`)
-  }
   if (agent.transport !== 'websocket') {
     throw new Error(`ACP agent ${agent.id} has unsupported transport ${agent.transport}`)
+  }
+  // A team agent is a `managed-acp` row with NO client-side URL: the relay is
+  // addressed by id and resolves the ACP endpoint server-side after a grant
+  // check (Stage 4, T1). Every other ACP agent must carry a URL.
+  const teamAgentId = agent.type === 'managed-acp' && !agent.url ? agent.id : undefined
+  if (!agent.url && !teamAgentId) {
+    throw new Error(`ACP agent ${agent.id} has no url`)
   }
 
   const transportFactory = deps.openTransport ?? openTransport
@@ -202,9 +206,12 @@ export const connectAcpAdapter = async (
 
   const transportController = new AbortController()
   const transport = await transportFactory({
-    url: agent.url,
+    // Team agents carry no URL; the relay resolves it, so pass a placeholder the
+    // transport factory ignores in favor of `teamAgentId`.
+    url: agent.url ?? `wss://team-agent.invalid/${agent.id}`,
     transport: agent.transport,
     agentType: agent.type,
+    teamAgentId,
     signal: transportController.signal,
     webSocketFactory: deps.webSocketFactory,
     // `httpClient` presence signals an authenticated cloud backend is wired:
@@ -277,23 +284,29 @@ export const connectAcpAdapter = async (
 
   /** Resolve (and cache) the ACP session id for the calling thread. First send
    *  on a thread runs `loadSession` (when supported + a prior id exists) or
-   *  `newSession`; subsequent sends reuse the cached id. */
+   *  `newSession`; subsequent sends reuse the cached id.
+   *
+   *  `mcpServers` come ONLY from `context.library` — populated exclusively for
+   *  EXTENSIBLE team agents by the extensible session builder (the seal). Sealed
+   *  team agents and personal ACP agents carry no library, so this is always
+   *  `[]` for them: user MCP servers can never reach a sealed session. */
   const resolveThreadSession = (context: EnsureSessionContext): Promise<string> => {
     const existing = sessionByThread.get(context.threadId)
     if (existing) {
       return existing
     }
+    const mcpServers = context.library?.mcpServers ?? []
     const resolve = (async (): Promise<string> => {
       if (context.acpSessionId && capabilities.loadSession) {
         await withHandshakeGuard(
-          connection.loadSession({ sessionId: context.acpSessionId, cwd: sessionCwd, mcpServers: [] }),
+          connection.loadSession({ sessionId: context.acpSessionId, cwd: sessionCwd, mcpServers }),
           transport.closed,
           handshakeTimeoutMs,
         )
         return context.acpSessionId
       }
       const newSession = await withHandshakeGuard(
-        connection.newSession({ cwd: sessionCwd, mcpServers: [] }),
+        connection.newSession({ cwd: sessionCwd, mcpServers }),
         transport.closed,
         handshakeTimeoutMs,
       )
@@ -308,7 +321,7 @@ export const connectAcpAdapter = async (
   }
 
   const fetch = async (init: RequestInit, context: AgentAdapterContext): Promise<Response> => {
-    const promptText = composeAcpPrompt(context.skillInstructions, extractUserPrompt(init))
+    const promptText = composeAcpPrompt(context.library?.skillInstructions, extractUserPrompt(init))
     const sessionId = await resolveThreadSession(context)
 
     const { body, translator, close } = createTranslatorStream({

@@ -23,6 +23,7 @@ import {
   passthroughPrefixCased,
   proxyFramingHeaders,
   targetUrlHeader,
+  wsAgentPrefix,
   wsTargetPrefix,
 } from '@shared/proxy-protocol'
 import { encodeWsBearer, wsBearerSubprotocolPrefix, wsCarrierSubprotocol } from '@shared/ws-bearer'
@@ -237,6 +238,38 @@ export const createProxyWebSocket = (options: {
       wsCarrierSubprotocol,
       ...authEntries,
       targetSubprotocol,
+      ...(protocols ?? []),
+    ])
+  }
+}
+
+/** Build a WebSocket factory for a granted TEAM AGENT (Stage 4, T1).
+ *
+ *  Unlike {@link createProxyWebSocket}, the caller supplies NO target URL — team
+ *  agents are addressed by id (`tbproxy.agent.<base64url(agentId)>`) and the
+ *  relay resolves the ACP endpoint server-side AFTER a grant check (INVARIANT 2
+ *  + SSRF). The bearer is still offered so the relay can identify the caller for
+ *  that grant check; the relay strips it before the upstream connect, so the
+ *  external team agent sees a SERVICE identity, never the invoker's token.
+ *
+ *  Always routes through the cloud relay (never a direct/standalone socket):
+ *  team agents are org-managed and the grant check lives only at the relay. The
+ *  `url` argument the ACP transport passes is ignored. */
+export const createTeamAgentProxyWebSocket = (options: {
+  cloudUrl: string
+  agentId: string
+  /** Test seam — production omits and the factory reads `getAuthToken()`. */
+  getAuthToken?: () => string | null
+}): ((url: string, protocols?: string[]) => WebSocket) => {
+  const readAuthToken = options.getAuthToken ?? getAuthToken
+  return (_url: string, protocols?: string[]): WebSocket => {
+    const wsBase = options.cloudUrl.replace(/^http/, 'ws').replace(/\/$/, '')
+    const token = readAuthToken()
+    const authEntries = token ? [`${wsBearerSubprotocolPrefix}${encodeWsBearer(token)}`] : []
+    return new WebSocket(`${wsBase}/proxy/ws`, [
+      wsCarrierSubprotocol,
+      ...authEntries,
+      `${wsAgentPrefix}${b64UrlEncode(options.agentId)}`,
       ...(protocols ?? []),
     ])
   }

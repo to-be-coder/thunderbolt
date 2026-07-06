@@ -17,6 +17,7 @@ import { createHttpLoggingMiddleware } from '@/middleware/http-logging'
 import { createAuthIpRateLimit, createInferenceRateLimit, createProRateLimit } from '@/middleware/rate-limit'
 import { createUniversalProxyRoutes } from '@/proxy/routes'
 import { createUniversalProxyWsRoutes } from '@/proxy/ws'
+import { createGrantRevocationHub } from '@/proxy/grant-revocations'
 import { createObservabilityRecorder } from '@/proxy/observability'
 import { createSearchRoutes } from '@/api/search'
 import { createPreviewRoutes } from '@/api/preview'
@@ -30,7 +31,7 @@ import { createHaystackRoutes } from '@/haystack'
 import { createConfigRoutes } from '@/api/config'
 import { createEncryptionRoutes } from '@/api/encryption'
 import { createPowerSyncRoutes } from '@/api/powersync'
-import { createAdminServiceRoutes, runAdminMigrations, type AdminDb } from '@admin/index'
+import { createAdminServiceRoutes, resolveAgentAccess, runAdminMigrations, type AdminDb } from '@admin/index'
 import { getUserByEmail, revokeUserSessions } from '@/dal'
 import { normalizeEmail } from '@/lib/email'
 import type { AppDeps } from '@/types'
@@ -95,6 +96,14 @@ export const createApp = async (deps?: AppDeps) => {
       logger: createStandaloneLogger(settings),
     })
 
+  // Stage 4 T1 — team-agent session establishment + in-flight revocation share
+  // one grant check (`resolveAgentAccess`). The WS relay uses it to authorize
+  // and resolve the ACP URL server-side; the grants route uses it (via the hub)
+  // to close in-flight sessions whose caller lost access on revoke.
+  const adminDb = database as unknown as AdminDb
+  const grantHub = createGrantRevocationHub()
+  const resolveTeamAgentAccess = (email: string, agentId: string) => resolveAgentAccess(adminDb, email, agentId)
+
   return (
     configuredApp
       .use(
@@ -139,6 +148,8 @@ export const createApp = async (deps?: AppDeps) => {
           rateLimit: proRateLimit,
           wsFactory: deps?.upstreamWsFactory,
           observability: proxyObservability,
+          resolveAgentAccess: resolveTeamAgentAccess,
+          grantHub,
         }),
       )
       .use(createSearchRoutes(auth, proRateLimit, { exaClient: deps?.searchExaClient }))
@@ -178,6 +189,14 @@ export const createApp = async (deps?: AppDeps) => {
             if (user) {
               await revokeUserSessions(database, user.id)
             }
+          },
+          // Grant revoked → close in-flight sessions to this agent whose caller
+          // no longer holds a grant, using the SAME check as establishment.
+          onGrantRevoked: async (agentId: string) => {
+            await grantHub.revalidateAgent(
+              agentId,
+              async (email: string) => (await resolveAgentAccess(adminDb, email, agentId)) !== null,
+            )
           },
         }) as unknown as Elysia,
       )

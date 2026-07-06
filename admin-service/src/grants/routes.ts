@@ -100,6 +100,10 @@ export const createGrantsRoutes = (deps: ServiceDeps) =>
             diff: { agentId: grant.agentId, targetType: grant.targetType, targetId: grant.targetId },
           })
         })
+        // Invalidate any IN-FLIGHT ACP sessions to this agent whose caller no
+        // longer holds a grant (Stage 4 T1). Runs after the revoke commits so
+        // the revalidation sees the new grant state.
+        await deps.onGrantRevoked(grant.agentId)
         return { success: true }
       },
       { params: t.Object({ id: t.String() }) },

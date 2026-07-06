@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import type { User } from '@shared/types/auth'
-import type { AdminAuth, ServiceDeps, SessionRevoker } from '../lib/context'
+import type { AdminAuth, GrantRevocationNotifier, ServiceDeps, SessionRevoker } from '../lib/context'
 import type { AdminDb } from '../db/types'
 
 /** Build a fake session user with sensible defaults. */
@@ -33,9 +33,11 @@ export const buildDeps = (params: {
   user: User | null
   seedAdminEmail?: string | null
   revokeSessionsForEmail?: SessionRevoker
+  onGrantRevoked?: GrantRevocationNotifier
 }): ServiceDeps => ({
   db: params.db,
   auth: buildAuth(params.user),
   seedAdminEmail: params.seedAdminEmail ?? null,
   revokeSessionsForEmail: params.revokeSessionsForEmail ?? (() => Promise.resolve()),
+  onGrantRevoked: params.onGrantRevoked ?? (() => Promise.resolve()),
 })

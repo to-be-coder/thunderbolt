@@ -31,7 +31,7 @@ import type { AnyMessage } from '@agentclientprotocol/sdk'
 import { getAuthToken } from '@/lib/auth-token'
 import type { HttpClient } from '@/lib/http'
 import { isTauri } from '@/lib/platform'
-import { computeEffectiveProxyEnabled, createProxyWebSocket } from '@/lib/proxy-fetch'
+import { computeEffectiveProxyEnabled, createProxyWebSocket, createTeamAgentProxyWebSocket } from '@/lib/proxy-fetch'
 import { getActiveCloudUrl } from '@/stores/trust-domain-registry'
 import type { AgentType } from '@shared/acp-types'
 import { encodeWsBearer, wsBearerSubprotocolPrefix, wsCarrierSubprotocol } from '@shared/ws-bearer'
@@ -44,6 +44,10 @@ export type OpenTransportInputs = {
   /** Agent type drives proxy routing — see file header. `built-in` never
    *  reaches the transport, but the union stays full for type-safety. */
   agentType: AgentType
+  /** Set for a granted TEAM agent (Stage 4, T1): the relay is addressed by this
+   *  id (`tbproxy.agent.<id>`), grant-checks the caller, and resolves the ACP URL
+   *  server-side. When set, `url` is a placeholder the transport ignores. */
+  teamAgentId?: string
   signal: AbortSignal
   /** Test seam — production omits and the factory builds a default. */
   webSocketFactory?: WebSocketFactory
@@ -105,6 +109,16 @@ export const openTransport = async (inputs: OpenTransportInputs): Promise<AcpTra
  *  factory that builds the `Sec-WebSocket-Protocol` list (carrier + bearer +
  *  target) synchronously from the in-memory bearer token. */
 const resolveWebSocketFactory = (inputs: OpenTransportInputs): WebSocketFactory => {
+  // Granted team agent: address the relay by id and let it grant-check + resolve
+  // the ACP URL server-side (service identity — the bearer is stripped upstream).
+  if (inputs.teamAgentId) {
+    const teamWs = createTeamAgentProxyWebSocket({
+      cloudUrl: cloudWsUrl(),
+      agentId: inputs.teamAgentId,
+      getAuthToken: inputs.getAuthToken,
+    })
+    return (url) => teamWs(url) as unknown as WebSocketLike
+  }
   if (inputs.agentType === 'managed-acp') {
     return resolveManagedAcpFactory(inputs)
   }

@@ -13,8 +13,9 @@ import { createPolicyRoutes } from './policy/routes'
 import { createDiscoveryRoutes } from './discovery/routes'
 
 export type { AdminDb } from './db/types'
-export type { AdminAuth, ServiceDeps, SessionRevoker } from './lib/context'
+export type { AdminAuth, ServiceDeps, SessionRevoker, GrantRevocationNotifier } from './lib/context'
 export { activateMemberByEmail } from './activation'
+export { resolveAgentAccess, type AgentAccess } from './grants/access'
 export { runAdminMigrations, getAdminMigrationsFolder, adminMigrationsTable } from './db/migrate'
 
 /** Options the host (backend, in dev) passes to mount the admin-service. */
@@ -28,6 +29,9 @@ export type AdminServiceOptions = {
   seedAdminEmail?: string | null
   /** Test seam — override the ACP connection probe. */
   connectionProbe?: ConnectionProbe
+  /** Called after a grant is revoked so the host can invalidate in-flight ACP
+   *  sessions to the affected agent (Stage 4 T1). Defaults to a no-op. */
+  onGrantRevoked?: import('./lib/context').GrantRevocationNotifier
 }
 
 /**
@@ -43,6 +47,7 @@ export const createAdminServiceRoutes = (options: AdminServiceOptions) => {
     auth: options.auth,
     seedAdminEmail: options.seedAdminEmail ?? process.env.ADMIN_SEED_EMAIL ?? null,
     revokeSessionsForEmail: options.revokeSessionsForEmail,
+    onGrantRevoked: options.onGrantRevoked ?? (async () => {}),
   }
 
   return new Elysia({ name: 'admin-service' })

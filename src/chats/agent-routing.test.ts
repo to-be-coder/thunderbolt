@@ -45,6 +45,16 @@ const otherRemoteAgent: Agent = {
   name: 'Remote Bar',
 }
 
+/** Team agents are synthesized as `managed-acp` — only they can be extensible. */
+const teamAgent: Agent = {
+  ...remoteAgent,
+  id: 'team-foo',
+  name: 'Team Foo',
+  type: 'managed-acp',
+  url: null,
+  isSystem: 1,
+}
+
 const mockMode: Mode = {
   id: 'mode-chat',
   name: 'chat',
@@ -348,46 +358,108 @@ describe('createAgentRoutingFetch', () => {
     expect(updateChatThread).not.toHaveBeenCalled()
   })
 
-  it('resolves user-skill instructions into the fetch context for a remote-acp agent', async () => {
+  // THE SEAL (Stage 4 INVARIANT 3), at the routing boundary: the member's
+  // Library reaches the fetch context ONLY for EXTENSIBLE team agents (routed
+  // through the extensible session builder). Sealed team agents, personal ACP
+  // agents, and the built-in agent get no `library` on the ACP fetch context.
+  it('gathers the Library for an EXTENSIBLE team agent and passes it on the fetch context', async () => {
     resetStore()
-    const { adapter, fetch: adapterFetch } = buildFakeAdapter(remoteAgent)
+    const { adapter, fetch: adapterFetch } = buildFakeAdapter(teamAgent)
     const connectToAgent = mock(async () => adapter)
-    const getAllSkills = mock(async () => [
-      { id: 's1', name: 'tell-a-joke', description: 'd', instruction: 'Tell a cat joke.', enabled: 1 },
-    ])
-    hydrateSessionWith('t-skill', remoteAgent)
+    const library = {
+      skillInstructions: ['Tell a cat joke.'],
+      mcpServers: [],
+      extensionToolNames: ['tasks_create'],
+    }
+    const gatherLibrary = mock(async () => library)
+    hydrateSessionWith('t-ext', teamAgent)
 
-    const customFetch = createAgentRoutingFetch('t-skill', saveMessages, httpClient, getProxyFetch, {
+    const customFetch = createAgentRoutingFetch('t-ext', saveMessages, httpClient, getProxyFetch, {
       connectToAgent: connectToAgent as never,
-      getAllSkills: getAllSkills as never,
       getDb: (() => ({})) as never,
+      getTeamAgentsCache: (async () => []) as never,
+      getAvailableTools: (async () => [{ name: 'tasks_create' }]) as never,
+      selectAcpSessionContributor: (() => ({ kind: 'extensible', gatherLibrary })) as never,
     })
 
     const body = JSON.stringify({ messages: [{ role: 'user', parts: [{ type: 'text', text: '/tell-a-joke' }] }] })
     await customFetch('/chat', { method: 'POST', body })
 
-    const [, ctx] = adapterFetch.mock.calls[0] as unknown as [unknown, { skillInstructions?: string[] }]
-    expect(ctx.skillInstructions).toEqual(['Tell a cat joke.'])
+    const [, ctx] = adapterFetch.mock.calls[0] as unknown as [unknown, { library?: typeof library }]
+    expect(ctx.library).toEqual(library)
+    expect(gatherLibrary).toHaveBeenCalledTimes(1)
+    const [input] = gatherLibrary.mock.calls[0] as unknown as [{ lastUserText: string; extensionToolNames: string[] }]
+    expect(input.lastUserText).toBe('/tell-a-joke')
+    expect(input.extensionToolNames).toEqual(['tasks_create'])
   })
 
-  it('does not resolve skill instructions for the built-in agent (it injects them itself)', async () => {
+  it('does NOT gather the Library for a SEALED team agent — the seal', async () => {
+    resetStore()
+    const { adapter, fetch: adapterFetch } = buildFakeAdapter(teamAgent)
+    const connectToAgent = mock(async () => adapter)
+    const gatherLibrary = mock(async () => ({ skillInstructions: [], mcpServers: [], extensionToolNames: [] }))
+    hydrateSessionWith('t-sealed', teamAgent)
+
+    const customFetch = createAgentRoutingFetch('t-sealed', saveMessages, httpClient, getProxyFetch, {
+      connectToAgent: connectToAgent as never,
+      getDb: (() => ({})) as never,
+      getTeamAgentsCache: (async () => []) as never,
+      // Sealed contributor has no `gatherLibrary`; the router must never call one.
+      selectAcpSessionContributor: (() => ({ kind: 'sealed' })) as never,
+    })
+
+    const body = JSON.stringify({ messages: [{ role: 'user', parts: [{ type: 'text', text: '/tell-a-joke' }] }] })
+    await customFetch('/chat', { method: 'POST', body })
+
+    const [, ctx] = adapterFetch.mock.calls[0] as unknown as [unknown, { library?: unknown }]
+    expect(ctx.library).toBeUndefined()
+    expect(gatherLibrary).not.toHaveBeenCalled()
+  })
+
+  it('short-circuits a personal (remote-acp) ACP agent to sealed WITHOUT reading the team cache', async () => {
+    resetStore()
+    const { adapter, fetch: adapterFetch } = buildFakeAdapter(remoteAgent)
+    const connectToAgent = mock(async () => adapter)
+    const getTeamAgentsCache = mock(async () => [])
+    const selectAcpSessionContributor = mock(() => ({ kind: 'sealed' as const }))
+    hydrateSessionWith('t-personal', remoteAgent)
+
+    const customFetch = createAgentRoutingFetch('t-personal', saveMessages, httpClient, getProxyFetch, {
+      connectToAgent: connectToAgent as never,
+      getDb: (() => ({})) as never,
+      getTeamAgentsCache: getTeamAgentsCache as never,
+      selectAcpSessionContributor: selectAcpSessionContributor as never,
+    })
+
+    const body = JSON.stringify({ messages: [{ role: 'user', parts: [{ type: 'text', text: '/tell-a-joke' }] }] })
+    await customFetch('/chat', { method: 'POST', body })
+
+    const [, ctx] = adapterFetch.mock.calls[0] as unknown as [unknown, { library?: unknown }]
+    expect(ctx.library).toBeUndefined()
+    // remote-acp is always sealed — no team-cache read, no descriptor routing.
+    expect(getTeamAgentsCache).not.toHaveBeenCalled()
+    expect(selectAcpSessionContributor).not.toHaveBeenCalled()
+  })
+
+  it('never gathers a Library for the built-in agent (it injects its own in ai/fetch.ts)', async () => {
     resetStore()
     const { adapter, fetch: adapterFetch } = buildFakeAdapter(builtInAgent)
     const connectToAgent = mock(async () => adapter)
-    const getAllSkills = mock(async () => [])
+    const selectAcpSessionContributor = mock(() => ({ kind: 'sealed' as const }))
     hydrateSessionWith('t-builtin-skill', builtInAgent)
 
     const customFetch = createAgentRoutingFetch('t-builtin-skill', saveMessages, httpClient, getProxyFetch, {
       connectToAgent: connectToAgent as never,
-      getAllSkills: getAllSkills as never,
       getDb: (() => ({})) as never,
+      selectAcpSessionContributor: selectAcpSessionContributor as never,
     })
 
     const body = JSON.stringify({ messages: [{ role: 'user', parts: [{ type: 'text', text: '/tell-a-joke' }] }] })
     await customFetch('/chat', { method: 'POST', body })
 
-    const [, ctx] = adapterFetch.mock.calls[0] as unknown as [unknown, { skillInstructions?: string[] }]
-    expect(ctx.skillInstructions).toBeUndefined()
-    expect(getAllSkills).not.toHaveBeenCalled()
+    const [, ctx] = adapterFetch.mock.calls[0] as unknown as [unknown, { library?: unknown }]
+    expect(ctx.library).toBeUndefined()
+    // Built-in short-circuits before SEAL routing — no contributor selected.
+    expect(selectAcpSessionContributor).not.toHaveBeenCalled()
   })
 })

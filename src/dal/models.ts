@@ -10,6 +10,8 @@ import { clearNullableColumns, nowIso } from '../lib/utils'
 import type { DrizzleQueryWithPromise, Model } from '@/types'
 import { getLastMessage } from './chat-messages'
 import { createDefaultModelProfile, deleteModelProfileForModel } from './model-profiles'
+import { assertByoModelAllowed } from './model-policy'
+import { getOrgPolicy } from './org-policy'
 
 /**
  * Gets all models (excluding soft-deleted), sorted with system models first,
@@ -188,6 +190,10 @@ export const createModel = async (
   db: AnyDrizzleDatabase,
   data: Partial<Model> & Pick<Model, 'id' | 'provider' | 'name' | 'model'>,
 ): Promise<void> => {
+  // T4 — BYO models are gated by org policy. Company-supplied (`isSystem === 1`)
+  // models are always allowed; a user-added model is refused when the org has
+  // disabled BYO. Consumer/no-org mode defaults to allowed.
+  assertByoModelAllowed(await getOrgPolicy(db), { isSystem: data.isSystem ?? 0 })
   await db.transaction(async (tx) => {
     await tx.insert(modelsTable).values(data)
     await createDefaultModelProfile(tx, data.id)

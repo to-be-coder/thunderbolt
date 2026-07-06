@@ -6,15 +6,26 @@ import type { connectToAgent as defaultConnectToAgent } from '@/acp'
 import { getOrConnectAdapter as defaultGetOrConnectAdapter } from '@/acp/adapter-cache'
 import type { AcpCommand, SessionSideEffect } from '@/acp/translators/acp-to-ai-sdk'
 import { useAgentCommandsStore } from '@/acp/agent-commands-store'
-import { updateChatThread as defaultUpdateChatThread } from '@/dal/chat-threads'
-import { getAllSkills as defaultGetAllSkills } from '@/dal'
-import { extractLastUserText, resolveSkillTokenInstructions } from '@/skills/resolve-skill-system-messages'
+import { selectAcpSessionContributor as defaultSelectAcpSessionContributor } from '@/acp/session-contributors'
+import type { LibraryInjection } from '@/acp/session-library'
+import {
+  agentRefForAgentId,
+  getAgentRef,
+  updateChatThread as defaultUpdateChatThread,
+  type AgentRef,
+} from '@/dal/chat-threads'
+import { getTeamAgentsCache as defaultGetTeamAgentsCache } from '@/dal/team-agents-cache'
+import { resolveAgentDescriptor, type AgentDescriptor } from './agent-descriptor'
+import { extractLastUserText } from '@/skills/resolve-skill-system-messages'
+import { getAvailableTools as defaultGetAvailableTools } from '@/lib/tools'
 import { getDb as defaultGetDb } from '@/db/database'
 import { isRateLimitError } from '@/lib/error-utils'
 import type { HttpClient } from '@/lib/http'
 import { trackEvent } from '@/lib/posthog'
 import type { FetchFn } from '@/lib/proxy-fetch'
-import type { SaveMessagesFunction, ThunderboltUIMessage } from '@/types'
+import type { AgentCard } from '@shared/agent-cards'
+import type { Agent } from '@/types/acp'
+import type { ChatThread, SaveMessagesFunction, ThunderboltUIMessage } from '@/types'
 import { Chat } from '@ai-sdk/react'
 import type { RequestPermissionRequest, RequestPermissionResponse } from '@agentclientprotocol/sdk'
 import { DefaultChatTransport } from 'ai'
@@ -79,7 +90,31 @@ export type CreateChatInstanceDeps = {
   connectToAgent?: typeof defaultConnectToAgent
   updateChatThread?: typeof defaultUpdateChatThread
   getDb?: typeof defaultGetDb
-  getAllSkills?: typeof defaultGetAllSkills
+  /** The SEAL router (Stage 4). Injected so tests drive extensible vs sealed
+   *  session construction without a team cache. */
+  selectAcpSessionContributor?: typeof defaultSelectAcpSessionContributor
+  getTeamAgentsCache?: typeof defaultGetTeamAgentsCache
+  getAvailableTools?: typeof defaultGetAvailableTools
+}
+
+/**
+ * Resolve the thread's {@link AgentDescriptor} for SEAL routing. The team
+ * binding lives on the persisted thread's agentRef; before the row exists we
+ * fall back to matching the selected agent against the cached team cards (a
+ * synthesized team `Agent` shares its id with its card), else treat it as
+ * personal/thunderbolt.
+ */
+const resolveRoutingDescriptor = (
+  selectedAgent: Agent,
+  chatThread: ChatThread | null,
+  teamCards: AgentCard[],
+): AgentDescriptor => {
+  const agentRef: AgentRef = chatThread
+    ? getAgentRef(chatThread)
+    : teamCards.some((card) => card.id === selectedAgent.id)
+      ? { kind: 'team', agentId: selectedAgent.id }
+      : agentRefForAgentId(selectedAgent.type === 'built-in' ? null : selectedAgent.id)
+  return resolveAgentDescriptor({ agentRef, selectedAgent, teamCards })
 }
 
 /**
@@ -112,30 +147,11 @@ export const createAgentRoutingFetch = (
   const getOrConnectAdapter = deps.getOrConnectAdapter ?? defaultGetOrConnectAdapter
   const updateChatThread = deps.updateChatThread ?? defaultUpdateChatThread
   const getDb = deps.getDb ?? defaultGetDb
-  const getAllSkills = deps.getAllSkills ?? defaultGetAllSkills
+  const selectAcpSessionContributor = deps.selectAcpSessionContributor ?? defaultSelectAcpSessionContributor
+  const getTeamAgentsCache = deps.getTeamAgentsCache ?? defaultGetTeamAgentsCache
+  const getAvailableTools = deps.getAvailableTools ?? defaultGetAvailableTools
 
   let routedAgentId: string | null = null
-
-  /** Resolve user-skill (`/slug`) instructions from the latest user message, so
-   *  ACP agents can receive them in the prompt (the built-in pipeline injects
-   *  these itself in `ai/fetch.ts`, so this only runs for non-built-in agents).
-   *  Cheap-exits before touching the DB when there's no message or no `/` token. */
-  const resolveAcpSkillInstructions = async (messages: ThunderboltUIMessage[] | undefined): Promise<string[]> => {
-    if (!messages?.length) {
-      return []
-    }
-    const lastUserText = extractLastUserText(messages)
-    if (!lastUserText.includes('/')) {
-      return []
-    }
-    const instructionBySlug = new Map<string, string>()
-    for (const skill of await getAllSkills(getDb())) {
-      if (skill.enabled === 1 && skill.name && skill.instruction) {
-        instructionBySlug.set(skill.name, skill.instruction)
-      }
-    }
-    return resolveSkillTokenInstructions(lastUserText, instructionBySlug)
-  }
 
   return Object.assign(
     async (_requestInfo: RequestInfo | URL, init?: RequestInit) => {
@@ -200,10 +216,36 @@ export const createAgentRoutingFetch = (
         useChatStore.getState().updateSession(id, { connectionStatus: 'ready', connectionError: null })
       }
 
-      // Built-in re-resolves skill instructions itself (ai/fetch.ts); for ACP
-      // agents we resolve here and fold them into the prompt via the adapter.
-      const skillInstructions =
-        selectedAgent.type === 'built-in' ? undefined : await resolveAcpSkillInstructions(requestBody.messages)
+      // THE SEAL (Stage 4, INVARIANT 3): the member's Library is gathered ONLY
+      // for EXTENSIBLE team agents, through the extensible session builder — the
+      // sole holder of the injection function. Sealed team agents, ALL personal
+      // ACP agents, and the built-in agent (which injects its own Library in
+      // `ai/fetch.ts`) receive `undefined`: the `kind !== 'extensible'` narrowing
+      // below is the route-level guard, and the sealed contributor type has no
+      // `gatherLibrary` member to reach even if that guard were removed.
+      const resolveSessionLibrary = async (): Promise<LibraryInjection | undefined> => {
+        // Personal ACP agents are `remote-acp` and are ALWAYS sealed — they have
+        // no team membership and never receive the Library. Short-circuit before
+        // any team-cache read. Only team agents (synthesized as `managed-acp`)
+        // can be extensible, so only they need the descriptor resolution.
+        if (selectedAgent.type === 'remote-acp') {
+          return undefined
+        }
+        const teamCards = await getTeamAgentsCache(getDb())
+        const descriptor = resolveRoutingDescriptor(selectedAgent, chatThread, teamCards)
+        const contributor = selectAcpSessionContributor(descriptor)
+        if (contributor.kind !== 'extensible') {
+          return undefined
+        }
+        return contributor.gatherLibrary({
+          db: getDb(),
+          lastUserText: extractLastUserText(requestBody.messages),
+          mcpClients,
+          extensionToolNames: (await getAvailableTools(httpClient)).map((tool) => tool.name),
+        })
+      }
+
+      const library = selectedAgent.type === 'built-in' ? undefined : await resolveSessionLibrary()
 
       return adapter.fetch(init, {
         threadId: id,
@@ -216,7 +258,7 @@ export const createAgentRoutingFetch = (
         reconnectClient,
         httpClient,
         getProxyFetch,
-        skillInstructions,
+        library,
         onAcpSessionId: persistAcpSessionId,
         requestPermission: (request) => requestPermissionViaStore(id, request),
         onSessionSideEffect: applySessionSideEffect,

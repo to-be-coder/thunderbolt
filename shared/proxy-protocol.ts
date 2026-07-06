@@ -28,6 +28,11 @@ export const passthroughPrefixCased = 'X-Proxy-Passthrough-'
 /** WS subprotocol marker that carries the base64url-encoded target URL. */
 export const wsTargetPrefix = 'tbproxy.target.'
 
+/** WS subprotocol marker that carries the base64url-encoded TEAM AGENT id
+ *  (Stage 4, T1). The relay grant-checks the caller and resolves the ACP URL
+ *  server-side — team agents never carry a URL client-side (INVARIANT 2 + SSRF). */
+export const wsAgentPrefix = 'tbproxy.agent.'
+
 /** HTTP redirect status codes the proxy follows when configured to. */
 export const redirectStatuses = new Set([301, 302, 303, 307, 308])
 

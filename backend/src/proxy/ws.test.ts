@@ -3,7 +3,59 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { describe, expect, it } from 'bun:test'
-import { classifyWsCloseCode, parseTargetSubprotocol, validateWsTarget, wsCloseCodes } from './ws'
+import {
+  classifyWsCloseCode,
+  parseAgentSubprotocol,
+  parseTargetSubprotocol,
+  validateWsTarget,
+  wsCloseCodes,
+} from './ws'
+
+describe('parseAgentSubprotocol — team-agent addressing', () => {
+  const encode = (id: string): string => Buffer.from(id).toString('base64url')
+
+  it('extracts the team-agent id from the base64url subprotocol entry', () => {
+    const result = parseAgentSubprotocol(`thunderbolt.v1, tbproxy.agent.${encode('agent-42')}, acp.v1`)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.agentId).toBe('agent-42')
+      // Control entries are stripped so the caller bearer never reaches upstream.
+      expect(result.callerProtocols).toEqual(['acp.v1'])
+    }
+  })
+
+  it('strips both thunderbolt.* and tbproxy.* control entries from caller protocols', () => {
+    const result = parseAgentSubprotocol(`thunderbolt.v1, thunderbolt.bearer.abc, tbproxy.agent.${encode('a1')}, json`)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.callerProtocols).toEqual(['json'])
+    }
+  })
+
+  it('reports missing when there is no agent marker (URL path handles it instead)', () => {
+    const result = parseAgentSubprotocol('thunderbolt.v1, acp.v1')
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.reason).toBe('missing')
+    }
+  })
+
+  it('rejects duplicate agent markers', () => {
+    const result = parseAgentSubprotocol(`tbproxy.agent.${encode('a')}, tbproxy.agent.${encode('b')}`)
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.reason).toBe('duplicate')
+    }
+  })
+
+  it('rejects a malformed (empty) agent marker', () => {
+    const result = parseAgentSubprotocol('tbproxy.agent.')
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.reason).toBe('malformed')
+    }
+  })
+})
 
 describe('parseTargetSubprotocol', () => {
   it('extracts target from base64url subprotocol entry', () => {

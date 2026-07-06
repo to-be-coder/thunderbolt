@@ -10,7 +10,7 @@
 
 import { describe, expect, it, mock } from 'bun:test'
 import { encodeWsBearer } from '@shared/ws-bearer'
-import { createProxyFetch, createProxyWebSocket } from './proxy-fetch'
+import { createProxyFetch, createProxyWebSocket, createTeamAgentProxyWebSocket } from './proxy-fetch'
 
 describe('createProxyFetch — Hosted mode', () => {
   it('rewrites caller headers to X-Proxy-Passthrough-* and sets the target URL header', async () => {
@@ -311,6 +311,68 @@ describe('createProxyWebSocket', () => {
       expect(FakeWS.instances).toHaveLength(1)
       expect(FakeWS.instances[0].url).toBe('wss://upstream.test/path')
       expect(tokenReads).toBe(0)
+    } finally {
+      globalThis.WebSocket = originalWS
+    }
+  })
+})
+
+describe('createTeamAgentProxyWebSocket (Stage 4 T1 — team-agent addressing)', () => {
+  class FakeWS {
+    static instances: Array<FakeWS> = []
+    url: string
+    protocols: string[]
+    constructor(u: string, p?: string[]) {
+      this.url = u
+      this.protocols = p ?? []
+      FakeWS.instances.push(this)
+    }
+    addEventListener() {}
+    removeEventListener() {}
+    send() {}
+    close() {}
+  }
+
+  it('addresses the relay by agent id (never a URL) with carrier + bearer, ignoring the passed url', () => {
+    FakeWS.instances = []
+    const originalWS = globalThis.WebSocket
+    globalThis.WebSocket = FakeWS as unknown as typeof WebSocket
+    try {
+      const factory = createTeamAgentProxyWebSocket({
+        cloudUrl: 'http://localhost:8000/v1',
+        agentId: 'agent-42',
+        getAuthToken: () => 'bearer-abc',
+      })
+      // The url arg is a placeholder; it must NOT appear in the handshake.
+      factory('wss://team-agent.invalid/agent-42', ['acp.v1'])
+      expect(FakeWS.instances).toHaveLength(1)
+      const real = FakeWS.instances[0]
+      expect(real.url).toBe('ws://localhost:8000/v1/proxy/ws')
+      expect(real.protocols[0]).toBe('thunderbolt.v1')
+      expect(real.protocols[1]).toBe(`thunderbolt.bearer.${encodeWsBearer('bearer-abc')}`)
+      // Agent marker carries the id — NO tbproxy.target.* URL entry.
+      expect(real.protocols[2]).toBe(`tbproxy.agent.${Buffer.from('agent-42').toString('base64url')}`)
+      expect(real.protocols.some((p) => p.startsWith('tbproxy.target.'))).toBe(false)
+      expect(real.protocols[3]).toBe('acp.v1')
+    } finally {
+      globalThis.WebSocket = originalWS
+    }
+  })
+
+  it('omits the bearer entry when no token is available (relay then refuses — anonymous)', () => {
+    FakeWS.instances = []
+    const originalWS = globalThis.WebSocket
+    globalThis.WebSocket = FakeWS as unknown as typeof WebSocket
+    try {
+      const factory = createTeamAgentProxyWebSocket({
+        cloudUrl: 'http://localhost:8000/v1',
+        agentId: 'agent-42',
+        getAuthToken: () => null,
+      })
+      factory('wss://team-agent.invalid/agent-42')
+      const real = FakeWS.instances[0]
+      expect(real.protocols.some((p) => p.startsWith('thunderbolt.bearer.'))).toBe(false)
+      expect(real.protocols.some((p) => p.startsWith('tbproxy.agent.'))).toBe(true)
     } finally {
       globalThis.WebSocket = originalWS
     }

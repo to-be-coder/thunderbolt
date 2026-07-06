@@ -26,6 +26,13 @@ export type AdminAuth = {
  *  HTTP call. */
 export type SessionRevoker = (email: string) => Promise<void>
 
+/** Notify the host that a grant to `agentId` changed so it can invalidate any
+ *  IN-FLIGHT ACP sessions to that agent whose caller no longer holds a grant
+ *  (Stage 4 T1). Injected by the host because open sockets live in backend's WS
+ *  relay; when the admin-service is extracted this becomes an HTTP/event call.
+ *  A no-op default keeps the admin-service usable standalone (e.g. in tests). */
+export type GrantRevocationNotifier = (agentId: string) => Promise<void>
+
 /** Dependencies every admin-service route factory receives. */
 export type ServiceDeps = {
   db: AdminDb
@@ -33,6 +40,9 @@ export type ServiceDeps = {
   /** Bootstrap admin email (env `ADMIN_SEED_EMAIL`). Ensured active+admin lazily. */
   seedAdminEmail: string | null
   revokeSessionsForEmail: SessionRevoker
+  /** Called after a grant is revoked so the host can close in-flight sessions
+   *  whose caller lost access. Defaults to a no-op. */
+  onGrantRevoked: GrantRevocationNotifier
 }
 
 /** Resolve the authenticated, non-anonymous session user for a request, or null. */

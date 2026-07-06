@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { afterEach, describe, expect, it } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import {
   isCompletionFlagSet,
   isDataCompletionFlagSet,
@@ -14,6 +14,13 @@ import {
 
 const serverA = '00000000-0000-0000-0000-00000000000a'
 const serverB = '00000000-0000-0000-0000-00000000000b'
+
+// These flags live in shared localStorage; another file's bootstrap can leave a
+// global/per-server flag set. Clear BEFORE each test (not only after) so this
+// suite starts clean regardless of cross-file ordering under --randomize.
+beforeEach(() => {
+  localStorage.clear()
+})
 
 describe('pre-workspaces-attach completion flag', () => {
   afterEach(() => {

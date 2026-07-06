@@ -15,6 +15,7 @@ import type { RequestPermissionRequest, RequestPermissionResponse } from '@agent
 import type { HttpClient } from '@/lib/http'
 import type { FetchFn } from '@/lib/proxy-fetch'
 import type { SessionSideEffectSink } from '@/acp/translators/acp-to-ai-sdk'
+import type { LibraryInjection } from '@/acp/session-library'
 import type { ChatThread, Mode, Model, SaveMessagesFunction } from '@/types'
 
 /** Capabilities advertised by an ACP agent on `initialize`. Stored on the
@@ -63,12 +64,13 @@ export type AgentAdapterContext = {
   reconnectClient: (client: MCPClient) => Promise<MCPClient | null>
   httpClient: HttpClient
   getProxyFetch: () => FetchFn
-  /** Resolved instruction bodies for any user skills (`/slug`) referenced in
-   *  the prompt. The built-in pipeline injects these as system messages
-   *  (`ai/fetch.ts`); ACP agents only receive prompt text, so the adapter folds
-   *  them into the prompt instead — keeping skills behaving the same across
-   *  agents. Empty/omitted when no skill token resolved. */
-  skillInstructions?: string[]
+  /** The member's ENABLED Library (skills + MCP servers + extensions), gathered
+   *  ONLY for EXTENSIBLE team agents by the extensible session builder (the
+   *  seal — see `src/acp/session-contributors.ts`). Skills fold into the prompt;
+   *  MCP servers ride `session/new`. `undefined` for sealed team agents, all
+   *  personal ACP agents, and the built-in agent (which injects its own Library
+   *  in `ai/fetch.ts`) — those sessions never reach the injection function. */
+  library?: LibraryInjection
   /** Called when an ACP adapter created a fresh `sessionId` via `session/new`.
    *  The chat layer persists it on `chatThreads.acpSessionId` so future loads
    *  can call `session/load` when the agent supports it. */
@@ -87,7 +89,7 @@ export type AgentAdapterContext = {
  *  session without sending a prompt. Used by `ensureSession` to warm the
  *  connection — creating `session/new` early so the agent emits its
  *  `available_commands_update` before the user's first message. */
-export type EnsureSessionContext = Pick<AgentAdapterContext, 'threadId' | 'acpSessionId' | 'onAcpSessionId'>
+export type EnsureSessionContext = Pick<AgentAdapterContext, 'threadId' | 'acpSessionId' | 'onAcpSessionId' | 'library'>
 
 /** Runtime adapter wrapping either the built-in pipeline or an ACP transport.
  *  `customFetch` in `chat-instance.ts` delegates to `adapter.fetch` and returns

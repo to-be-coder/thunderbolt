@@ -257,6 +257,32 @@ describe('connectAcpAdapter — handshake failure modes', () => {
     expect(sse).toContain('[CLOSED]')
   })
 
+  it('T4: sends NO model to the ACP agent — it runs whatever its server runs', async () => {
+    const { transport } = buildFakeTransport()
+    const { FakeConnection, calls, releasePrompts } = buildFakeConnection()
+
+    const adapter = await connectAcpAdapter(remoteAgent, baseCtx(), {
+      openTransport: async () => transport,
+      ClientSideConnection: FakeConnection as never,
+    })
+
+    const response = await adapter.fetch(promptInit('hi'), threadCtx('t1'))
+    await act(async () => {
+      releasePrompts()
+      await getClock().runAllAsync()
+      await readSse(response)
+    })
+
+    // Neither session creation nor the prompt carries any model selection.
+    const newSessionKeys = Object.keys(calls.newSession[0] ?? {})
+    expect(newSessionKeys).not.toContain('model')
+    expect(newSessionKeys).not.toContain('modelId')
+    const promptKeys = Object.keys(calls.prompt[0] ?? {})
+    expect(promptKeys).not.toContain('model')
+    expect(promptKeys).not.toContain('modelId')
+    expect(promptKeys.sort()).toEqual(['prompt', 'sessionId'])
+  })
+
   it('folds resolved skill instructions into the prompt ahead of the user text', async () => {
     const { transport } = buildFakeTransport()
     const { FakeConnection, calls, releasePrompts } = buildFakeConnection()
@@ -268,7 +294,13 @@ describe('connectAcpAdapter — handshake failure modes', () => {
 
     const response = await adapter.fetch(
       promptInit('/tell-a-joke'),
-      threadCtx('t1', { skillInstructions: ['Tell a joke about cats, then give a time and place to tell it.'] }),
+      threadCtx('t1', {
+        library: {
+          skillInstructions: ['Tell a joke about cats, then give a time and place to tell it.'],
+          mcpServers: [],
+          extensionToolNames: [],
+        },
+      }),
     )
     await act(async () => {
       releasePrompts()
