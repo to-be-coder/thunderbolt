@@ -55,18 +55,10 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
     return <Navigate to="/settings" replace />
   }
 
-  const handleToggle = async (agent: Agent, enabled: boolean) => {
-    if (agent.type === 'built-in') {
-      // Built-in is hardcoded; the row's toggle is disabled, so this is a
-      // belt-and-braces guard. No DB row exists to update.
-      return
-    }
-    if (agent.isSystem === 1) {
-      // System agents live in the local-only `agents_system` table —
-      // refreshed by discovery, not user-editable.
-      return
-    }
-    await updateAgent(db, agent.id, { enabled: enabled ? 1 : 0 })
+  const handleToggle = async (_agent: Agent, _enabled: boolean) => {
+    // Personal agents no longer carry an `enabled` flag — the row is either
+    // present (usable) or soft-deleted. The toggle affordance goes away with
+    // the Stage 2 agent-access UI; until then this is a no-op.
   }
 
   const handleDelete = async (agent: Agent) => {
@@ -84,9 +76,7 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
       // path (the row hides the Edit affordance).
       await updateAgent(db, editingAgent.id, {
         name: payload.name,
-        transport: payload.transport,
-        url: payload.url,
-        description: payload.description,
+        acpUrl: payload.url,
       })
       return
     }
@@ -98,11 +88,7 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
     await createAgent(db, {
       id: uuidv7(),
       name: payload.name,
-      type: 'remote-acp',
-      transport: payload.transport,
-      url: payload.url,
-      description: payload.description,
-      enabled: 1,
+      acpUrl: payload.url,
       userId: currentUserId,
     })
   }

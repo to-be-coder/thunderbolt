@@ -51,6 +51,10 @@ export const chatThreadsTable = powersyncSchema.table(
     contextSize: integer('context_size'),
     modeId: text('mode_id'),
     acpSessionId: text('acp_session_id'),
+    // agentRef pair: (agent_kind, agent_id). 'thunderbolt' threads have a null
+    // agent_id; 'personal'/'team' threads carry the agent's id. Default covers
+    // inserts from pre-agent_kind clients; migration 0023 backfills old rows.
+    agentKind: text('agent_kind', { enum: ['thunderbolt', 'personal', 'team'] }).default('thunderbolt'),
     agentId: text('agent_id'),
     deletedAt: timestamp('deleted_at'),
     userId: text('user_id')
@@ -251,7 +255,8 @@ export const devicesTable = powersyncSchema.table(
   (table) => [index('idx_devices_user_id').on(table.userId)],
 )
 
-/** Synced via PowerSync. User-created ACP agents only. System agents are not rows. */
+/** Synced via PowerSync. Personal ACP agents only — user-added endpoint
+ *  references (name + ACP URL). Built-in and team agents are never rows. */
 export const agentsTable = powersyncSchema.table(
   'agents',
   {
@@ -260,12 +265,8 @@ export const agentsTable = powersyncSchema.table(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
-    type: text('type', { enum: ['remote-acp', 'managed-acp'] }).notNull(),
-    transport: text('transport', { enum: ['websocket'] }).notNull(),
-    url: text('url').notNull(),
-    description: text('description'),
-    icon: text('icon'),
-    enabled: integer('enabled').default(1).notNull(),
+    acpUrl: text('acp_url').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
     deletedAt: timestamp('deleted_at'),
   },
   (table) => [primaryKey({ columns: [table.id, table.userId] }), index('idx_agents_user_id').on(table.userId)],

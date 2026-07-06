@@ -119,24 +119,28 @@ const copyTableViaReader = async (
     return emptyOutcome
   }
   const newColsSet = new Set(newCols)
-  const sharedCols = legacyCols.filter((c) => newColsSet.has(c))
-  if (sharedCols.length === 0) {
+  const renames = table.columnRenames ?? {}
+
+  // A legacy column carries over if its (possibly renamed) target exists in the
+  // new schema. Workspace-era synthetic columns (workspace_id, scope) are gone
+  // from the new schema, so nothing extra is stamped on the way in.
+  const carried = legacyCols
+    .map((legacyCol) => ({ legacyCol, newCol: renames[legacyCol] ?? legacyCol }))
+    .filter(({ newCol }) => newColsSet.has(newCol))
+  if (carried.length === 0) {
     return emptyOutcome
   }
 
-  // Insert only the columns both schemas share (positionally aligned with the
-  // legacy row). Workspace-era synthetic columns (workspace_id, scope) are gone
-  // from the new schema, so nothing extra is stamped on the way in.
-  const insertCols: string[] = [...sharedCols]
+  const insertCols = carried.map((c) => c.newCol)
 
   const rows = await reader.selectAll(table.name)
   if (rows.length === 0) {
     return emptyOutcome
   }
 
-  // Cache the index of each shared column in the legacy row tuple so the
-  // per-row inner loop is O(sharedCols) rather than O(sharedCols * legacyCols).
-  const sharedColIndices = sharedCols.map((c) => legacyCols.indexOf(c))
+  // Cache the index of each carried column in the legacy row tuple so the
+  // per-row inner loop is O(carried) rather than O(carried * legacyCols).
+  const sharedColIndices = carried.map((c) => legacyCols.indexOf(c.legacyCol))
 
   const colListSql = sql.raw(insertCols.map(quoteId).join(', '))
 

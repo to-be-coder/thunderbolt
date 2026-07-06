@@ -33,15 +33,20 @@ export {
 
 // Chat Threads
 export {
+  AgentRefImmutableError,
+  agentRefForAgentId,
   createChatThread,
   deleteAllChatThreads,
   deleteChatThread,
+  getAgentRef,
   getAllChatThreads,
   getChatThread,
   getContextSizeForThread,
   getOrCreateChatThread,
   isChatThreadDeleted,
   updateChatThread,
+  type AgentKind,
+  type AgentRef,
 } from './chat-threads'
 
 // Chat Messages
@@ -165,6 +170,13 @@ export {
 } from './agents'
 export { builtInAgent } from '../defaults/agents'
 export { refreshSystemAgents, type RefreshSystemAgentsResult } from '../db/seeding/seed-agents'
+export {
+  clearTeamAgentsCache,
+  clearTeamAgentsCacheOnAuthError,
+  getTeamAgentsCache,
+  replaceTeamAgentsCache,
+} from './team-agents-cache'
+export { clearOrgPolicy, getOrgPolicy, setOrgPolicy } from './org-policy'
 
 // Export (user-data backup)
 export { exportFormat, exportSchemaVersion, exportUserData, exportedTableNames, type UserDataExport } from './export'

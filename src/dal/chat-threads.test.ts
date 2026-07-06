@@ -8,9 +8,12 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { eq } from 'drizzle-orm'
 import { v7 as uuidv7 } from 'uuid'
 import {
+  AgentRefImmutableError,
+  agentRefForAgentId,
   createChatThread,
   deleteAllChatThreads,
   deleteChatThread,
+  getAgentRef,
   getAllChatThreads,
   getChatThread,
   getContextSizeForThread,
@@ -18,6 +21,7 @@ import {
   isChatThreadDeleted,
   updateChatThread,
 } from './chat-threads'
+import { builtInAgent } from '@/defaults/agents'
 import { getModel } from './models'
 import { getChatMessages } from './chat-messages'
 import { resetTestDatabase, setupTestDatabase, teardownTestDatabase } from './test-utils'
@@ -951,6 +955,77 @@ describe('Chat Threads DAL', () => {
       expect(updatedThread?.title).toBe('Test Thread') // Should remain unchanged
     })
 
+    it('should reject an agentId change once the thread has a message', async () => {
+      const threadId = uuidv7()
+      const db = getDb()
+
+      await db.insert(chatThreadsTable).values({ id: threadId, title: 'Test', isEncrypted: 0, agentId: null })
+      await db.insert(chatMessagesTable).values({ id: uuidv7(), chatThreadId: threadId, role: 'user', content: 'hi' })
+
+      await expect(updateChatThread(getDb(), threadId, { agentId: 'agent-x', agentKind: 'personal' })).rejects.toThrow(
+        AgentRefImmutableError,
+      )
+
+      const thread = await getChatThread(getDb(), threadId)
+      expect(thread?.agentId).toBeNull()
+    })
+
+    it('should reject an agentKind-only change once the thread has a message', async () => {
+      const threadId = uuidv7()
+      const db = getDb()
+
+      await db.insert(chatThreadsTable).values({ id: threadId, title: 'Test', isEncrypted: 0 })
+      await db.insert(chatMessagesTable).values({ id: uuidv7(), chatThreadId: threadId, role: 'user', content: 'hi' })
+
+      await expect(updateChatThread(getDb(), threadId, { agentKind: 'team' })).rejects.toThrow(AgentRefImmutableError)
+    })
+
+    it('should allow agentRef changes while the thread has no messages', async () => {
+      const threadId = uuidv7()
+      const db = getDb()
+
+      await db.insert(chatThreadsTable).values({ id: threadId, title: 'Test', isEncrypted: 0, agentId: null })
+
+      await updateChatThread(getDb(), threadId, { agentId: 'agent-x', agentKind: 'personal' })
+
+      const thread = await getChatThread(getDb(), threadId)
+      expect(thread?.agentId).toBe('agent-x')
+      expect(thread?.agentKind).toBe('personal')
+    })
+
+    it('should still allow non-agentRef patches on threads with messages', async () => {
+      const threadId = uuidv7()
+      const db = getDb()
+
+      await db.insert(chatThreadsTable).values({ id: threadId, title: 'Before', isEncrypted: 0 })
+      await db.insert(chatMessagesTable).values({ id: uuidv7(), chatThreadId: threadId, role: 'user', content: 'hi' })
+
+      await updateChatThread(getDb(), threadId, { title: 'After', contextSize: 42 })
+
+      const thread = await getChatThread(getDb(), threadId)
+      expect(thread?.title).toBe('After')
+      expect(thread?.contextSize).toBe(42)
+    })
+
+    it('should treat a thread whose messages are all soft-deleted as message-free', async () => {
+      const threadId = uuidv7()
+      const db = getDb()
+
+      await db.insert(chatThreadsTable).values({ id: threadId, title: 'Test', isEncrypted: 0 })
+      await db.insert(chatMessagesTable).values({
+        id: uuidv7(),
+        chatThreadId: threadId,
+        role: 'user',
+        content: 'gone',
+        deletedAt: nowIso(),
+      })
+
+      await updateChatThread(getDb(), threadId, { agentId: 'agent-x', agentKind: 'personal' })
+
+      const thread = await getChatThread(getDb(), threadId)
+      expect(thread?.agentId).toBe('agent-x')
+    })
+
     it('should not affect other threads when updating one', async () => {
       const threadId1 = uuidv7()
       const threadId2 = uuidv7()
@@ -984,6 +1059,95 @@ describe('Chat Threads DAL', () => {
       expect(thread2?.contextSize).toBe(2500)
       expect(thread3?.title).toBe('Thread 3')
       expect(thread3?.contextSize).toBe(3000)
+    })
+  })
+
+  describe('agentRef', () => {
+    const baseThread = { title: 'New Chat', contextSize: null, triggeredBy: null, wasTriggeredByAutomation: 0 as const }
+
+    it('createChatThread stamps agentKind=thunderbolt when no agentId is given', async () => {
+      const threadId = uuidv7()
+      const modelId = await createTestModel()
+      const model = await getModel(getDb(), modelId)
+      if (!model) {
+        throw new Error('Test setup failed')
+      }
+
+      await createChatThread(getDb(), { ...baseThread, id: threadId }, model)
+
+      const thread = await getChatThread(getDb(), threadId)
+      expect(thread?.agentKind).toBe('thunderbolt')
+      expect(thread?.agentId).toBeNull()
+    })
+
+    it('createChatThread stamps agentKind=thunderbolt for the built-in agent id', async () => {
+      const threadId = uuidv7()
+      const modelId = await createTestModel()
+      const model = await getModel(getDb(), modelId)
+      if (!model) {
+        throw new Error('Test setup failed')
+      }
+
+      await createChatThread(getDb(), { ...baseThread, id: threadId, agentId: builtInAgent.id }, model)
+
+      const thread = await getChatThread(getDb(), threadId)
+      expect(thread?.agentKind).toBe('thunderbolt')
+    })
+
+    it('createChatThread derives agentKind=personal for a non-built-in agentId', async () => {
+      const threadId = uuidv7()
+      const modelId = await createTestModel()
+      const model = await getModel(getDb(), modelId)
+      if (!model) {
+        throw new Error('Test setup failed')
+      }
+
+      await createChatThread(getDb(), { ...baseThread, id: threadId, agentId: 'custom-agent' }, model)
+
+      const thread = await getChatThread(getDb(), threadId)
+      expect(thread?.agentKind).toBe('personal')
+      expect(thread?.agentId).toBe('custom-agent')
+    })
+
+    it('createChatThread persists an explicit agentKind=team', async () => {
+      const threadId = uuidv7()
+      const modelId = await createTestModel()
+      const model = await getModel(getDb(), modelId)
+      if (!model) {
+        throw new Error('Test setup failed')
+      }
+
+      await createChatThread(
+        getDb(),
+        { ...baseThread, id: threadId, agentId: 'team-agent-1', agentKind: 'team' },
+        model,
+      )
+
+      const thread = await getChatThread(getDb(), threadId)
+      expect(thread?.agentKind).toBe('team')
+      expect(thread?.agentId).toBe('team-agent-1')
+    })
+
+    it('getAgentRef reads a NULL kind (pre-migration row) as the thunderbolt ref', () => {
+      expect(getAgentRef({ agentKind: null, agentId: null })).toEqual({ kind: 'thunderbolt', agentId: null })
+      // Legacy rows kept their agentId; kind still resolves to thunderbolt.
+      expect(getAgentRef({ agentKind: null, agentId: builtInAgent.id })).toEqual({ kind: 'thunderbolt', agentId: null })
+    })
+
+    it('getAgentRef returns discriminated personal/team refs', () => {
+      expect(getAgentRef({ agentKind: 'personal', agentId: 'p1' })).toEqual({ kind: 'personal', agentId: 'p1' })
+      expect(getAgentRef({ agentKind: 'team', agentId: 't1' })).toEqual({ kind: 'team', agentId: 't1' })
+    })
+
+    it('getAgentRef degrades an id-less personal/team kind to the thunderbolt ref', () => {
+      expect(getAgentRef({ agentKind: 'personal', agentId: null })).toEqual({ kind: 'thunderbolt', agentId: null })
+    })
+
+    it('agentRefForAgentId maps null/built-in to thunderbolt and everything else to personal', () => {
+      expect(agentRefForAgentId(null)).toEqual({ kind: 'thunderbolt', agentId: null })
+      expect(agentRefForAgentId(undefined)).toEqual({ kind: 'thunderbolt', agentId: null })
+      expect(agentRefForAgentId(builtInAgent.id)).toEqual({ kind: 'thunderbolt', agentId: null })
+      expect(agentRefForAgentId('custom-1')).toEqual({ kind: 'personal', agentId: 'custom-1' })
     })
   })
 })

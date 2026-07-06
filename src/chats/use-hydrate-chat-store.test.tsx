@@ -338,9 +338,7 @@ describe('useHydrateChatStore', () => {
       await createAgent(getDb(), {
         id: 'custom-last-used',
         name: 'Last Used Agent',
-        type: 'remote-acp',
-        transport: 'websocket',
-        url: 'wss://example.test/ws',
+        acpUrl: 'wss://example.test/ws',
         userId: 'u1',
       })
       await updateSettings(getDb(), { selected_agent: 'custom-last-used' })

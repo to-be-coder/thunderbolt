@@ -5,11 +5,17 @@
 import type { Agent } from '@/types/acp'
 
 /**
- * The built-in Thunderbolt agent. Lives in code only — never a DB row.
+ * The built-in Thunderbolt agent — a fixed identity that lives in code only.
+ * Exactly one per user, never a database row, zero stored config: the DAL
+ * refuses to create, update, delete, or attach secrets/settings rows for this
+ * id (see `src/dal/agents.ts`).
  *
  * The chat layer treats this special case as a thin adapter over the existing
  * `aiFetchStreamingResponse` pipeline; the ACP protocol is not involved.
  * Always present, always first in the agent list, never removable.
+ *
+ * Chat threads reference it as agentRef `{ kind: 'thunderbolt', agentId: null }`
+ * (see `getAgentRef` in `src/dal/chat-threads.ts`).
  */
 export const builtInAgent: Agent = {
   id: 'thunderbolt-built-in',

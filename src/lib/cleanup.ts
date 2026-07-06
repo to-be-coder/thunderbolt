@@ -4,8 +4,10 @@
 
 import { getDbFilenameFor } from '@/db/database-path'
 import { broadcastDbLifecycle as defaultBroadcastDbLifecycle } from '@/db/db-lifecycle-broadcast'
-import { resetDatabase as defaultResetDatabase } from '@/db/database'
+import { getDb, resetDatabase as defaultResetDatabase } from '@/db/database'
 import { disposeAllAdapters } from '@/acp/adapter-cache'
+import { clearTeamAgentsCache } from '@/dal/team-agents-cache'
+import { clearOrgPolicy } from '@/dal/org-policy'
 import { setSyncEnabled as defaultSetSyncEnabled } from '@/db/powersync'
 import {
   clearAuthToken as defaultClearAuthToken,
@@ -84,6 +86,18 @@ export const clearLocalData = async ({
     await disposeAllAdapters()
   } catch (error) {
     console.error('[clearLocalData] Failed to dispose ACP adapters:', error)
+  }
+
+  // Clear the device-local agent-access caches (team agent cards + org
+  // policy) while the DB is still open. The DB file deletion below removes
+  // them too on the happy path; the explicit clear guarantees no team-agent
+  // grant data survives a wipe where the file delete is skipped or fails.
+  try {
+    const db = getDb()
+    await clearTeamAgentsCache(db)
+    await clearOrgPolicy(db)
+  } catch (error) {
+    console.error('[clearLocalData] Failed to clear agent-access caches:', error)
   }
 
   // Clear the registry's `activeTrustDomain` BEFORE broadcasting `db-closing`

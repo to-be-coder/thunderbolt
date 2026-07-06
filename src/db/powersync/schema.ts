@@ -47,6 +47,14 @@ export const localOnlyTables = {
     tableDefinition: tables.agentsSecretsTable,
     options: { localOnly: true },
   } satisfies DrizzleTableWithPowerSyncOptions,
+  team_agents_cache: {
+    tableDefinition: tables.teamAgentsCacheTable,
+    options: { localOnly: true },
+  } satisfies DrizzleTableWithPowerSyncOptions,
+  org_policy: {
+    tableDefinition: tables.orgPolicyTable,
+    options: { localOnly: true },
+  } satisfies DrizzleTableWithPowerSyncOptions,
 }
 
 /**

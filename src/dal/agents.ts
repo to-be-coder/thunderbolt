@@ -20,23 +20,25 @@ export type AgentSecrets = {
   authMethod: string | null
 }
 
-/** Row shape returned by the synced `agents` table query. Columns mirror the
- *  table; `isSystem` is always 0 for custom agents — built-ins and system
- *  agents are NOT rows in this table. */
+/** Row shape returned by the synced `agents` table query. Personal ACP agents
+ *  only — an endpoint reference {id, name, acp_url, created_at}. Built-in and
+ *  team agents are NOT rows in this table. */
 type AgentCustomRow = typeof agentsTable.$inferSelect
 type AgentSystemRow = typeof agentsSystemTable.$inferSelect
 
-/** Lift a synced custom row into the unified `Agent` shape used by UI/chat. */
+/** Lift a synced personal-agent row into the unified `Agent` shape used by
+ *  UI/chat. The row stores only the endpoint reference; the remaining unified
+ *  fields are fixed for personal ACP agents (websocket remote, always on). */
 const customRowToAgent = (row: AgentCustomRow): Agent => ({
   id: row.id,
   name: row.name,
-  type: row.type,
-  transport: row.transport,
-  url: row.url,
-  description: row.description,
-  icon: row.icon,
+  type: 'remote-acp',
+  transport: 'websocket',
+  url: row.acpUrl,
+  description: null,
+  icon: null,
   isSystem: 0,
-  enabled: row.enabled === 1 ? 1 : 0,
+  enabled: 1,
   deletedAt: row.deletedAt,
   userId: row.userId,
 })
@@ -56,7 +58,7 @@ const systemRowToAgent = (row: AgentSystemRow): Agent => ({
   userId: null,
 })
 
-/** Query for all non-deleted custom agents (synced via PowerSync), alpha by name. */
+/** Query for all non-deleted personal agents (synced via PowerSync), alpha by name. */
 export const getAllAgents = (db: AnyDrizzleDatabase) =>
   db.select().from(agentsTable).where(isNull(agentsTable.deletedAt)).orderBy(asc(agentsTable.name))
 
@@ -64,7 +66,7 @@ export const getAllAgents = (db: AnyDrizzleDatabase) =>
 export const getAllSystemAgents = (db: AnyDrizzleDatabase) =>
   db.select().from(agentsSystemTable).orderBy(asc(agentsSystemTable.name))
 
-/** Live hook for custom (synced) agents. Returns `Agent[]` in visual order. */
+/** Live hook for personal (synced) agents. Returns `Agent[]` in visual order. */
 export const useAgents = (): Agent[] => {
   const db = useDatabase()
   const { data = [] } = useQuery({
@@ -105,51 +107,45 @@ export const useAllAgents = (): Agent[] => {
   return composeAllAgents(useSystemAgents(), useAgents(), { includeBuiltIn })
 }
 
-/** Fields accepted by `createAgent`. `id` is caller-generated (uuid). */
+/** Fields accepted by `createAgent`. `id` is caller-generated (uuid). Personal
+ *  ACP agents are endpoint references only — name + ACP URL, no config. */
 export type CreateAgentInput = {
   id: string
   name: string
-  type: 'remote-acp' | 'managed-acp'
-  transport: 'websocket'
-  url: string
-  description?: string | null
-  icon?: string | null
-  enabled?: 0 | 1
+  acpUrl: string
   userId: string
 }
 
-/** Insert a new custom agent into the synced table.
- *  `userId` is required — synced tables must carry it from the caller's session. */
+/** Insert a new personal agent into the synced table.
+ *  `userId` is required — synced tables must carry it from the caller's session.
+ *  `createdAt` is stamped here (PowerSync tables are views; DDL defaults don't apply). */
 export const createAgent = async (db: AnyDrizzleDatabase, data: CreateAgentInput): Promise<void> => {
+  if (data.id === builtInAgent.id) {
+    throw new Error(`createAgent: refusing to create a row for the built-in agent "${data.id}"`)
+  }
   await db.insert(agentsTable).values({
     id: data.id,
     name: data.name,
-    type: data.type,
-    transport: data.transport,
-    url: data.url,
-    description: data.description ?? null,
-    icon: data.icon ?? null,
-    enabled: data.enabled ?? 1,
+    acpUrl: data.acpUrl,
+    createdAt: nowIso(),
     userId: data.userId,
   })
 }
 
-/** Fields patchable via `updateAgent`. `id`/`userId`/`deletedAt` are managed
- *  internally — callers cannot rewrite them through this entry point. */
-export type UpdateAgentPatch = Partial<
-  Pick<CreateAgentInput, 'name' | 'type' | 'transport' | 'url' | 'description' | 'icon' | 'enabled'>
->
+/** Fields patchable via `updateAgent`. `id`/`userId`/`createdAt`/`deletedAt`
+ *  are managed internally — callers cannot rewrite them through this entry point. */
+export type UpdateAgentPatch = Partial<Pick<CreateAgentInput, 'name' | 'acpUrl'>>
 
 /** Patch fields whose change invalidates a warm ACP connection — the wire
- *  identity (endpoint + transport + agent type). Editing any of these means the
- *  next chat must reconnect, so the cached adapter is disposed. */
-const connectionInvalidatingFields: ReadonlyArray<keyof UpdateAgentPatch> = ['url', 'transport', 'type']
+ *  identity (endpoint). Editing it means the next chat must reconnect, so the
+ *  cached adapter is disposed. */
+const connectionInvalidatingFields: ReadonlyArray<keyof UpdateAgentPatch> = ['acpUrl']
 
-/** Patch an existing custom agent. Built-in and system agents are not editable
- *  through the DAL — built-in lives in code, system rows live in the local-only
- *  `agents_system` table which `updateAgent` never touches.
+/** Patch an existing personal agent. Built-in and system agents are not
+ *  editable through the DAL — built-in lives in code, system rows live in the
+ *  local-only `agents_system` table which `updateAgent` never touches.
  *
- *  Editing the wire identity (url/transport/type) disposes the agent's warm ACP
+ *  Editing the wire identity (acpUrl) disposes the agent's warm ACP
  *  connection so the next chat reconnects against the new endpoint. */
 export const updateAgent = async (db: AnyDrizzleDatabase, id: string, patch: UpdateAgentPatch): Promise<void> => {
   if (id === builtInAgent.id) {
@@ -168,7 +164,7 @@ export const updateAgent = async (db: AnyDrizzleDatabase, id: string, patch: Upd
   }
 }
 
-/** Soft delete a custom agent. Never hard-delete — sets `deletedAt` and lets
+/** Soft delete a personal agent. Never hard-delete — sets `deletedAt` and lets
  *  PowerSync replicate the tombstone. Built-ins/system rows are not in this
  *  table and cannot be removed. */
 export const deleteAgent = async (db: AnyDrizzleDatabase, id: string): Promise<void> => {
@@ -195,6 +191,9 @@ export const getAgentSecrets = async (db: AnyDrizzleDatabase, id: string): Promi
 
 /** Upsert credentials for an agent into the local-only secrets table.
  *
+ *  The built-in agent has zero stored config by definition — no settings or
+ *  secrets row is ever created for it, so writes against its id are refused.
+ *
  *  PowerSync exposes local-only tables as SQLite views, which don't support
  *  `INSERT ... ON CONFLICT DO UPDATE`. Emulate UPSERT with SELECT-then-INSERT/UPDATE,
  *  same pattern as `models_secrets` / `integrations_secrets`. */
@@ -203,6 +202,9 @@ export const setAgentSecrets = async (
   id: string,
   secrets: Partial<AgentSecrets>,
 ): Promise<void> => {
+  if (id === builtInAgent.id) {
+    throw new Error(`setAgentSecrets: refusing to store secrets for the built-in agent "${id}"`)
+  }
   const existing = await db.select().from(agentsSecretsTable).where(eq(agentsSecretsTable.agentId, id)).get()
 
   if (existing) {

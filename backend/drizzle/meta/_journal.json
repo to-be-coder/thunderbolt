@@ -162,6 +162,13 @@
       "when": 1783291490361,
       "tag": "0022_regular_next_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1783296971816,
+      "tag": "0023_short_strong_guy",
+      "breakpoints": true
     }
   ]
 }

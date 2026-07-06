@@ -157,9 +157,7 @@ describe('Header', () => {
     await createAgent(getDb(), {
       id: customAgent.id,
       name: customAgent.name,
-      type: 'remote-acp',
-      transport: 'websocket',
-      url: 'wss://example.com',
+      acpUrl: 'wss://example.com',
       userId: 'user-1',
     })
     setupWithAgent(customAgent)

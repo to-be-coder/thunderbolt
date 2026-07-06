@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { updateSettings } from '@/dal'
-import { updateChatThread } from '@/dal/chat-threads'
+import { agentRefForAgentId, updateChatThread } from '@/dal/chat-threads'
 import { getDb } from '@/db/database'
 import { type NamedMCPClient, type ReconnectClient } from '@/lib/mcp-provider'
 import { trackEvent } from '@/lib/posthog'
@@ -162,17 +162,26 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
       throw new Error('No session found')
     }
 
-    const nextSessions = new Map(sessions)
-    const nextChatThread = session.chatThread ? { ...session.chatThread, agentId: agent.id } : session.chatThread
-    nextSessions.set(id, { ...session, chatThread: nextChatThread, selectedAgent: agent })
-
-    set({ sessions: nextSessions })
-
+    // The agentRef pair (kind + id) moves together. The DAL rejects this
+    // write with AgentRefImmutableError once the thread has messages — the
+    // agent a conversation happened with cannot be rewritten. The thread
+    // write runs BEFORE the in-memory update so a rejection propagates to the
+    // caller without leaving the session pointing at an agent the thread
+    // never switched to.
+    const agentKind = agentRefForAgentId(agent.id).kind
     const db = getDb()
 
     if (session.chatThread) {
-      await updateChatThread(db, session.chatThread.id, { agentId: agent.id })
+      await updateChatThread(db, session.chatThread.id, { agentId: agent.id, agentKind })
     }
+
+    const nextSessions = new Map(sessions)
+    const nextChatThread = session.chatThread
+      ? { ...session.chatThread, agentId: agent.id, agentKind }
+      : session.chatThread
+    nextSessions.set(id, { ...session, chatThread: nextChatThread, selectedAgent: agent })
+
+    set({ sessions: nextSessions })
 
     // Persist the global last-used agent so new chats default to it (mirrors
     // `setSelectedModel`/`setSelectedMode`). The per-thread write above keeps

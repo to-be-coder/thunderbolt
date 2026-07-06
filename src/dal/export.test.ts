@@ -83,9 +83,7 @@ describe('Export DAL', () => {
       id: 'agent-1',
       userId: 'user-1',
       name: 'Mine',
-      type: 'remote-acp',
-      transport: 'websocket',
-      url: 'wss://mine',
+      acpUrl: 'wss://mine',
     })
     await db.insert(agentsSecretsTable).values({ agentId: 'agent-1', apiKey: 'k-mine' })
     await db.insert(mcpServersTable).values({ id: 'mcp-1', name: 'Mine', type: 'http', url: 'https://mine' })

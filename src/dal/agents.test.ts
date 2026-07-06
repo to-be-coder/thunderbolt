@@ -80,41 +80,39 @@ describe('agents DAL', () => {
       await createAgent(db, {
         id: 'agent-1',
         name: 'Custom Remote',
-        type: 'remote-acp',
-        transport: 'websocket',
-        url: 'wss://example.test/ws',
+        acpUrl: 'wss://example.test/ws',
         userId: 'user-42',
       })
 
       const row = await db.select().from(agentsTable).get()
       expect(row?.id).toBe('agent-1')
       expect(row?.userId).toBe('user-42')
-      expect(row?.type).toBe('remote-acp')
-      expect(row?.transport).toBe('websocket')
-      expect(row?.enabled).toBe(1)
+      expect(row?.acpUrl).toBe('wss://example.test/ws')
       expect(row?.deletedAt).toBeNull()
     })
 
-    it('defaults enabled = 1 when omitted', async () => {
+    it('stamps createdAt on insert', async () => {
       await createAgent(getDb(), {
         id: 'agent-default',
         name: 'Defaults',
-        type: 'remote-acp',
-        transport: 'websocket',
-        url: 'wss://example.test/acp',
+        acpUrl: 'wss://example.test/acp',
         userId: 'u1',
       })
       const row = await getDb().select().from(agentsTable).get()
-      expect(row?.enabled).toBe(1)
+      expect(row?.createdAt).toBeTruthy()
+    })
+
+    it('refuses to create a row for the built-in agent id', async () => {
+      await expect(
+        createAgent(getDb(), { id: builtInAgent.id, name: 'nope', acpUrl: 'wss://x', userId: 'u1' }),
+      ).rejects.toThrow(/built-in/)
     })
 
     it('persists the owning userId', async () => {
       await createAgent(getDb(), {
         id: 'agent-private',
         name: 'Private',
-        type: 'remote-acp',
-        transport: 'websocket',
-        url: 'wss://x',
+        acpUrl: 'wss://x',
         userId: 'u1',
       })
       const row = await getDb().select().from(agentsTable).get()
@@ -127,17 +125,15 @@ describe('agents DAL', () => {
       await createAgent(getDb(), {
         id: 'a1',
         name: 'Original',
-        type: 'remote-acp',
-        transport: 'websocket',
-        url: 'wss://old/ws',
+        acpUrl: 'wss://old/ws',
         userId: 'u1',
       })
 
-      await updateAgent(getDb(), 'a1', { name: 'Renamed', enabled: 0 })
+      await updateAgent(getDb(), 'a1', { name: 'Renamed', acpUrl: 'wss://renamed/ws' })
 
       const row = await getDb().select().from(agentsTable).get()
       expect(row?.name).toBe('Renamed')
-      expect(row?.enabled).toBe(0)
+      expect(row?.acpUrl).toBe('wss://renamed/ws')
     })
 
     it('refuses to edit the built-in agent', async () => {
@@ -148,9 +144,7 @@ describe('agents DAL', () => {
       await createAgent(getDb(), {
         id: 'a2',
         name: 'Untouched',
-        type: 'remote-acp',
-        transport: 'websocket',
-        url: 'wss://x',
+        acpUrl: 'wss://x',
         userId: 'u1',
       })
       await updateAgent(getDb(), 'a2', {})
@@ -162,14 +156,12 @@ describe('agents DAL', () => {
       await createAgent(getDb(), {
         id: 'a-url',
         name: 'Wired',
-        type: 'remote-acp',
-        transport: 'websocket',
-        url: 'wss://old/ws',
+        acpUrl: 'wss://old/ws',
         userId: 'u1',
       })
       const cached = await seedCachedAdapter('a-url')
 
-      await updateAgent(getDb(), 'a-url', { url: 'wss://new/ws' })
+      await updateAgent(getDb(), 'a-url', { acpUrl: 'wss://new/ws' })
 
       expect(cached.disconnectCount()).toBe(1)
     })
@@ -178,9 +170,7 @@ describe('agents DAL', () => {
       await createAgent(getDb(), {
         id: 'a-name',
         name: 'Before',
-        type: 'remote-acp',
-        transport: 'websocket',
-        url: 'wss://keep/ws',
+        acpUrl: 'wss://keep/ws',
         userId: 'u1',
       })
       const cached = await seedCachedAdapter('a-name')
@@ -196,9 +186,7 @@ describe('agents DAL', () => {
       await createAgent(getDb(), {
         id: 'a-del',
         name: 'Doomed',
-        type: 'remote-acp',
-        transport: 'websocket',
-        url: 'wss://x',
+        acpUrl: 'wss://x',
         userId: 'u1',
       })
 
@@ -217,9 +205,7 @@ describe('agents DAL', () => {
       await createAgent(getDb(), {
         id: 'a-disp',
         name: 'Doomed',
-        type: 'remote-acp',
-        transport: 'websocket',
-        url: 'wss://x',
+        acpUrl: 'wss://x',
         userId: 'u1',
       })
       const cached = await seedCachedAdapter('a-disp')
@@ -312,6 +298,11 @@ describe('agents DAL', () => {
       await setAgentSecrets(getDb(), 'new-agent', { authMethod: 'oauth' })
       const result = await getAgentSecrets(getDb(), 'new-agent')
       expect(result).toEqual({ apiKey: null, authMethod: 'oauth' })
+    })
+
+    it('refuses to store secrets for the built-in agent (zero stored config)', async () => {
+      await expect(setAgentSecrets(getDb(), builtInAgent.id, { apiKey: 'sk-nope' })).rejects.toThrow(/built-in/)
+      expect(await getAgentSecrets(getDb(), builtInAgent.id)).toBeNull()
     })
   })
 

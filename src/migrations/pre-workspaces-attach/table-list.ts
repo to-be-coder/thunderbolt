@@ -9,6 +9,10 @@
  */
 export type LegacyTable = {
   readonly name: string
+  /** Legacy→new column renames applied during the copy. The value is read from
+   *  the legacy column (key) and written to the new column (value). Used when a
+   *  column was renamed since the legacy schema, e.g. `agents.url`→`acp_url`. */
+  readonly columnRenames?: Readonly<Record<string, string>>
 }
 
 export const syncedLegacyTables: readonly LegacyTable[] = [
@@ -21,7 +25,9 @@ export const syncedLegacyTables: readonly LegacyTable[] = [
   { name: 'triggers' },
   { name: 'modes' },
   { name: 'model_profiles' },
-  { name: 'agents' },
+  // Stage 1 slimmed `agents` to personal-ACP-only and renamed `url`→`acp_url`;
+  // the legacy endpoint carries over under its new name.
+  { name: 'agents', columnRenames: { url: 'acp_url' } },
   { name: 'settings' },
   { name: 'devices' },
 ]

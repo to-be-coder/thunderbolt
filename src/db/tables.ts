@@ -5,6 +5,7 @@
 import type { WidgetCacheData } from '@/widgets'
 import type { UIMessage } from 'ai'
 import type { UIMessageMetadata } from '@/types'
+import type { AgentCardCapability, OrgPolicy } from '@shared/agent-cards'
 import { sql } from 'drizzle-orm'
 import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
@@ -28,6 +29,11 @@ export const chatThreadsTable = sqliteTable(
     contextSize: integer('context_size'),
     modeId: text('mode_id'),
     acpSessionId: text('acp_session_id'),
+    // agentRef pair: (agent_kind, agent_id). `thunderbolt` threads have a null
+    // agent_id (the built-in agent is not a row anywhere); `personal`/`team`
+    // threads carry the referenced agent's id. NULL kind (pre-migration rows)
+    // reads as 'thunderbolt' — see `getAgentRef` in src/dal/chat-threads.ts.
+    agentKind: text('agent_kind', { enum: ['thunderbolt', 'personal', 'team'] }).default('thunderbolt'),
     agentId: text('agent_id'),
     deletedAt: text('deleted_at'),
     userId: text('user_id'),
@@ -272,18 +278,17 @@ export const devicesTable = sqliteTable('devices', {
   revokedAt: text('revoked_at'),
 })
 
-/** Synced via PowerSync. User-created ACP agents only. `isSystem` is always 0; built-ins and system agents are not rows. */
+/** Synced via PowerSync. Personal ACP agents only — user-added endpoint
+ *  references (name + ACP URL), nothing more. The built-in Thunderbolt agent
+ *  is a code constant (`src/defaults/agents.ts`) and team agents are cached
+ *  device-locally (`team_agents_cache`); neither is ever a row here. */
 export const agentsTable = sqliteTable(
   'agents',
   {
     id: text('id').primaryKey(),
     name: text('name').notNull(),
-    type: text('type', { enum: ['remote-acp', 'managed-acp'] }).notNull(),
-    transport: text('transport', { enum: ['websocket'] }).notNull(),
-    url: text('url').notNull(),
-    description: text('description'),
-    icon: text('icon'),
-    enabled: integer('enabled').default(1).notNull(),
+    acpUrl: text('acp_url').notNull(),
+    createdAt: text('created_at').default(sql`(datetime('now'))`),
     deletedAt: text('deleted_at'),
     userId: text('user_id'),
   },
@@ -311,4 +316,30 @@ export const agentsSecretsTable = sqliteTable('agents_secrets', {
   agentId: text('id').primaryKey(),
   apiKey: text('api_key'),
   authMethod: text('auth_method'),
+})
+
+/** Local-only cache of grant-filtered team agent cards from org discovery.
+ *  Columns mirror `AgentCard` (shared/agent-cards.ts). Device-local by design
+ *  (PRD Rev 3.2): cards are re-fetched per device, never synced, cleared on
+ *  discovery 401/403 and on sign-out. */
+export const teamAgentsCacheTable = sqliteTable('team_agents_cache', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  icon: text('icon').notNull(),
+  description: text('description').notNull(),
+  category: text('category', { enum: ['sealed', 'extensible'] }).notNull(),
+  capabilities: text('capabilities', { mode: 'json' }).$type<AgentCardCapability[]>().notNull(),
+  advertisedModels: text('advertised_models', { mode: 'json' }).$type<string[]>().notNull(),
+  managedBy: text('managed_by').notNull(),
+  grantedVia: text('granted_via').notNull(),
+  fetchedAt: text('fetched_at').notNull(),
+})
+
+/** Local-only single-row cache of the org policy from the discovery envelope
+ *  (shared/agent-cards.ts `OrgPolicy`). Never synced. Absent row ⇒ consumer /
+ *  no-org mode — `getOrgPolicy` falls back to `defaultOrgPolicy`. */
+export const orgPolicyTable = sqliteTable('org_policy', {
+  id: text('id').primaryKey(), // always 'org-policy'
+  policy: text('policy', { mode: 'json' }).$type<OrgPolicy>().notNull(),
+  fetchedAt: text('fetched_at').notNull(),
 })
