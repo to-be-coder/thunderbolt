@@ -45,54 +45,56 @@ export const RegistryPage = () => {
 
   return (
     <div className="flex w-full">
-      <div className="flex min-w-0 flex-1 flex-col gap-6">
-        <PageHeader title="Registry">
-          <Button
-            variant="outline"
-            size="icon"
-            className="rounded-lg"
-            onClick={() => setRegistering(true)}
-            aria-label="Register an agent"
-          >
-            <Plus />
-          </Button>
-        </PageHeader>
-
-        <Dialog open={registering} onOpenChange={setRegistering}>
-          <DialogContent className="max-h-[85vh] overflow-y-auto">
-            <DialogHeader className="sr-only">
-              <DialogTitle>Register agent</DialogTitle>
-            </DialogHeader>
-            {registering && <AgentForm agent={null} onDone={() => setRegistering(false)} />}
-          </DialogContent>
-        </Dialog>
-
-        <div className="flex flex-col gap-2">
-          {agentsQuery.isPending && <p className="text-sm text-muted-foreground">Loading…</p>}
-          {!agentsQuery.isPending && agents.length === 0 && (
-            <p className="text-sm text-muted-foreground">No agents registered yet.</p>
-          )}
-          {agents.map((agent) => (
-            <button
-              key={agent.id}
-              type="button"
-              onClick={() => setSelectedId(agent.id)}
-              data-testid={`agent-card-${agent.id}`}
-              aria-label={`Open ${agent.name}`}
-              aria-pressed={agent.id === selectedId}
-              className={cn(
-                'flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors',
-                agent.id === selectedId ? 'border-primary bg-secondary/50' : 'border-border hover:bg-secondary/50',
-              )}
+      <div className="min-w-0 flex-1">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+          <PageHeader title="Registry">
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-lg"
+              onClick={() => setRegistering(true)}
+              aria-label="Register an agent"
             >
-              <Building2 className="size-5 shrink-0 text-muted-foreground" aria-hidden />
-              <div className="min-w-0 flex-1">
-                <div className="truncate font-medium">{agent.name}</div>
-                <AgentConnectionIndicator acpUrl={agent.acpUrl} />
-              </div>
-              <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-            </button>
-          ))}
+              <Plus />
+            </Button>
+          </PageHeader>
+
+          <Dialog open={registering} onOpenChange={setRegistering}>
+            <DialogContent className="max-h-[85vh] overflow-y-auto">
+              <DialogHeader className="sr-only">
+                <DialogTitle>Register agent</DialogTitle>
+              </DialogHeader>
+              {registering && <AgentForm agent={null} onDone={() => setRegistering(false)} />}
+            </DialogContent>
+          </Dialog>
+
+          <div className="flex flex-col gap-2">
+            {agentsQuery.isPending && <p className="text-sm text-muted-foreground">Loading…</p>}
+            {!agentsQuery.isPending && agents.length === 0 && (
+              <p className="text-sm text-muted-foreground">No agents registered yet.</p>
+            )}
+            {agents.map((agent) => (
+              <button
+                key={agent.id}
+                type="button"
+                onClick={() => setSelectedId(agent.id)}
+                data-testid={`agent-card-${agent.id}`}
+                aria-label={`Open ${agent.name}`}
+                aria-pressed={agent.id === selectedId}
+                className={cn(
+                  'flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors',
+                  agent.id === selectedId ? 'border-primary bg-secondary/50' : 'border-border hover:bg-secondary/50',
+                )}
+              >
+                <Building2 className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium">{agent.name}</div>
+                  <AgentConnectionIndicator acpUrl={agent.acpUrl} />
+                </div>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
