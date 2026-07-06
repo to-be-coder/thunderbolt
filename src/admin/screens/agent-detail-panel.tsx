@@ -106,14 +106,14 @@ const AdminDetail = ({ agent }: { agent: TeamAgentWithCapabilities }) => {
 
   return (
     <section className="flex flex-col gap-4">
-      <Field label="Category">
-        <div>
-          <StatusPill tone={agent.category === 'sealed' ? 'muted' : 'info'}>{agent.category}</StatusPill>
-        </div>
-      </Field>
       <Field label="Status">
         <div>
           <AgentConnectionIndicator acpUrl={agent.acpUrl} />
+        </div>
+      </Field>
+      <Field label="Category">
+        <div>
+          <StatusPill tone={agent.category === 'sealed' ? 'muted' : 'info'}>{agent.category}</StatusPill>
         </div>
       </Field>
       <Field label="Endpoint">
