@@ -34,10 +34,10 @@ const setMatchesMobile = (isMobile: boolean) => {
   })) as typeof window.matchMedia
 }
 
-const TestWrapper = ({ children }: { children: ReactNode }) => {
+const TestWrapper = ({ children, route = '/chats/thread-1' }: { children: ReactNode; route?: string }) => {
   const Provider = createTestProvider()
   return (
-    <MemoryRouter initialEntries={['/chats/thread-1']}>
+    <MemoryRouter initialEntries={[route]}>
       <Provider>
         <SignInModalProvider>
           <SidebarProvider>{children}</SidebarProvider>
@@ -62,18 +62,28 @@ describe('Header', () => {
     await resetTestDatabase()
   })
 
-  it('renders the sidebar toggle (agent selection now lives in the composer)', () => {
+  it('renders the sidebar toggle on non-chat routes (desktop)', () => {
     setMatchesMobile(false)
 
-    render(<Header />, { wrapper: TestWrapper })
+    render(<Header />, { wrapper: ({ children }) => <TestWrapper route="/settings">{children}</TestWrapper> })
 
     expect(screen.getByText('Toggle Sidebar')).toBeInTheDocument()
+  })
+
+  it('gives the top-left slot to the agent selector on chat routes (no burger)', () => {
+    setMatchesMobile(false)
+
+    render(<Header />, { wrapper: ({ children }) => <TestWrapper route="/chats/thread-1">{children}</TestWrapper> })
+
+    // The desktop chat header hosts the agent selector instead of the sidebar
+    // toggle; the sidebar has its own collapse control + ⌘B.
+    expect(screen.queryByText('Toggle Sidebar')).not.toBeInTheDocument()
   })
 
   it('shows a new-chat shortcut on the mobile layout', () => {
     setMatchesMobile(true)
 
-    render(<Header />, { wrapper: TestWrapper })
+    render(<Header />, { wrapper: ({ children }) => <TestWrapper route="/chats/thread-1">{children}</TestWrapper> })
 
     expect(screen.getByText('New Chat')).toBeInTheDocument()
   })

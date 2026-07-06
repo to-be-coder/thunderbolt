@@ -64,20 +64,25 @@ export const Header = () => {
     )
   }
 
-  // Desktop: sidebar trigger + agent selector left, PowerSync status right.
+  // Desktop: on chat routes the agent selector owns the top-left slot (the
+  // sidebar has its own collapse toggle + ⌘B, so no burger is needed here); on
+  // other routes the sidebar toggle stays. PowerSync status sits on the right.
   return (
     <header className="flex h-[var(--touch-height-xl)] w-full items-center justify-between px-2 flex-shrink-0">
       <div className="flex min-w-0 items-center gap-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-[var(--touch-height-sm)] cursor-pointer"
-          onClick={toggleSidebar}
-        >
-          <Menu className="size-[var(--icon-size-default)]" />
-          <span className="sr-only">Toggle Sidebar</span>
-        </Button>
-        {isChatRoute && <HeaderAgentSelector />}
+        {isChatRoute ? (
+          <HeaderAgentSelector />
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-[var(--touch-height-sm)] cursor-pointer"
+            onClick={toggleSidebar}
+          >
+            <Menu className="size-[var(--icon-size-default)]" />
+            <span className="sr-only">Toggle Sidebar</span>
+          </Button>
+        )}
       </div>
       <PowerSyncStatus />
     </header>
