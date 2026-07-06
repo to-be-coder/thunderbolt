@@ -1,0 +1,4 @@
+[test]
+# Preload test setup to initialize the shared PGlite database (backend + admin
+# migrations) before any tests run, mirroring backend/bunfig.toml.
+preload = ["./src/test-utils/test-setup.ts"]

@@ -30,6 +30,9 @@ import { createHaystackRoutes } from '@/haystack'
 import { createConfigRoutes } from '@/api/config'
 import { createEncryptionRoutes } from '@/api/encryption'
 import { createPowerSyncRoutes } from '@/api/powersync'
+import { createAdminServiceRoutes, runAdminMigrations, type AdminDb } from '@admin/index'
+import { getUserByEmail, revokeUserSessions } from '@/dal'
+import { normalizeEmail } from '@/lib/email'
 import type { AppDeps } from '@/types'
 import { cors } from '@elysiajs/cors'
 import { Elysia } from 'elysia'
@@ -157,6 +160,27 @@ export const createApp = async (deps?: AppDeps) => {
       .use(createAccountRoutes(auth, database))
       .use(createAgentsRoutes(auth))
       .use(createHaystackRoutes(settings, auth, { fetchFn }))
+      // Org/admin backend — a SEPARABLE package (admin-service/) mounted here in
+      // dev behind its own boundary. Later extraction to a standalone service is
+      // a deployment change (swap this mount for an HTTP client), not a refactor.
+      .use(
+        // Cast bridges the two physical `elysia` copies (backend's vs the
+        // admin-service package's). They are the same major version and merge
+        // fine at runtime; drizzle interop is safe (global `Symbol.for` table
+        // identity). This cast disappears when the service is extracted.
+        createAdminServiceRoutes({
+          db: database as unknown as AdminDb,
+          auth,
+          // Member removal → kill live backend sessions. The `session` table is
+          // backend-owned, so the admin-service receives this as an injected dep.
+          revokeSessionsForEmail: async (email: string) => {
+            const user = await getUserByEmail(database, normalizeEmail(email))
+            if (user) {
+              await revokeUserSessions(database, user.id)
+            }
+          },
+        }) as unknown as Elysia,
+      )
   )
 }
 
@@ -182,6 +206,11 @@ const startServer = async () => {
   try {
     // Run PGLite migrations before creating the app (no-op for Postgres)
     await runMigrations()
+    // Apply the admin-service's own migrations against the shared database.
+    // Its migrator writes a distinct journal (`__admin_migrations`) so the two
+    // histories never collide on the same Postgres instance.
+    const { db } = await import('@/db/client')
+    await runAdminMigrations(db as unknown as AdminDb)
 
     const app = await createApp()
 

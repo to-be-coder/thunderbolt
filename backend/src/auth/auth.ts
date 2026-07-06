@@ -28,6 +28,7 @@ import {
   sendWaitlistJoinedEmail as defaultSendWaitlistJoinedEmail,
   sendWaitlistNotReadyEmail as defaultSendWaitlistNotReadyEmail,
 } from '@/waitlist/utils'
+import { activateMemberByEmail, type AdminDb } from '@admin/index'
 import { challengeTokenHeader, otpExpiryMs, otpExpirySeconds } from './otp-constants'
 import { buildVerifyUrl, parseTrustedOrigins, sendSignInEmail as defaultSendSignInEmail } from './utils'
 import { eq } from 'drizzle-orm'
@@ -271,6 +272,12 @@ export const createAuth = (database: typeof DbType, emailDeps: AuthEmailDeps = {
         const email = (ctx.body as { email?: string })?.email
         if (email) {
           await deleteOtpChallengesForEmail(database, normalizeEmail(email))
+          // Admin-plane member activation: first successful sign-in flips an
+          // invited member row to active. No-op for consumer / non-org sign-ins.
+          // Owned by the admin-service to keep the package boundary clean. The
+          // cast bridges backend's and the admin-service's separate `drizzle-orm`
+          // copies (nominally-distinct Column classes); runtime interop is safe.
+          await activateMemberByEmail(database as unknown as AdminDb, normalizeEmail(email))
         }
 
         const sessionUser = newSession.user

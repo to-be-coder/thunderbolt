@@ -30,3 +30,9 @@ export const linkSessionToDevice = async (
 /** Revoke (delete) all sessions linked to a specific device for a given user. */
 export const revokeDeviceSessions = async (database: typeof DbType, deviceId: string, userId: string) =>
   database.delete(session).where(and(eq(session.deviceId, deviceId), eq(session.userId, userId)))
+
+/** Revoke (delete) ALL sessions for a user — kills every live bearer/cookie token.
+ *  Used when the admin-service removes a member: the soft-deleted member row alone
+ *  never touches Better Auth's `session` rows, so live tokens must be deleted here. */
+export const revokeUserSessions = async (database: typeof DbType, userId: string) =>
+  database.delete(session).where(eq(session.userId, userId))

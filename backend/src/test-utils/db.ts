@@ -10,6 +10,11 @@ import { resolve } from 'path'
 import type { db as DbType } from '../db/client'
 import * as schema from '../db/schema'
 
+/** Admin-service migrations live in a sibling package but target the same DB.
+ *  A distinct journal table keeps the two histories from colliding. */
+const adminMigrationsFolder = resolve(import.meta.dir, '../../../admin-service/drizzle')
+const adminMigrationsTable = '__admin_migrations'
+
 class TestDbManager {
   private client: PGlite | null = null
   private db: typeof DbType | null = null
@@ -28,6 +33,11 @@ class TestDbManager {
     this.db = drizzle({ client: this.client, schema })
     const migrationsFolder = resolve(import.meta.dir, '../../drizzle')
     await migrate(this.db, { migrationsFolder })
+    // Backend and the admin-service share ONE physical database in production
+    // (runAdminMigrations runs at startup alongside runMigrations). Mirror that
+    // here so integration paths that touch admin-plane tables — e.g. the auth
+    // after-hook's member activation — resolve against a realistic DB.
+    await migrate(this.db, { migrationsFolder: adminMigrationsFolder, migrationsTable: adminMigrationsTable })
     this.initialized = true
   }
 
@@ -136,6 +146,7 @@ export const createIsolatedTestDb = async (): Promise<IsolatedTestDb> => {
   const db = drizzle({ client, schema })
   const migrationsFolder = resolve(import.meta.dir, '../../drizzle')
   await migrate(db, { migrationsFolder })
+  await migrate(db, { migrationsFolder: adminMigrationsFolder, migrationsTable: adminMigrationsTable })
   return {
     client,
     db,

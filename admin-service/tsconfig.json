@@ -1,0 +1,17 @@
+{
+  "extends": "../shared/tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ESNext",
+    "composite": false,
+    "ignoreDeprecations": "6.0",
+    "verbatimModuleSyntax": true,
+    "baseUrl": ".",
+    "paths": {
+      "@admin/*": ["./src/*"],
+      "@shared/*": ["../shared/*"]
+    },
+    "types": ["bun-types"]
+  },
+  "include": ["src/**/*.ts", "../shared/**/*.ts"],
+  "exclude": ["node_modules", "dist", "drizzle"]
+}

@@ -17,7 +17,7 @@ export {
 export { getUserById, getUserByEmail, deleteUser, markUserNotNew } from './users'
 
 // Sessions
-export { getActiveSessionByToken, linkSessionToDevice, revokeDeviceSessions } from './sessions'
+export { getActiveSessionByToken, linkSessionToDevice, revokeDeviceSessions, revokeUserSessions } from './sessions'
 
 // Waitlist
 export { getWaitlistByEmail, createWaitlistEntry, approveWaitlistEntry } from './waitlist'

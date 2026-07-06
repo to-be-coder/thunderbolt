@@ -1,0 +1,28 @@
+{
+  "name": "thunderbolt-admin-service",
+  "version": "0.1.0",
+  "description": "Thunderbolt org/admin backend — a separable service mounted alongside backend/ in dev, extractable to a standalone deployment.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test",
+    "type-check": "bun tsc --noEmit",
+    "db": "drizzle-kit"
+  },
+  "dependencies": {
+    "@agentclientprotocol/sdk": "^0.22.1",
+    "drizzle-orm": "^0.45.2",
+    "elysia": "^1.4.28",
+    "ipaddr.js": "^2.3.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.4.4",
+    "@types/bun": "^1.2.22",
+    "bun-types": "^1.2.22",
+    "drizzle-kit": "^0.31.7",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}
