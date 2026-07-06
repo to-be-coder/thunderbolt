@@ -3,11 +3,12 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { useState } from 'react'
-import { Navigate, useNavigate } from 'react-router'
+import { Navigate, Outlet, useMatch, useNavigate } from 'react-router'
 import { v7 as uuidv7 } from 'uuid'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
+import { SlideInPanel } from '@/components/slide-in-panel'
 import { AgentList } from '@/components/settings/agents/agent-list'
 import { AgentCatalog } from '@/components/settings/agents/agent-catalog'
 import { AddCustomAgentDialog, type AddCustomAgentPayload } from '@/components/settings/agents/add-custom-agent-dialog'
@@ -39,6 +40,7 @@ type AgentsSettingsPageProps = {
 export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageProps = {}) {
   const db = useDatabase()
   const navigate = useNavigate()
+  const detailMatch = useMatch('/settings/agents/:agentId')
   const teamCards = useTeamAgents()
   const personalAgents = useAgents()
   const policy = useOrgPolicy()
@@ -71,29 +73,41 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
     })
   }
 
-  return (
-    <div className="flex flex-col gap-6 p-4 w-full max-w-[760px] mx-auto">
-      <PageHeader title="Agents">
-        {canConnect && (
-          <Button
-            variant="outline"
-            size="icon"
-            className="rounded-lg"
-            onClick={() => setDialogOpen(true)}
-            data-testid="connect-an-agent"
-            aria-label="Connect an agent"
-          >
-            <Plus className="size-4" />
-          </Button>
-        )}
-      </PageHeader>
+  const detailOpen = detailMatch !== null
 
-      <AgentList
-        teamCards={teamCards}
-        personalAgents={personalAgents}
-        policy={policy}
-        onOpenAgent={(agentId) => navigate(`/settings/agents/${agentId}`)}
-      />
+  return (
+    <div className="flex h-full w-full min-h-0">
+      <div className="min-w-0 flex-1 overflow-y-auto">
+        <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6 p-4">
+          <PageHeader title="Agents">
+            {canConnect && (
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-lg"
+                onClick={() => setDialogOpen(true)}
+                data-testid="connect-an-agent"
+                aria-label="Connect an agent"
+              >
+                <Plus className="size-4" />
+              </Button>
+            )}
+          </PageHeader>
+
+          <AgentList
+            teamCards={teamCards}
+            personalAgents={personalAgents}
+            policy={policy}
+            onOpenAgent={(agentId) => navigate(`/settings/agents/${agentId}`)}
+          />
+        </div>
+      </div>
+
+      <SlideInPanel open={detailOpen}>
+        <div className="h-full overflow-y-auto border-l border-border">
+          <Outlet />
+        </div>
+      </SlideInPanel>
 
       <AddCustomAgentDialog
         open={dialogOpen}

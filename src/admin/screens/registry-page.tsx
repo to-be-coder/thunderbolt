@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { SlideInPanel } from '@/components/slide-in-panel'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { PageHeader } from '@/components/ui/page-header'
@@ -13,12 +14,6 @@ import type { TeamAgentWithCapabilities } from '../api/types'
 import { AgentDetailPanel } from './agent-detail-panel'
 import { AgentForm } from './agent-form'
 import { AgentConnectionIndicator } from './connection-status'
-
-/** Detail column width when open. The width animation reflows the list column;
- *  the content translate slides it in — together they read as one motion. */
-const DETAIL_WIDTH = 'clamp(360px, 42vw, 560px)'
-// Linear's spring curve — fast start, smooth tail, no overshoot.
-const SLIDE = 'cubic-bezier(0.32, 0.72, 0, 1)'
 
 /**
  * S1 — Registry. The agent list fills the page until one is selected; then the
@@ -98,24 +93,11 @@ export const RegistryPage = () => {
         </div>
       </div>
 
-      <aside
-        className="h-full shrink-0 overflow-hidden transition-[width] duration-300 motion-reduce:transition-none"
-        style={{ width: open ? DETAIL_WIDTH : '0px', transitionTimingFunction: SLIDE }}
-        aria-hidden={!open}
-      >
-        <div
-          className="h-full transition-transform duration-300 motion-reduce:transition-none"
-          style={{
-            width: DETAIL_WIDTH,
-            transform: open ? 'translateX(0)' : 'translateX(100%)',
-            transitionTimingFunction: SLIDE,
-          }}
-        >
-          <div className="h-full pl-6">
-            {panelAgent && <AgentDetailPanel agent={panelAgent} onClose={() => setSelectedId(null)} />}
-          </div>
+      <SlideInPanel open={open}>
+        <div className="h-full pl-6">
+          {panelAgent && <AgentDetailPanel agent={panelAgent} onClose={() => setSelectedId(null)} />}
         </div>
-      </aside>
+      </SlideInPanel>
     </div>
   )
 }

@@ -138,8 +138,9 @@ const renderMainRoutes = ({ experimentalFeatureTasks }: { experimentalFeatureTas
       <Route path="devices" element={<DevicesSettingsPage />} />
       <Route path="mcp-servers" element={<McpServersPage />} />
       <Route path="skills" element={<SkillsPage />} />
-      <Route path="agents" element={<AgentsSettingsPage />} />
-      <Route path="agents/:agentId" element={<AgentDetailPage />} />
+      <Route path="agents" element={<AgentsSettingsPage />}>
+        <Route path=":agentId" element={<AgentDetailPage />} />
+      </Route>
       <Route path="integrations" element={<IntegrationsPage />} />
       {import.meta.env.DEV && <Route path="dev-settings" element={<DevSettingsPage />} />}
     </Route>
