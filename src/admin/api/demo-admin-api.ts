@@ -300,10 +300,16 @@ export const createDemoAdminApi = (): AdminApi => {
       }
       return { success: true } as const
     },
-    testConnection: async (acpUrl: string) =>
-      acpUrl.startsWith('wss://')
-        ? ({ reachable: true } as const)
-        : ({ reachable: false, error: 'Demo: only wss:// URLs are reachable' } as const),
+    testConnection: async (acpUrl: string) => {
+      if (!acpUrl.startsWith('wss://')) {
+        return { reachable: false, error: 'Demo: only wss:// URLs are reachable' } as const
+      }
+      // The agent's card advertises its own name; a live server would return it.
+      // In the demo we derive a sensible one from the endpoint host.
+      const label = new URL(acpUrl).hostname.split('.')[0] ?? ''
+      const name = label ? label.charAt(0).toUpperCase() + label.slice(1) : ''
+      return { reachable: true, name } as const
+    },
 
     listGrants: async () => live(store.grants),
     createGrant: async (input: GrantInput): Promise<Grant> => {

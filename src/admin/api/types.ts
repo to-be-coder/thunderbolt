@@ -83,7 +83,7 @@ export type AgentInput = {
 
 export type AgentPatch = Partial<AgentInput>
 
-export type ConnectionTestResult = { reachable: true } | { reachable: false; error: string }
+export type ConnectionTestResult = { reachable: true; name?: string } | { reachable: false; error: string }
 
 export type GrantTargetType = 'group' | 'everyone' | 'member'
 

@@ -49,7 +49,7 @@ export const RegistryPage = () => {
       </PageHeader>
 
       <Dialog open={editing.mode !== 'closed'} onOpenChange={(open) => !open && setEditing({ mode: 'closed' })}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader className="sr-only">
             <DialogTitle>{editing.mode === 'edit' ? 'Edit agent' : 'Register agent'}</DialogTitle>
           </DialogHeader>

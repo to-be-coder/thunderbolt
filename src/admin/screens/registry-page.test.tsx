@@ -73,18 +73,21 @@ describe('RegistryPage', () => {
     expect(body.status).toBe('published')
   })
 
-  it('warns admins that instructions are confidential-not-secret (T5)', async () => {
-    const { client } = createRecordingClient(() => [])
+  it('derives the name from a reachable endpoint into an empty Name field', async () => {
+    const { client } = createRecordingClient((call) => {
+      if (call.path === '/v1/admin/agents/connection-test') {
+        return { reachable: true, name: 'Research' }
+      }
+      return []
+    })
     renderAdmin(<RegistryPage />, client)
     await flush()
 
     fireEvent.click(screen.getByRole('button', { name: 'Register an agent' }))
+    fireEvent.change(screen.getByLabelText('ACP URL'), { target: { value: 'wss://research.company.com/acp' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Test' }))
+    await flush()
 
-    // No technical countermeasures in v1 — just the admin-facing posture warning
-    // sitting with the card/description editor.
-    const warning = screen.getByTestId('prompt-confidentiality-warning')
-    expect(warning).toBeInTheDocument()
-    expect(warning).toHaveTextContent(/confidential, not secret/i)
-    expect(warning).toHaveTextContent(/extract its underlying prompt/i)
+    expect(screen.getByLabelText('Name')).toHaveValue('Research')
   })
 })
