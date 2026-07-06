@@ -142,12 +142,12 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
         </ToggleGroup>
       </div>
 
-      <div className="flex items-center gap-3">
-        <Button onClick={handleSave} disabled={!canSave || saving}>
-          {saving ? 'Saving…' : agent ? 'Save changes' : 'Register agent'}
-        </Button>
+      <div className="flex items-center justify-end gap-3">
         <Button variant="ghost" onClick={onDone}>
           Cancel
+        </Button>
+        <Button onClick={handleSave} disabled={!canSave || saving}>
+          {saving ? (agent ? 'Saving…' : 'Connecting…') : agent ? 'Save changes' : 'Connect'}
         </Button>
       </div>
     </div>

@@ -40,7 +40,7 @@ describe('RegistryPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Register an agent' }))
     fireEvent.change(screen.getByLabelText('ACP URL'), { target: { value: 'wss://research.company.com/acp' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Register agent' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Connect' }))
     await flush()
 
     const probe = calls.find((call) => call.path === '/v1/admin/agents/connection-test')
@@ -63,7 +63,7 @@ describe('RegistryPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Register an agent' }))
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Research Bot' } })
     fireEvent.change(screen.getByLabelText('ACP URL'), { target: { value: 'wss://agent.test/acp' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Register agent' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Connect' }))
     await flush()
 
     expect(calls.find((call) => call.path === '/v1/admin/agents/connection-test')).toBeUndefined()
