@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useSettings } from '@/hooks/use-settings'
 import { useOnboardingState } from '@/hooks/use-onboarding-state'
+import { isDemoMode } from '@/lib/demo-mode'
 import { OnboardingPrivacyStep } from './onboarding-privacy-step'
 import { OnboardingAuthStep } from './onboarding-auth-step'
 import { OnboardingNameStep } from './onboarding-name-step'
@@ -25,7 +26,7 @@ export const OnboardingDialog = () => {
   const { state, actions } = useOnboardingState()
 
   useEffect(() => {
-    if (import.meta.env.VITE_SKIP_ONBOARDING === 'true') {
+    if (import.meta.env.VITE_SKIP_ONBOARDING === 'true' || isDemoMode()) {
       return
     }
     if (!userHasCompletedOnboarding.isLoading && !userHasCompletedOnboarding.value) {
