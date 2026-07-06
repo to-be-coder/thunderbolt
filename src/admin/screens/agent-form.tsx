@@ -104,7 +104,7 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
     <div className="flex flex-col gap-4">
       <h2 className="text-sm font-semibold">{agent ? 'Edit agent' : 'Register agent'}</h2>
 
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2">
         <Label htmlFor="agent-acp-url">ACP URL</Label>
         <Input
           id="agent-acp-url"
@@ -114,7 +114,7 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
         />
       </div>
 
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2">
         <Label htmlFor="agent-name">Name</Label>
         <Input
           id="agent-name"
@@ -124,7 +124,7 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
         />
       </div>
 
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2">
         <Label>Category</Label>
         <ToggleGroup
           type="single"
