@@ -23,18 +23,18 @@ const bordered =
 
 /**
  * Data-driven composer slot for what an agent CARD advertises (T2 — "the picker
- * shows what the agent card advertises"). Zero/one option renders a static,
- * non-interactive chip; two or more render a bounded picker. The selection is
- * cosmetic — cards are display-only (no model/config wiring), so there is no
- * store write. Shared by the model slot (advertised models, `emptyLabel` = the
- * org fallback) and the mode slot (capability labels).
+ * shows what the agent card advertises"). Zero options renders a static,
+ * non-interactive chip (the `emptyLabel` fallback); one or more render a bounded
+ * picker — a single option still opens, showing a "No other model available"
+ * footer so the user learns there's no choice. The selection is cosmetic — cards
+ * are display-only (no model/config wiring), so there is no store write. Shared
+ * by the model slot (advertised models) and the mode slot (capability labels).
  */
 export const AdvertisedPicker = ({ options, emptyLabel, ariaLabel, icon }: AdvertisedPickerProps) => {
   const { isMobile } = useIsMobile()
   const [selected, setSelected] = useState(options[0] ?? emptyLabel)
 
-  if (options.length <= 1) {
-    const label = options[0] ?? emptyLabel
+  if (options.length === 0) {
     return (
       <div
         data-testid="advertised-static-chip"
@@ -42,7 +42,7 @@ export const AdvertisedPicker = ({ options, emptyLabel, ariaLabel, icon }: Adver
         className={cn(bordered, 'text-muted-foreground')}
       >
         {icon}
-        <span className="font-medium truncate">{label}</span>
+        <span className="font-medium truncate">{emptyLabel}</span>
       </div>
     )
   }
@@ -78,6 +78,11 @@ export const AdvertisedPicker = ({ options, emptyLabel, ariaLabel, icon }: Adver
       trigger={renderTrigger}
       width={260}
       maxHeight={300}
+      footer={
+        options.length === 1 ? (
+          <p className="text-[length:var(--font-size-sm)] text-muted-foreground">No other model available</p>
+        ) : undefined
+      }
     />
   )
 }

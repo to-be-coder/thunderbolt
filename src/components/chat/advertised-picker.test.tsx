@@ -15,9 +15,18 @@ describe('AdvertisedPicker', () => {
     expect(screen.getByTestId('advertised-static-chip')).toHaveTextContent('Set by your organization')
   })
 
-  it('renders a single advertised option as a static chip (no picker)', () => {
+  it('renders a single advertised option as a picker that notes there is no other model', async () => {
     render(<AdvertisedPicker options={['Company GPT-4o']} emptyLabel="fallback" ariaLabel="Advertised model" />)
-    expect(screen.getByTestId('advertised-static-chip')).toHaveTextContent('Company GPT-4o')
+
+    // Not a static chip — an openable picker showing the single model.
+    expect(screen.queryByTestId('advertised-static-chip')).toBeNull()
+    const trigger = screen.getByLabelText('Advertised model')
+    expect(trigger).toHaveTextContent('Company GPT-4o')
+
+    await act(async () => {
+      fireEvent.click(trigger)
+    })
+    expect(await screen.findByText('No other model available')).toBeInTheDocument()
   })
 
   it('renders a bounded picker for two or more options and lets the user switch', async () => {
