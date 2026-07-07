@@ -21,9 +21,9 @@ export const AgentAccessTab = ({ agentId }: { agentId: string }) => {
   const createGrant = useCreateGrant()
   const revokeGrant = useRevokeGrant()
 
-  // High-level access choice; "limited" then narrows to a group or an individual.
-  const [access, setAccess] = useState<'everyone' | 'limited' | 'admins'>('limited')
-  const [limitedType, setLimitedType] = useState<'group' | 'member'>('group')
+  // High-level access choice; "restricted" then narrows to a group or an individual.
+  const [access, setAccess] = useState<'everyone' | 'restricted' | 'admins'>('restricted')
+  const [restrictedType, setRestrictedType] = useState<'group' | 'member'>('group')
   const [targetId, setTargetId] = useState('')
 
   const groups = useMemo(() => groupsQuery.data ?? [], [groupsQuery.data])
@@ -36,7 +36,7 @@ export const AgentAccessTab = ({ agentId }: { agentId: string }) => {
 
   const grants = (grantsQuery.data ?? []).filter((grant) => grant.agentId === agentId)
 
-  const needsTarget = access === 'limited'
+  const needsTarget = access === 'restricted'
   const canGrant = !needsTarget || targetId !== ''
 
   const handleGrant = async () => {
@@ -44,7 +44,7 @@ export const AgentAccessTab = ({ agentId }: { agentId: string }) => {
       return
     }
     const targetType: GrantTargetType =
-      access === 'everyone' ? 'everyone' : access === 'admins' ? 'admins' : limitedType
+      access === 'everyone' ? 'everyone' : access === 'admins' ? 'admins' : restrictedType
     await createGrant.mutateAsync({ agentId, targetType, ...(needsTarget ? { targetId } : {}) })
     setTargetId('')
   }
@@ -96,7 +96,7 @@ export const AgentAccessTab = ({ agentId }: { agentId: string }) => {
           <Select
             value={access}
             onValueChange={(value) => {
-              setAccess(value as 'everyone' | 'limited' | 'admins')
+              setAccess(value as 'everyone' | 'restricted' | 'admins')
               setTargetId('')
             }}
           >
@@ -105,21 +105,21 @@ export const AgentAccessTab = ({ agentId }: { agentId: string }) => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="everyone">Everyone</SelectItem>
-              <SelectItem value="limited">Limited</SelectItem>
+              <SelectItem value="restricted">Restricted</SelectItem>
               <SelectItem value="admins">Admin only</SelectItem>
             </SelectContent>
           </Select>
 
-          {access === 'limited' && (
+          {access === 'restricted' && (
             <>
               <Select
-                value={limitedType}
+                value={restrictedType}
                 onValueChange={(value) => {
-                  setLimitedType(value as 'group' | 'member')
+                  setRestrictedType(value as 'group' | 'member')
                   setTargetId('')
                 }}
               >
-                <SelectTrigger className="w-32" aria-label="Limit to">
+                <SelectTrigger className="w-32" aria-label="Restrict to">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -128,7 +128,7 @@ export const AgentAccessTab = ({ agentId }: { agentId: string }) => {
                 </SelectContent>
               </Select>
 
-              {limitedType === 'group' ? (
+              {restrictedType === 'group' ? (
                 <Select value={targetId} onValueChange={setTargetId}>
                   <SelectTrigger className="w-48" aria-label="Group">
                     <SelectValue placeholder="Select group…" />
