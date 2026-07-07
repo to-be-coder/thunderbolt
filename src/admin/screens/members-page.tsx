@@ -24,7 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
-import { ChevronDown, MoreHorizontal, Plus, X } from 'lucide-react'
+import { ChevronDown, ChevronsUpDown, ChevronUp, MoreHorizontal, Plus, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 import {
@@ -40,6 +40,45 @@ import {
 import type { Member } from '../api/types'
 import { StatusPill } from './status-pill'
 
+type SortKey = 'name' | 'email' | 'role' | 'status'
+type SortState = { key: SortKey; dir: 'asc' | 'desc' }
+
+/** A clickable column header — click to sort by it, click again to flip the
+ *  direction; an arrow shows the active column + direction. */
+const SortableHead = ({
+  label,
+  sortKey,
+  sort,
+  onSort,
+}: {
+  label: string
+  sortKey: SortKey
+  sort: SortState
+  onSort: (key: SortKey) => void
+}) => {
+  const active = sort.key === sortKey
+  return (
+    <TableHead>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
+      >
+        {label}
+        {active ? (
+          sort.dir === 'asc' ? (
+            <ChevronUp className="size-3.5" />
+          ) : (
+            <ChevronDown className="size-3.5" />
+          )
+        ) : (
+          <ChevronsUpDown className="size-3.5 opacity-40" />
+        )}
+      </button>
+    </TableHead>
+  )
+}
+
 /**
  * S2 — Members. Invite by email (optionally as admin), list with status and
  * is_admin, and remove (soft-delete + session kill on the backend).
@@ -53,6 +92,10 @@ export const MembersPage = () => {
   const [asAdmin, setAsAdmin] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'name', dir: 'asc' })
+
+  const toggleSort = (key: SortKey) =>
+    setSort((prev) => (prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }))
 
   const handleInvite = async () => {
     const trimmed = email.trim()
@@ -67,6 +110,23 @@ export const MembersPage = () => {
 
   const members = membersQuery.data ?? []
   const selectedMember = members.find((member) => member.id === selectedId) ?? null
+
+  const sortedMembers = useMemo(() => {
+    const value = (member: Member): string => {
+      switch (sort.key) {
+        case 'name':
+          return (member.name || member.email).toLowerCase()
+        case 'email':
+          return member.email.toLowerCase()
+        case 'role':
+          return member.isAdmin ? 'admin' : 'member'
+        case 'status':
+          return member.status
+      }
+    }
+    const ordered = [...members].sort((a, b) => value(a).localeCompare(value(b)))
+    return sort.dir === 'asc' ? ordered : ordered.reverse()
+  }, [members, sort])
 
   return (
     <div className="flex h-full w-full min-h-0">
@@ -132,10 +192,10 @@ export const MembersPage = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Role</TableHead>
+                  <SortableHead label="Name" sortKey="name" sort={sort} onSort={toggleSort} />
+                  <SortableHead label="Email" sortKey="email" sort={sort} onSort={toggleSort} />
+                  <SortableHead label="Role" sortKey="role" sort={sort} onSort={toggleSort} />
+                  <SortableHead label="Status" sortKey="status" sort={sort} onSort={toggleSort} />
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -154,7 +214,7 @@ export const MembersPage = () => {
                     </TableCell>
                   </TableRow>
                 )}
-                {members.map((member) => (
+                {sortedMembers.map((member) => (
                   <MemberRow
                     key={member.id}
                     member={member}
@@ -204,11 +264,11 @@ const MemberRow = ({
     >
       <TableCell className="font-medium">{member.name || <span className="text-muted-foreground">—</span>}</TableCell>
       <TableCell className="text-muted-foreground">{member.email}</TableCell>
-      <TableCell>
-        <StatusPill tone={member.status === 'active' ? 'success' : 'muted'}>{member.status}</StatusPill>
-      </TableCell>
       <TableCell className={member.isAdmin ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'}>
         {member.isAdmin ? 'Admin' : 'Member'}
+      </TableCell>
+      <TableCell>
+        <StatusPill tone={member.status === 'active' ? 'success' : 'muted'}>{member.status}</StatusPill>
       </TableCell>
       <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
         <DropdownMenu>
@@ -447,7 +507,7 @@ const GroupMultiSelect = ({
             <ChevronDown className="size-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-1">
+        <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-1">
           {groups.length === 0 ? (
             <p className="px-2 py-1.5 text-sm text-muted-foreground">No groups yet.</p>
           ) : (
