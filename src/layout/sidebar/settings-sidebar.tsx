@@ -63,6 +63,26 @@ export const SettingsSidebarContent = ({
 
       <SidebarSeparator className="m-0" />
 
+      {!agentsHidden && (
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => onSettingsNavigate('/settings/agents')}
+                  tooltip="Agents"
+                  className="cursor-pointer"
+                  isActive={subPath === '/settings/agents'}
+                >
+                  <Bot className="size-4" />
+                  <span>Agents</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      )}
+
       <SidebarGroup>
         <SidebarGroupLabel>Library</SidebarGroupLabel>
         <SidebarGroupContent>
@@ -111,19 +131,6 @@ export const SettingsSidebarContent = ({
                 <span>MCP Servers</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            {!agentsHidden && (
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => onSettingsNavigate('/settings/agents')}
-                  tooltip="Agents"
-                  className="cursor-pointer"
-                  isActive={subPath === '/settings/agents'}
-                >
-                  <Bot className="size-4" />
-                  <span>Agents</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
