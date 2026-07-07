@@ -16,13 +16,19 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Info, KeyRound, MoreHorizontal, Pencil, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { AlertTriangle, Info, KeyRound, MoreHorizontal, Pencil, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useReducer, useState } from 'react'
-import { useAgentEndpointDetail, useDeleteAgent, useUpdateAgent } from '../api/hooks'
+import {
+  useAgentEndpointDetail,
+  useConnectionFailures,
+  useDeleteAgent,
+  useTestConnection,
+  useUpdateAgent,
+} from '../api/hooks'
 import type { AgentCategory, TeamAgentWithCapabilities } from '../api/types'
 import { AgentAccessTab } from './agent-access-tab'
-import { AgentConnectionIndicator } from './connection-status'
 import { CategoryInfoTooltip } from './category-info'
 import { PillTabs } from './pill-tabs'
 
@@ -218,14 +224,7 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
           </div>
 
           <div className="flex flex-col gap-4 rounded-xl bg-secondary p-4 dark:bg-sidebar">
-            <Field label="Status">
-              <div>
-                <span className="inline-flex rounded-md bg-muted px-2 py-0.5">
-                  <AgentConnectionIndicator acpUrl={agent.acpUrl} showDot={false} />
-                </span>
-              </div>
-            </Field>
-
+            <AgentHealth agentId={agent.id} acpUrl={agent.acpUrl} />
             <AdminWiring acpUrl={agent.acpUrl} />
           </div>
         </section>
@@ -248,6 +247,70 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  )
+}
+
+/** Compact "2pm today"-style stamp for the failure-since line (spec §3.2). */
+const formatSince = (iso: string): string => {
+  const d = new Date(iso)
+  const time = d.toLocaleTimeString([], { hour: 'numeric', minute: d.getMinutes() ? '2-digit' : undefined })
+  const sameDay = d.toDateString() === new Date().toDateString()
+  return sameDay
+    ? `${time.toLowerCase().replace(' ', '')} today`
+    : d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+}
+
+/**
+ * The Status line (spec §2/§3/§4): an on-demand reachability **Test** (never a
+ * live poll) whose last result reads Not tested → testing… → Reachable /
+ * Unreachable, plus the passive, deduped **failure count** the admin reads.
+ */
+const AgentHealth = ({ agentId, acpUrl }: { agentId: string; acpUrl: string }) => {
+  const test = useTestConnection()
+  const failures = useConnectionFailures(agentId)
+  const result = test.data
+
+  const label = test.isPending
+    ? 'testing…'
+    : result === undefined
+      ? 'Not tested'
+      : result.reachable
+        ? 'Reachable'
+        : `Unreachable (${result.error})`
+  const tone =
+    result === undefined || test.isPending
+      ? 'text-muted-foreground'
+      : result.reachable
+        ? 'text-green-600 dark:text-green-400'
+        : 'text-destructive'
+  const count = failures.data?.count ?? 0
+  const since = failures.data?.since
+
+  return (
+    <Field label="Status">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <span className={cn('text-sm font-medium', tone)} data-testid="agent-health-status">
+            {label}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => test.mutate(acpUrl)}
+            disabled={test.isPending}
+            data-testid="agent-test-connection"
+          >
+            Test connection
+          </Button>
+        </div>
+        {count > 0 && since && (
+          <p className="inline-flex items-center gap-1.5 text-sm text-destructive" data-testid="agent-health-failures">
+            <AlertTriangle className="size-3.5 shrink-0" />
+            {count} user failure{count === 1 ? '' : 's'} since {formatSince(since)}
+          </p>
+        )}
+      </div>
+    </Field>
   )
 }
 

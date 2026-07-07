@@ -14,9 +14,6 @@ afterEach(() => {
   cleanup()
 })
 
-// Deterministic status probe so personal rows don't open real sockets.
-const stubStatus = (() => ({ status: 'online' as const, refresh: () => {} })) as never
-
 const extensibleCard: AgentCard = {
   id: 'sales',
   name: 'Sales Agent',
@@ -66,7 +63,6 @@ const renderList = (props: Partial<Parameters<typeof AgentList>[0]> = {}) =>
       personalAgents={props.personalAgents ?? [personalAgent]}
       policy={props.policy ?? allPolicy}
       onOpenAgent={props.onOpenAgent ?? (() => {})}
-      useAcpAgentStatus={stubStatus}
       // Default: nothing newly granted (no DB). Individual tests override.
       useNewlyGrantedTeamAgents={props.useNewlyGrantedTeamAgents ?? (() => new Set<string>())}
     />,
@@ -81,21 +77,17 @@ describe('AgentList — sections + provenance', () => {
     expect(screen.getByTestId('agent-section-yours')).toBeInTheDocument()
   })
 
-  it('renders the exact secondary line per agent kind', () => {
+  it('renders a STATIC secondary line per agent kind (no live connection status)', () => {
     renderList()
-    // Org agents show a connection status (not their category) in the list.
-    const salesLine = screen.getByTestId('agent-provenance-sales')
-    expect(salesLine).toHaveTextContent('Connected')
-    expect(salesLine).not.toHaveTextContent(/extensible/i)
-    expect(screen.getByTestId('agent-provenance-finance')).toHaveTextContent('Connected')
+    // Org agents show their category — the roster opens no connection (spec §0/§1).
+    expect(screen.getByTestId('agent-provenance-sales')).toHaveTextContent('Extensible')
+    expect(screen.getByTestId('agent-provenance-finance')).toHaveTextContent('Sealed')
     // The native row keeps its Library provenance.
     expect(screen.getByTestId(`agent-provenance-${builtInAgent.id}`)).toHaveTextContent(
       'Your agent · uses your Library',
     )
-    // Personal rows show the live connection status in place of the endpoint.
-    const personalStatus = screen.getByTestId('agent-provenance-custom-1')
-    expect(personalStatus).toHaveTextContent('Connected')
-    expect(personalStatus).not.toHaveTextContent('home.example.dev')
+    // Personal rows show a static endpoint provenance line.
+    expect(screen.getByTestId('agent-provenance-custom-1')).toHaveTextContent('Connected agent · home.example.dev')
   })
 
   it('pins the Thunderbolt row first in YOURS and shows a chevron on EVERY row', () => {

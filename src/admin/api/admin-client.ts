@@ -73,6 +73,11 @@ export const createAdminApi = (httpClient: HttpClient) => ({
   // Live connection state of the endpoint (Ready / Needs auth / Error / …).
   agentStatus: (acpUrl: string) =>
     httpClient.post('admin/agents/status', { json: { acpUrl } }).json<{ state: AgentConnectionState }>(),
+  // Passive connection-failure report (spec §3) — record + deduped summary.
+  recordConnectionFailure: (input: { agentId: string; memberId: string; errorKind: string }) =>
+    httpClient.post('admin/agents/connection-failures', { json: input }).json<{ success: true }>(),
+  listConnectionFailures: (agentId: string) =>
+    httpClient.get(`admin/agents/${agentId}/connection-failures`).json<{ count: number; since: string | null }>(),
 
   // Grants
   listGrants: () => httpClient.get('admin/grants').json<Grant[]>(),

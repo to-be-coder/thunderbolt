@@ -5,51 +5,16 @@
 import { ChevronRight, type LucideIcon } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import type { AcpAgentStatus } from '@/hooks/use-acp-agent-status'
 import { NewGrantBadge } from './new-grant-badge'
-
-/** Live connection status for a personal ACP row — a colored dot + label:
- *  green "Connected" / red "Offline". `checking` shows a muted pulse; `unknown`
- *  renders nothing. This is the secondary line for personal agents (it replaces
- *  the endpoint provenance). */
-const AgentStatus = ({ status }: { status: AcpAgentStatus }) => {
-  if (status === 'unknown') {
-    return null
-  }
-  if (status === 'checking') {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-        <span className="inline-block size-2 rounded-full bg-muted-foreground/50 animate-pulse" aria-hidden="true" />
-        Checking…
-      </span>
-    )
-  }
-  const online = status === 'online'
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1.5 font-medium',
-        online ? 'text-green-600 dark:text-green-500' : 'text-destructive',
-      )}
-    >
-      <span
-        className={cn('inline-block size-2 rounded-full', online ? 'bg-green-500' : 'bg-destructive')}
-        aria-hidden="true"
-      />
-      {online ? 'Connected' : 'Offline'}
-    </span>
-  )
-}
 
 export type AgentRowProps = {
   /** Stable id used for the row test id and React key. */
   agentId: string
   icon: LucideIcon
   name: string
-  /** Secondary provenance line (agents-page-spec §1, exact copy). */
+  /** Secondary provenance line (agents-page-spec §1, exact copy). Static — the
+   *  roster never opens a connection, so no live status is shown here (spec §0/§1). */
   provenanceLine: string
-  /** Personal ACP live status; omit for team / native rows. */
-  status?: AcpAgentStatus
   /** One-time "grant received" highlight — a ring + "New" badge (Stage 7 T2). */
   isNewlyGranted?: boolean
   /** Whether this row's detail is open — brightens the row like other selected
@@ -71,7 +36,6 @@ export const AgentRow = ({
   icon: Icon,
   name,
   provenanceLine,
-  status,
   isNewlyGranted,
   selected,
   onOpen,
@@ -96,14 +60,10 @@ export const AgentRow = ({
           {isNewlyGranted && <NewGrantBadge />}
         </div>
         <div
-          className="flex items-center gap-1.5 text-[length:var(--font-size-sm)] truncate"
+          className="flex items-center gap-1.5 text-[length:var(--font-size-sm)] truncate text-muted-foreground"
           data-testid={`agent-provenance-${agentId}`}
         >
-          {status === undefined ? (
-            <span className="truncate text-muted-foreground">{provenanceLine}</span>
-          ) : (
-            <AgentStatus status={status} />
-          )}
+          <span className="truncate">{provenanceLine}</span>
         </div>
       </div>
       <ChevronRight

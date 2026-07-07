@@ -32,6 +32,7 @@ export const adminKeys = {
   agents: ['admin', 'agents'] as const,
   agentEndpoint: (acpUrl: string) => ['admin', 'agents', 'endpoint', acpUrl] as const,
   agentStatus: (acpUrl: string) => ['admin', 'agents', 'status', acpUrl] as const,
+  connectionFailures: (agentId: string) => ['admin', 'agents', agentId, 'connection-failures'] as const,
   grants: ['admin', 'grants'] as const,
   policy: ['admin', 'policy'] as const,
   audit: (action?: string) => ['admin', 'audit', action ?? 'all'] as const,
@@ -205,6 +206,25 @@ export const useAgentConnectionStatus = (acpUrl: string | undefined) => {
     queryKey: adminKeys.agentStatus(acpUrl ?? ''),
     queryFn: () => api.agentStatus(acpUrl ?? ''),
     enabled: acpUrl !== undefined && acpUrl !== '',
+    staleTime: 30_000,
+  })
+}
+
+/** On-demand reachability probe (spec §2) — a mutation, so it fires only when the
+ *  admin clicks Test, never on view. Returns the reachability result. */
+export const useTestConnection = () => {
+  const api = useAdminApi()
+  return useMutation({ mutationFn: (acpUrl: string) => api.testConnection(acpUrl) })
+}
+
+/** Passive, deduped connection-failure summary for one agent (spec §3) — a count
+ *  and the earliest timestamp in the window. Read on the admin detail. */
+export const useConnectionFailures = (agentId: string | undefined) => {
+  const api = useAdminApi()
+  return useQuery({
+    queryKey: adminKeys.connectionFailures(agentId ?? ''),
+    queryFn: () => api.listConnectionFailures(agentId ?? ''),
+    enabled: agentId !== undefined && agentId !== '',
     staleTime: 30_000,
   })
 }

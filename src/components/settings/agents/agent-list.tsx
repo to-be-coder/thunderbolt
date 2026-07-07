@@ -5,12 +5,11 @@
 import { Building2, Zap } from 'lucide-react'
 import type { AgentCard, OrgPolicy } from '@shared/agent-cards'
 import { builtInAgent } from '@/defaults/agents'
-import type { useAcpAgentStatus as useAcpAgentStatus_default } from '@/hooks/use-acp-agent-status'
 import { useNewlyGrantedTeamAgents as useNewlyGrantedTeamAgents_default } from '@/hooks/use-newly-granted-agents'
 import type { Agent } from '@/types/acp'
 import { AgentRow } from './agent-row'
 import { PersonalAgentRow } from './personal-agent-row'
-import { nativeProvenanceLine } from './agent-provenance'
+import { companyProvenanceLine, nativeProvenanceLine } from './agent-provenance'
 
 /** The section label copy mirrors the composer agent selector (spec §1). */
 const ORG_SECTION_LABEL = 'FROM YOUR ORGANIZATION'
@@ -33,8 +32,6 @@ type AgentListProps = {
   selectedId?: string | null
   /** Opens the read-only detail view for the given agent id. */
   onOpenAgent: (agentId: string) => void
-  /** Injectable status probe for the personal rows (tests inject a stub). */
-  useAcpAgentStatus?: typeof useAcpAgentStatus_default
   /** Injectable newly-granted diff (tests drive fixtures without the DB). */
   useNewlyGrantedTeamAgents?: typeof useNewlyGrantedTeamAgents_default
 }
@@ -58,7 +55,6 @@ export const AgentList = ({
   nativeHidden = false,
   selectedId,
   onOpenAgent,
-  useAcpAgentStatus,
   useNewlyGrantedTeamAgents = useNewlyGrantedTeamAgents_default,
 }: AgentListProps) => {
   const showOrgSection = teamCards.length > 0
@@ -78,10 +74,8 @@ export const AgentList = ({
                 agentId={card.id}
                 icon={Building2}
                 name={card.name}
-                provenanceLine=""
-                // Org agents are hosted + granted by the org, so in the member
-                // view they read as connected (no category shown here).
-                status="online"
+                // Static category — the roster opens no connection (spec §0/§1).
+                provenanceLine={companyProvenanceLine(card)}
                 isNewlyGranted={newlyGranted.has(card.id)}
                 selected={selectedId === card.id}
                 onOpen={() => onOpenAgent(card.id)}
@@ -111,7 +105,6 @@ export const AgentList = ({
                 agent={agent}
                 selected={selectedId === agent.id}
                 onOpen={() => onOpenAgent(agent.id)}
-                useAcpAgentStatus={useAcpAgentStatus}
               />
             ))}
           </div>

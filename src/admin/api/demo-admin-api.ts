@@ -33,6 +33,15 @@ import type {
 
 const now = () => new Date().toISOString()
 const id = () => crypto.randomUUID()
+const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString()
+
+/** Sentinel endpoint whose probe and session-start connection ALWAYS fail — the
+ *  demo "Flaky Test Agent" so the connection-failure UX (Test → unreachable,
+ *  Health count, member "reported to your admin" message) is demoable. */
+export const FLAKY_ACP_URL = 'wss://agents.demo.thunderbolt/flaky'
+
+/** A single agent-side connection failure at a member's session start (spec §3). */
+type ConnectionFailure = { agentId: string; memberId: string; ts: string; errorKind: string }
 
 type DemoStore = {
   members: Member[]
@@ -42,6 +51,7 @@ type DemoStore = {
   grants: Grant[]
   policy: OrgPolicy
   audit: AuditEvent[]
+  connectionFailures: ConnectionFailure[]
 }
 
 const seedStore = (): DemoStore => {
@@ -173,6 +183,22 @@ const seedStore = (): DemoStore => {
       },
     ],
   }
+  // Demo-only agent whose endpoint always fails to connect (spec §6), so the
+  // connection-failure UX is reviewable end to end.
+  const flakyAgent: TeamAgentWithCapabilities = {
+    id: id(),
+    name: 'Flaky Test Agent',
+    icon: 'bug',
+    description: 'A demo agent whose endpoint always fails to connect — used to review the connection-failure states.',
+    acpUrl: FLAKY_ACP_URL,
+    category: 'sealed',
+    status: 'published',
+    managedBy: 'Demo IT',
+    advertisedModels: [],
+    createdAt: now(),
+    deletedAt: null,
+    capabilities: [],
+  }
 
   return {
     members: [admin, rae, jordan, ...extraMembers],
@@ -185,7 +211,7 @@ const seedStore = (): DemoStore => {
       { groupId: financeGroup.id, memberId: extraMembers[2].id },
       { groupId: financeGroup.id, memberId: extraMembers[8].id },
     ],
-    agents: [salesAgent, financeAgent],
+    agents: [salesAgent, financeAgent, flakyAgent],
     grants: [
       {
         id: id(),
@@ -203,6 +229,16 @@ const seedStore = (): DemoStore => {
         createdAt: now(),
         deletedAt: null,
       },
+      // Flaky agent granted to everyone so any member can reproduce the failure.
+      { id: id(), agentId: flakyAgent.id, targetType: 'everyone', targetId: null, createdAt: now(), deletedAt: null },
+    ],
+    // Pre-seeded agent-side failures from three DIFFERENT members at staggered
+    // times so the admin Health line reads "3 user failures since {earliest}"
+    // without anyone clicking (spec §3/§6).
+    connectionFailures: [
+      { agentId: flakyAgent.id, memberId: rae.id, ts: minutesAgo(128), errorKind: 'unreachable' },
+      { agentId: flakyAgent.id, memberId: jordan.id, ts: minutesAgo(74), errorKind: 'unreachable' },
+      { agentId: flakyAgent.id, memberId: extraMembers[0].id, ts: minutesAgo(19), errorKind: 'unreachable' },
     ],
     policy: {
       personalAgentPolicy: 'all',
@@ -388,6 +424,9 @@ export const createDemoAdminApi = (): AdminApi => {
       return { success: true } as const
     },
     testConnection: async (acpUrl: string) => {
+      if (acpUrl === FLAKY_ACP_URL) {
+        return { reachable: false, error: 'connection refused' } as const
+      }
       if (!acpUrl.startsWith('wss://')) {
         return { reachable: false, error: 'Demo: only wss:// URLs are reachable' } as const
       }
@@ -401,9 +440,37 @@ export const createDemoAdminApi = (): AdminApi => {
       // A live server reports its handshake result; the demo assigns a plausible
       // per-endpoint state so the registry shows a spread. Freshly-registered
       // agents (unknown seed) read as never-verified.
+      if (acpUrl === FLAKY_ACP_URL) {
+        return { state: 'error' }
+      }
       const seed = acpUrl.split('/').filter(Boolean).pop() ?? ''
       const bySeed: Record<string, AgentConnectionState> = { sales: 'ready', finance: 'not_connected' }
       return { state: bySeed[seed] ?? 'not_connected' }
+    },
+    /** Record an agent-side connection failure (spec §3.1). Reuses the audit
+     *  pipe; the raw rows are deduped at read time in {@link listConnectionFailures}. */
+    recordConnectionFailure: async (input: { agentId: string; memberId: string; errorKind: string }) => {
+      store.connectionFailures.push({ ...input, ts: now() })
+      writeAudit('agent.connect.fail', input.agentId, { errorKind: input.errorKind })
+      return { success: true } as const
+    },
+    /** Deduped failure summary for one agent (spec §3.2): repeat failures from the
+     *  same member within a 15-min window collapse to one counted incident. */
+    listConnectionFailures: async (agentId: string): Promise<{ count: number; since: string | null }> => {
+      const WINDOW_MS = 15 * 60_000
+      const rows = store.connectionFailures
+        .filter((f) => f.agentId === agentId)
+        .sort((a, b) => a.ts.localeCompare(b.ts))
+      const incidents: ConnectionFailure[] = []
+      for (const row of rows) {
+        const dup = incidents.some(
+          (i) => i.memberId === row.memberId && Math.abs(Date.parse(i.ts) - Date.parse(row.ts)) < WINDOW_MS,
+        )
+        if (!dup) {
+          incidents.push(row)
+        }
+      }
+      return { count: incidents.length, since: incidents[0]?.ts ?? null }
     },
     describeEndpoint: async (acpUrl: string): Promise<AgentEndpointDetail> => {
       // A live server returns its own wiring; the demo derives a plausible,

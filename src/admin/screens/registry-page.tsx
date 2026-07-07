@@ -13,7 +13,6 @@ import { useAgents } from '../api/hooks'
 import type { TeamAgentWithCapabilities } from '../api/types'
 import { AgentDetailPanel } from './agent-detail-panel'
 import { AgentForm } from './agent-form'
-import { AgentConnectionIndicator } from './connection-status'
 
 /**
  * S1 — Registry. The agent list fills the page until one is selected; then the
@@ -86,7 +85,8 @@ export const RegistryPage = () => {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{agent.name}</div>
-                  <AgentConnectionIndicator acpUrl={agent.acpUrl} />
+                  {/* Static category — no ambient connection probe on the roster (spec §0/§1). */}
+                  <p className="text-sm capitalize text-muted-foreground">{agent.category}</p>
                 </div>
                 <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
               </button>
