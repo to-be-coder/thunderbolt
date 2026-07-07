@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from 'react'
 import { testAcpConnection as defaultTestAcpConnection } from '@/acp'
+import { isDemoMode } from '@/lib/demo-mode'
 import type { TestAcpConnectionFn } from '@/components/settings/agents/add-custom-agent-dialog'
 
 /** Live connection state of a personal ACP endpoint. `checking` is the initial
@@ -23,13 +24,19 @@ export const useAcpAgentStatus = (
   url: string | null,
   testAcpConnection: TestAcpConnectionFn = defaultTestAcpConnection,
 ): { status: AcpAgentStatus; refresh: () => void } => {
-  const [status, setStatus] = useState<AcpAgentStatus>(url ? 'checking' : 'unknown')
+  const [status, setStatus] = useState<AcpAgentStatus>(url ? (isDemoMode() ? 'online' : 'checking') : 'unknown')
   // Bumping this re-runs the probe effect (manual Test / retry).
   const [nonce, setNonce] = useState(0)
 
   useEffect(() => {
     if (!url) {
       setStatus('unknown')
+      return
+    }
+    // Demo mode has no real endpoints — the seeded agents are fakes that should
+    // read as connected, so skip the (always-failing) probe.
+    if (isDemoMode()) {
+      setStatus('online')
       return
     }
     let cancelled = false

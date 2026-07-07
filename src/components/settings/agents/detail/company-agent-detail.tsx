@@ -2,10 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { Info } from 'lucide-react'
 import type { AgentCard, AgentCardCapability } from '@shared/agent-cards'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { AgentDetailLayout, DetailSection } from './agent-detail-layout'
 import { CompanyCapabilityRow } from './company-capability-row'
-import { ManageInLibraryLink } from '../manage-in-library-link'
 
 /**
  * External team agents reach their upstream through the service-identity relay,
@@ -15,25 +16,47 @@ import { ManageInLibraryLink } from '../manage-in-library-link'
  */
 const TRANSPORT_PASSES_INVOKER = false
 
-/** The category banner translates the card's category into member language —
- *  the only place the sealed/extensible concept surfaces (agents-page-spec §3). */
-const CategoryBanner = ({ card, agentId }: { card: AgentCard; agentId: string }) => {
-  if (card.category === 'extensible') {
-    return (
-      <div className="rounded-lg border border-border p-3 flex flex-col gap-1" data-testid="category-banner-extensible">
-        <p className="text-base font-medium">✅ Works with your skills</p>
-        <p className="text-sm text-muted-foreground">Your enabled Library items are available to this agent.</p>
-        <ManageInLibraryLink agentKind="team" agentId={agentId} />
-      </div>
-    )
-  }
+/** The Category section names the card's category (Extensible / Sealed). The
+ *  explanation lives in a tooltip on the word itself (agents-page-spec §3). */
+const CategorySection = ({ card }: { card: AgentCard }) => {
+  const extensible = card.category === 'extensible'
+  const explanation = extensible
+    ? 'Your enabled Library items (skills, MCP servers) are available to this agent.'
+    : 'This agent uses only what your organization built into it.'
   return (
-    <div className="rounded-lg border border-border p-3 flex flex-col gap-1" data-testid="category-banner-sealed">
-      <p className="text-base font-medium">🔒 Comes fully configured</p>
-      <p className="text-sm text-muted-foreground">This agent uses only what your organization built into it.</p>
-    </div>
+    <DetailSection title="Category">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className="w-fit cursor-help text-base font-medium underline decoration-dotted underline-offset-4 decoration-muted-foreground"
+            data-testid={`category-${card.category}`}
+          >
+            {extensible ? 'Extensible' : 'Sealed'}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs text-sm">{explanation}</TooltipContent>
+      </Tooltip>
+    </DetailSection>
   )
 }
+
+/** Info tooltip next to the Models section — the member can't change these. */
+const ModelsInfoTooltip = () => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <button
+        type="button"
+        aria-label="Where do these models come from?"
+        className="text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <Info className="size-3.5" />
+      </button>
+    </TooltipTrigger>
+    <TooltipContent className="max-w-xs text-sm">
+      Models are supplied by your organization — you can’t change them for this agent.
+    </TooltipContent>
+  </Tooltip>
+)
 
 type CompanyAgentDetailProps = {
   card: AgentCard
@@ -45,10 +68,9 @@ type CompanyAgentDetailProps = {
 /**
  * Read-only rendered agent card for a company (team) agent (agents-page-spec §3).
  * The card is DISPLAY-ONLY (INVARIANT 2) — capabilities are plain-language
- * labels, never skill names or prompt text. The only interactive elements are
- * the `as_you` credential rows (Connect / Disconnect) and Start a chat. Model is
- * "set by your organization"; the footer reserves the report-a-problem slot
- * (P1-3, not built in v1).
+ * labels, never skill names or prompt text. Models are supplied by the org (with
+ * a tooltip saying so); the only interactive elements are the `as_you` credential
+ * rows (Connect / Disconnect).
  */
 export const CompanyAgentDetail = ({
   card,
@@ -58,12 +80,16 @@ export const CompanyAgentDetail = ({
 }: CompanyAgentDetailProps) => (
   <AgentDetailLayout
     name={card.name}
-    subtitle={`From ${card.managedBy} · granted via: ${card.grantedVia}`}
+    subtitle={`Granted via ${card.grantedVia}`}
     body={
       <>
-        {card.description && <p className="text-base italic text-muted-foreground">“{card.description}”</p>}
+        {card.description && (
+          <DetailSection title="About">
+            <p className="text-base">{card.description}</p>
+          </DetailSection>
+        )}
 
-        <CategoryBanner card={card} agentId={card.id} />
+        <CategorySection card={card} />
 
         <DetailSection title="What it can do">
           <ul className="flex flex-col" data-testid="capability-list">
@@ -81,10 +107,21 @@ export const CompanyAgentDetail = ({
           </ul>
         </DetailSection>
 
-        <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-          <p data-testid="company-model-line">Model: set by your organization</p>
-          <p data-testid="company-managed-by">Managed by: {card.managedBy}</p>
-        </div>
+        <DetailSection title="Models" titleExtra={<ModelsInfoTooltip />}>
+          {card.advertisedModels.length === 0 ? (
+            <span className="text-sm text-muted-foreground" data-testid="company-model-line">
+              Set by your organization
+            </span>
+          ) : (
+            <div className="flex flex-wrap gap-1.5" data-testid="company-model-line">
+              {card.advertisedModels.map((model) => (
+                <span key={model} className="rounded-md bg-muted px-2 py-0.5 text-base">
+                  {model}
+                </span>
+              ))}
+            </div>
+          )}
+        </DetailSection>
       </>
     }
     onBack={onBack}

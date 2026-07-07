@@ -61,10 +61,22 @@ export const AgentDetailLayout = ({ name, subtitle, body, actions, menu, onBack 
 )
 
 /** A titled read-only content section inside a detail body (the "── Title ──"
- *  blocks in the spec mocks). */
-export const DetailSection = ({ title, children }: { title: string; children: ReactNode }) => (
+ *  blocks in the spec mocks). `titleExtra` renders inline after the title (e.g.
+ *  an info tooltip). */
+export const DetailSection = ({
+  title,
+  titleExtra,
+  children,
+}: {
+  title: string
+  titleExtra?: ReactNode
+  children: ReactNode
+}) => (
   <section className="flex flex-col gap-2">
-    <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">{title}</h2>
+    <div className="flex items-center gap-1.5">
+      <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">{title}</h2>
+      {titleExtra}
+    </div>
     {children}
   </section>
 )

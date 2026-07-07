@@ -12,11 +12,10 @@ import type { LibraryCounts } from '@/hooks/use-library-counts'
  * read them so the two never drift.
  */
 
-/** Company (team) agent row provenance: `From {org} · <what tapping does>`. */
-export const companyProvenanceLine = (card: Pick<AgentCard, 'managedBy' | 'category'>): string =>
-  card.category === 'extensible'
-    ? `From ${card.managedBy} · works with your skills`
-    : `From ${card.managedBy} · comes fully configured`
+/** Company (team) agent row sub-label — just the category. The org name is
+ *  omitted: a member belongs to exactly one org, so "From {org}" is redundant. */
+export const companyProvenanceLine = (card: Pick<AgentCard, 'category'>): string =>
+  card.category === 'extensible' ? 'Extensible' : 'Sealed'
 
 /** The Thunderbolt (native) agent's provenance line. */
 export const nativeProvenanceLine = (): string => 'Your agent · uses your Library'

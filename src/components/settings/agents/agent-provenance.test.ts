@@ -12,14 +12,12 @@ import {
 } from './agent-provenance'
 
 describe('companyProvenanceLine', () => {
-  it('uses the "works with your skills" copy for extensible agents', () => {
-    expect(companyProvenanceLine({ managedBy: 'ACME', category: 'extensible' })).toBe(
-      'From ACME · works with your skills',
-    )
+  it('shows the category name for extensible agents (no org prefix)', () => {
+    expect(companyProvenanceLine({ category: 'extensible' })).toBe('Extensible')
   })
 
-  it('uses the "comes fully configured" copy for sealed agents', () => {
-    expect(companyProvenanceLine({ managedBy: 'ACME', category: 'sealed' })).toBe('From ACME · comes fully configured')
+  it('shows the category name for sealed agents (no org prefix)', () => {
+    expect(companyProvenanceLine({ category: 'sealed' })).toBe('Sealed')
   })
 })
 

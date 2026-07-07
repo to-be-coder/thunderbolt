@@ -40,28 +40,32 @@ const renderCard = (card: AgentCard) =>
 describe('CompanyAgentDetail', () => {
   it('renders the granted-via subtitle and description', () => {
     renderCard(baseCard)
-    expect(screen.getByText('From ACME IT · granted via: Sales (group)')).toBeInTheDocument()
+    expect(screen.getByText('Granted via Sales (group)')).toBeInTheDocument()
     expect(screen.getByText(/drafts outreach/i)).toBeInTheDocument()
   })
 
-  it('shows the extensible banner + Library link for extensible agents', () => {
+  it('names the category Extensible (explanation is in the tooltip, no Library link)', () => {
     renderCard(baseCard)
-    expect(screen.getByTestId('category-banner-extensible')).toHaveTextContent('Works with your skills')
-    expect(screen.getByTestId('manage-in-library-link')).toBeInTheDocument()
-  })
-
-  it('shows the sealed banner (no Library link) for sealed agents', () => {
-    renderCard({ ...baseCard, category: 'sealed' })
-    expect(screen.getByTestId('category-banner-sealed')).toHaveTextContent('Comes fully configured')
+    expect(screen.getByTestId('category-extensible')).toHaveTextContent('Extensible')
+    // The explanation lives in a hover tooltip, so it isn't in the DOM at rest.
+    expect(screen.queryByText(/available to this agent/i)).not.toBeInTheDocument()
     expect(screen.queryByTestId('manage-in-library-link')).not.toBeInTheDocument()
   })
 
-  it('lists plain-language capabilities and the org-set model + managed-by footer', () => {
-    renderCard(baseCard)
+  it('names the category Sealed for sealed agents', () => {
+    renderCard({ ...baseCard, category: 'sealed' })
+    expect(screen.getByTestId('category-sealed')).toHaveTextContent('Sealed')
+    expect(screen.queryByTestId('manage-in-library-link')).not.toBeInTheDocument()
+  })
+
+  it('lists capabilities and the org-supplied models (no Managed by)', () => {
+    renderCard({ ...baseCard, advertisedModels: ['claude-opus-4-8', 'claude-haiku-4-5'] })
     expect(screen.getByText('Searches the web')).toBeInTheDocument()
     expect(screen.getByText('Reads the Sales knowledge base')).toBeInTheDocument()
-    expect(screen.getByTestId('company-model-line')).toHaveTextContent('set by your organization')
-    expect(screen.getByTestId('company-managed-by')).toHaveTextContent('Managed by: ACME IT')
+    expect(screen.getByTestId('company-model-line')).toHaveTextContent('claude-opus-4-8')
+    expect(screen.getByTestId('company-model-line')).toHaveTextContent('claude-haiku-4-5')
+    expect(screen.queryByTestId('company-managed-by')).not.toBeInTheDocument()
+    expect(screen.queryByText(/managed by/i)).not.toBeInTheDocument()
   })
 
   it('shows as_you rows truthfully as unsupported on the v1 external transport (no Connect)', () => {

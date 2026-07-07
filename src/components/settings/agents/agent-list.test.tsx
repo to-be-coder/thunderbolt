@@ -83,8 +83,8 @@ describe('AgentList — sections + provenance', () => {
 
   it('renders the exact provenance copy per agent kind', () => {
     renderList()
-    expect(screen.getByTestId('agent-provenance-sales')).toHaveTextContent('From ACME · works with your skills')
-    expect(screen.getByTestId('agent-provenance-finance')).toHaveTextContent('From ACME · comes fully configured')
+    expect(screen.getByTestId('agent-provenance-sales')).toHaveTextContent('Extensible')
+    expect(screen.getByTestId('agent-provenance-finance')).toHaveTextContent('Sealed')
     expect(screen.getByTestId(`agent-provenance-${builtInAgent.id}`)).toHaveTextContent(
       'Your agent · uses your Library',
     )
