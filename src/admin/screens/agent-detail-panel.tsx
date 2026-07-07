@@ -161,14 +161,16 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
         </div>
       )}
 
-      <PillTabs
-        tabs={[
-          { id: 'details', label: 'Details', icon: Info },
-          { id: 'access', label: 'Access', icon: KeyRound },
-        ]}
-        value={tab}
-        onChange={setTab}
-      />
+      <div className="border-b border-border">
+        <PillTabs
+          tabs={[
+            { id: 'details', label: 'Details', icon: Info },
+            { id: 'access', label: 'Access', icon: KeyRound },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+      </div>
 
       {tab === 'access' && <AgentAccessTab agentId={agent.id} />}
 
