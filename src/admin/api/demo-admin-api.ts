@@ -49,6 +49,7 @@ const seedStore = (): DemoStore => {
   const financeGroup: Group = { id: id(), name: 'Finance', createdAt: now(), deletedAt: null }
   const admin: Member = {
     id: id(),
+    name: 'Demo Admin',
     email: 'admin@demo.thunderbolt',
     status: 'active',
     isAdmin: true,
@@ -57,6 +58,7 @@ const seedStore = (): DemoStore => {
   }
   const rae: Member = {
     id: id(),
+    name: 'Rae Thompson',
     email: 'rae@demo.thunderbolt',
     status: 'active',
     isAdmin: false,
@@ -65,6 +67,7 @@ const seedStore = (): DemoStore => {
   }
   const jordan: Member = {
     id: id(),
+    name: 'Jordan Lee',
     email: 'jordan@demo.thunderbolt',
     status: 'invited',
     isAdmin: false,
@@ -96,6 +99,7 @@ const seedStore = (): DemoStore => {
     'Nina Kowalski',
   ].map((name, index) => ({
     id: id(),
+    name,
     email: `${name.toLowerCase().replace(' ', '.')}@demo.thunderbolt`,
     status: index % 5 === 0 ? 'invited' : 'active',
     isAdmin: index === 3 || index === 11,
@@ -230,6 +234,8 @@ export const createDemoAdminApi = (): AdminApi => {
     inviteMember: async (input) => {
       const member: Member = {
         id: id(),
+        // Name is unknown until the invitee signs in and completes their profile.
+        name: '',
         email: input.email,
         status: 'invited',
         isAdmin: input.isAdmin ?? false,

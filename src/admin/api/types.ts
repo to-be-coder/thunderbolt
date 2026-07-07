@@ -14,6 +14,7 @@ export type MemberStatus = 'invited' | 'active'
 
 export type Member = {
   id: string
+  name: string
   email: string
   status: MemberStatus
   isAdmin: boolean

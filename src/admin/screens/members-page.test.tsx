@@ -11,6 +11,7 @@ import { MembersPage } from './members-page'
 
 const member = (over: Partial<Member>): Member => ({
   id: 'm1',
+  name: 'Existing User',
   email: 'existing@corp.test',
   status: 'active',
   isAdmin: false,

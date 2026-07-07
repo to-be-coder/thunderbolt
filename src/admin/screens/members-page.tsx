@@ -106,6 +106,7 @@ export const MembersPage = () => {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Role</TableHead>
@@ -115,14 +116,14 @@ export const MembersPage = () => {
           <TableBody>
             {membersQuery.isPending && (
               <TableRow>
-                <TableCell colSpan={4} className="text-muted-foreground">
+                <TableCell colSpan={5} className="text-muted-foreground">
                   Loading…
                 </TableCell>
               </TableRow>
             )}
             {!membersQuery.isPending && members.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-muted-foreground">
+                <TableCell colSpan={5} className="text-muted-foreground">
                   No members yet. Invite someone to get started.
                 </TableCell>
               </TableRow>
@@ -155,7 +156,8 @@ const MemberRow = ({
 
   return (
     <TableRow>
-      <TableCell className="font-medium">{member.email}</TableCell>
+      <TableCell className="font-medium">{member.name || <span className="text-muted-foreground">—</span>}</TableCell>
+      <TableCell className="text-muted-foreground">{member.email}</TableCell>
       <TableCell>
         <StatusPill tone={member.status === 'active' ? 'success' : 'muted'}>{member.status}</StatusPill>
       </TableCell>
