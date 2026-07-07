@@ -77,8 +77,8 @@ export const RegistryPage = () => {
                 aria-label={`Open ${agent.name}`}
                 aria-pressed={agent.id === selectedId}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors',
-                  agent.id === selectedId ? 'border-primary bg-secondary/50' : 'border-border hover:bg-secondary/50',
+                  'flex items-center gap-3 rounded-lg border border-border px-4 py-3 text-left transition-colors',
+                  agent.id === selectedId ? 'bg-accent' : 'hover:bg-secondary/50',
                 )}
               >
                 <Building2 className="size-5 shrink-0 text-muted-foreground" aria-hidden />
