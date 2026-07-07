@@ -5,9 +5,10 @@
 import { testAcpConnection as testAcpConnection_default } from '@/acp'
 import type { AgentDescriptor } from '@/chats/agent-descriptor'
 import type { ConnectionStatus } from '@/chats/chat-store'
+import { reportAgentConnectionFailure } from '@/chats/report-agent-failure'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, WifiOff } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate as useNavigate_default } from 'react-router'
 
 /** Which of the three Stage-5 thread states (if any) blocks the composer. */
@@ -69,6 +70,21 @@ export const ComposerBlock = ({
   const [isTesting, setIsTesting] = useState(false)
   const [testResult, setTestResult] = useState<string | null>(null)
 
+  // Spec §5: a member's own offline state was NOT reported to the admin, so the
+  // copy must not claim it was. Only an agent-side failure (member is online) is.
+  const isMemberOffline = typeof navigator !== 'undefined' && navigator.onLine === false
+
+  // Spec §3.1: emit ONE agent-side failure to the admin plane on session-start
+  // failure (deduped admin-side). Team agents only — personal agents have no
+  // owning admin. The message renders every time; this fires once per mount.
+  const reportedRef = useRef(false)
+  useEffect(() => {
+    if (state.kind === 'offline' && descriptor.kind === 'team' && !isMemberOffline && !reportedRef.current) {
+      reportedRef.current = true
+      reportAgentConnectionFailure(descriptor.id, 'unreachable')
+    }
+  }, [state.kind, descriptor.kind, descriptor.id, isMemberOffline])
+
   if (state.kind === 'revoked') {
     return (
       <div
@@ -106,9 +122,6 @@ export const ComposerBlock = ({
     setTestResult(result.success ? 'Connection restored — reopen the chat to continue.' : result.error)
   }
 
-  // Spec §5: only an AGENT-side failure was reported to the admin — a member's
-  // own offline state was not, so the copy must not claim a report was sent.
-  const isMemberOffline = typeof navigator !== 'undefined' && navigator.onLine === false
   const message = isMemberOffline
     ? "Couldn't connect. Check your connection and try again."
     : `Couldn't connect to ${descriptor.name}. This has been reported to your admin.`

@@ -18,9 +18,11 @@ import { createAdminApi, type AdminApi } from './admin-client'
 import { createDemoAdminApi } from './demo-admin-api'
 import type { AgentInput, AgentPatch, GrantInput, OrgPolicy } from './types'
 
-/** Lazily-built singleton demo API so its in-memory store survives re-renders. */
+/** Lazily-built singleton demo API so its in-memory store survives re-renders.
+ *  Exported so the member surfaces (e.g. a chat that fails to connect) can report
+ *  a failure into the same in-memory admin store in demo mode (spec §3.1). */
 let demoApi: AdminApi | null = null
-const getDemoAdminApi = (): AdminApi => (demoApi ??= createDemoAdminApi())
+export const getDemoAdminApi = (): AdminApi => (demoApi ??= createDemoAdminApi())
 
 export const adminKeys = {
   me: ['admin', 'me'] as const,

@@ -184,9 +184,10 @@ const seedStore = (): DemoStore => {
     ],
   }
   // Demo-only agent whose endpoint always fails to connect (spec §6), so the
-  // connection-failure UX is reviewable end to end.
+  // connection-failure UX is reviewable end to end. STABLE id (matches the
+  // member team-cache card) so a live member failure resolves to this agent.
   const flakyAgent: TeamAgentWithCapabilities = {
-    id: id(),
+    id: 'demo-flaky-agent',
     name: 'Flaky Test Agent',
     icon: 'bug',
     description: 'A demo agent whose endpoint always fails to connect — used to review the connection-failure states.',
