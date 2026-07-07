@@ -72,7 +72,7 @@ export const DetailSection = ({
   titleExtra?: ReactNode
   children: ReactNode
 }) => (
-  <section className="flex flex-col gap-2">
+  <section className="flex flex-col gap-2 rounded-xl bg-secondary p-4 dark:bg-sidebar">
     <div className="flex items-center gap-1.5">
       <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">{title}</h2>
       {titleExtra}
