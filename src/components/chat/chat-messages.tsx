@@ -5,9 +5,10 @@
 import { AssistantMessage } from './assistant-message'
 import { SyntheticLoadingPart } from './synthetic-loading-part'
 import { UserMessage } from './user-message'
-import { ErrorMessage } from './error-message'
+import { ConnectionFailureMessage, ErrorMessage } from './error-message'
 import { useEffect, useMemo, useRef } from 'react'
 import { useCurrentChatSession } from '@/chats/chat-store'
+import { isConnectionError } from '@/lib/error-utils'
 import { useChat as useChat_default } from '@ai-sdk/react'
 import { shouldUseViewportPositioning } from '@/chats/use-chat-scroll-handler'
 import { useHaptics } from '@/hooks/use-haptics'
@@ -17,7 +18,7 @@ type ChatMessagesProps = {
 }
 
 export const ChatMessages = ({ useChat = useChat_default }: ChatMessagesProps) => {
-  const { chatInstance, retryCount, retriesExhausted } = useCurrentChatSession()
+  const { chatInstance, retryCount, retriesExhausted, selectedAgent, selectedAgentKind } = useCurrentChatSession()
 
   const { error: chatError, status, messages, regenerate } = useChat({ chat: chatInstance })
   const { triggerNotification } = useHaptics()
@@ -89,15 +90,25 @@ export const ChatMessages = ({ useChat = useChat_default }: ChatMessagesProps) =
 
       {showSubmittedLoading && <SyntheticLoadingPart isStreaming />}
 
-      {/* Show error message if there's an error */}
-      {hasError && (
-        <ErrorMessage
-          retryCount={retryCount}
-          retriesExhausted={retriesExhausted}
-          error={chatError}
-          onRetry={() => regenerate()}
-        />
-      )}
+      {/* Show error message if there's an error. A connection failure (agent
+          unreachable at session start) gets the calm §5 message once it settles
+          into the final error state; mid-retry keeps the generic retry spinner. */}
+      {hasError &&
+        (isConnectionError(chatError) && !(retryCount > 0 && !retriesExhausted) ? (
+          <ConnectionFailureMessage
+            agentName={selectedAgent.name}
+            agentKind={selectedAgentKind}
+            agentId={selectedAgent.id}
+            onRetry={() => regenerate()}
+          />
+        ) : (
+          <ErrorMessage
+            retryCount={retryCount}
+            retriesExhausted={retriesExhausted}
+            error={chatError}
+            onRetry={() => regenerate()}
+          />
+        ))}
     </div>
   )
 }

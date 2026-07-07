@@ -28,6 +28,21 @@ export const isRateLimitError = (error?: Error | null): boolean => {
   return error.message.toLowerCase().includes('too many requests')
 }
 
+/** Whether an error is a failure to CONNECT to the agent's endpoint (as opposed
+ *  to a mid-conversation error) — the ACP transport dropped or never opened. Used
+ *  to show the connection-failure message instead of a generic error. */
+export const isConnectionError = (error?: Error | null): boolean => {
+  const message = error?.message?.toLowerCase() ?? ''
+  return (
+    message.includes('transport closed') ||
+    message.includes('connection refused') ||
+    message.includes('failed to connect') ||
+    message.includes('could not reach') ||
+    message.includes('econnrefused') ||
+    message.includes('websocket')
+  )
+}
+
 /**
  * Creates a HandleError with optional stack trace if available
  */

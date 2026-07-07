@@ -5,10 +5,9 @@
 import { testAcpConnection as testAcpConnection_default } from '@/acp'
 import type { AgentDescriptor } from '@/chats/agent-descriptor'
 import type { ConnectionStatus } from '@/chats/chat-store'
-import { reportAgentConnectionFailure } from '@/chats/report-agent-failure'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, WifiOff } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate as useNavigate_default } from 'react-router'
 
 /** Which of the three Stage-5 thread states (if any) blocks the composer. */
@@ -29,13 +28,7 @@ export const resolveComposerBlock = (params: {
   if (descriptor.kind === 'team' && descriptor.revoked) {
     return { kind: 'revoked' }
   }
-  // A failed connection at session start blocks the composer for any connected
-  // agent kind — personal ACP or team (spec §5). Thunderbolt never connects.
-  if (
-    (descriptor.kind === 'personal' || descriptor.kind === 'team') &&
-    connectionStatus === 'error' &&
-    connectionError != null
-  ) {
+  if (descriptor.kind === 'personal' && connectionStatus === 'error' && connectionError != null) {
     return { kind: 'offline' }
   }
   if (descriptor.kind === 'thunderbolt' && modelCount === 0) {
@@ -69,21 +62,6 @@ export const ComposerBlock = ({
   const navigate = useNavigate()
   const [isTesting, setIsTesting] = useState(false)
   const [testResult, setTestResult] = useState<string | null>(null)
-
-  // Spec §5: a member's own offline state was NOT reported to the admin, so the
-  // copy must not claim it was. Only an agent-side failure (member is online) is.
-  const isMemberOffline = typeof navigator !== 'undefined' && navigator.onLine === false
-
-  // Spec §3.1: emit ONE agent-side failure to the admin plane on session-start
-  // failure (deduped admin-side). Team agents only — personal agents have no
-  // owning admin. The message renders every time; this fires once per mount.
-  const reportedRef = useRef(false)
-  useEffect(() => {
-    if (state.kind === 'offline' && descriptor.kind === 'team' && !isMemberOffline && !reportedRef.current) {
-      reportedRef.current = true
-      reportAgentConnectionFailure(descriptor.id, 'unreachable')
-    }
-  }, [state.kind, descriptor.kind, descriptor.id, isMemberOffline])
 
   if (state.kind === 'revoked') {
     return (
@@ -122,28 +100,19 @@ export const ComposerBlock = ({
     setTestResult(result.success ? 'Connection restored — reopen the chat to continue.' : result.error)
   }
 
-  const message = isMemberOffline
-    ? "Couldn't connect. Check your connection and try again."
-    : `Couldn't connect to ${descriptor.name}. This has been reported to your admin.`
-
   return (
     <div className="flex flex-col items-center gap-2 rounded-2xl border bg-card px-4 py-3 text-center">
       <div className="flex items-center gap-2 text-muted-foreground text-[length:var(--font-size-sm)]">
         <WifiOff className="size-[var(--icon-size-default)] shrink-0" />
-        <span role="alert">{message}</span>
+        <span>{descriptor.name} is offline. Messages can't be sent right now.</span>
       </div>
-      {/* Members can only re-probe their own (personal) endpoint. */}
-      {agentUrl && (
-        <>
-          <Button size="sm" variant="outline" disabled={isTesting} onClick={handleTest}>
-            {isTesting ? 'Testing…' : 'Test connection'}
-          </Button>
-          {testResult && (
-            <span role="status" className="text-muted-foreground text-[length:var(--font-size-xs)]">
-              {testResult}
-            </span>
-          )}
-        </>
+      <Button size="sm" variant="outline" disabled={isTesting} onClick={handleTest}>
+        {isTesting ? 'Testing…' : 'Test connection'}
+      </Button>
+      {testResult && (
+        <span role="status" className="text-muted-foreground text-[length:var(--font-size-xs)]">
+          {testResult}
+        </span>
       )}
     </div>
   )

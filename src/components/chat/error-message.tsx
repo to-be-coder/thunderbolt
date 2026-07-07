@@ -3,9 +3,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { maxRetries } from '@/chats/chat-instance'
+import { reportAgentConnectionFailure } from '@/chats/report-agent-failure'
+import type { AgentKind } from '@/dal/chat-threads'
 import { isRateLimitError } from '@/lib/error-utils'
-import { Loader2 } from 'lucide-react'
-import { memo } from 'react'
+import { Loader2, WifiOff } from 'lucide-react'
+import { memo, useEffect, useRef } from 'react'
 
 type ErrorMessageProps = {
   retryCount: number
@@ -63,3 +65,64 @@ export const ErrorMessage = memo(({ retryCount, retriesExhausted, error, onRetry
     </div>
   )
 })
+
+/**
+ * The connection-failure message (spec §5), shown in place of the generic error
+ * when the agent couldn't be reached at session start. Calm and blame-free; for
+ * an agent-side team failure it confirms the report (and emits it, §3.1). A
+ * member's own offline state is never claimed as reported.
+ */
+export const ConnectionFailureMessage = memo(
+  ({
+    agentName,
+    agentKind,
+    agentId,
+    onRetry,
+  }: {
+    agentName: string
+    agentKind: AgentKind
+    agentId: string
+    onRetry?: () => void
+  }) => {
+    const isMemberOffline = typeof navigator !== 'undefined' && navigator.onLine === false
+
+    // Spec §3.1: emit ONE agent-side team failure to the admin plane (deduped
+    // admin-side). Member-network failures and personal agents are not reported.
+    const reportedRef = useRef(false)
+    useEffect(() => {
+      if (!isMemberOffline && agentKind === 'team' && !reportedRef.current) {
+        reportedRef.current = true
+        reportAgentConnectionFailure(agentId, 'unreachable')
+      }
+    }, [isMemberOffline, agentKind, agentId])
+
+    const message = isMemberOffline
+      ? "Couldn't connect. Check your connection and try again."
+      : agentKind === 'team'
+        ? `Couldn't connect to ${agentName}. This has been reported to your admin.`
+        : `Couldn't connect to ${agentName}. Try again.`
+
+    return (
+      <div className="px-4 py-3 rounded-2xl bg-destructive/10 border border-destructive/20 mr-auto w-full mt-2">
+        <div className="flex items-center justify-between gap-2 min-h-[var(--touch-height-sm)]">
+          <span
+            className="flex items-center gap-2 text-destructive/80 text-[length:var(--font-size-body)]"
+            role="alert"
+          >
+            <WifiOff className="size-[var(--icon-size-sm)] shrink-0" />
+            {message}
+          </span>
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="cursor-pointer shrink-0 text-[length:var(--font-size-body)] font-medium text-destructive/90 bg-destructive/10 hover:bg-destructive/15 px-3 py-1 rounded-xl"
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  },
+)
