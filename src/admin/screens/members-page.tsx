@@ -87,7 +87,7 @@ export const MembersPage = () => {
             <div className="flex flex-col gap-2">
               <Label htmlFor="member-role">Role</Label>
               <Select value={asAdmin ? 'admin' : 'member'} onValueChange={(value) => setAsAdmin(value === 'admin')}>
-                <SelectTrigger id="member-role" className="w-fit" aria-label="Role">
+                <SelectTrigger id="member-role" className="w-full" aria-label="Role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
