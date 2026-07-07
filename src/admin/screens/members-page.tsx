@@ -18,7 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PageHeader } from '@/components/ui/page-header'
-import { Switch } from '@/components/ui/switch'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { MoreHorizontal, Plus } from 'lucide-react'
 import { useState } from 'react'
@@ -84,10 +84,18 @@ export const MembersPage = () => {
                 onKeyDown={(event) => event.key === 'Enter' && handleInvite()}
               />
             </div>
-            <label className="flex items-center gap-2 text-sm">
-              <Switch checked={asAdmin} onCheckedChange={setAsAdmin} aria-label="Invite as admin" />
-              Admin
-            </label>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="member-role">Role</Label>
+              <Select value={asAdmin ? 'admin' : 'member'} onValueChange={(value) => setAsAdmin(value === 'admin')}>
+                <SelectTrigger id="member-role" className="w-fit" aria-label="Role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="member">Member</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             {invite.isError && (
               <p className="text-sm text-destructive" role="alert">
                 Could not invite this member. They may already exist.
