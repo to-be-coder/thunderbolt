@@ -194,7 +194,7 @@ const MemberRow = ({
     <TableRow
       onClick={onSelect}
       aria-selected={selected}
-      className={cn('cursor-pointer', selected ? 'bg-accent hover:bg-accent' : 'hover:bg-transparent')}
+      className={cn('cursor-pointer', selected ? 'bg-accent hover:bg-accent' : 'hover:bg-muted/50')}
     >
       <TableCell className="font-medium">{member.name || <span className="text-muted-foreground">—</span>}</TableCell>
       <TableCell className="text-muted-foreground">{member.email}</TableCell>
