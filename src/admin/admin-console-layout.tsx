@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { cn } from '@/lib/utils'
-import { Boxes, ClipboardList, KeyRound, ScrollText, ShieldCheck, Users } from 'lucide-react'
+import { Boxes, ClipboardList, ShieldCheck, Users } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router'
 
@@ -13,9 +13,7 @@ const navItems: AdminNavItem[] = [
   { to: '/admin', label: 'Registry', icon: <Boxes className="size-4" />, end: true },
   { to: '/admin/members', label: 'Members', icon: <Users className="size-4" /> },
   { to: '/admin/groups', label: 'Groups', icon: <Boxes className="size-4" /> },
-  { to: '/admin/grants', label: 'Grants', icon: <KeyRound className="size-4" /> },
   { to: '/admin/policy', label: 'Policy', icon: <ShieldCheck className="size-4" /> },
-  { to: '/admin/audit', label: 'Audit Log', icon: <ScrollText className="size-4" /> },
 ]
 
 /**
