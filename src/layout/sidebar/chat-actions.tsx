@@ -13,6 +13,7 @@ export const ChatActions = ({
   deleteAllChatsMutation,
   deleteAllChatsDialogRef,
   onSearchClick,
+  middleSlot,
 }: ChatActionsProps) => {
   if (isCollapsed) {
     return null
@@ -33,6 +34,7 @@ export const ChatActions = ({
           <p>Search chats</p>
         </TooltipContent>
       </Tooltip>
+      {middleSlot}
       <Tooltip>
         <TooltipTrigger asChild>
           <SidebarMenuButton

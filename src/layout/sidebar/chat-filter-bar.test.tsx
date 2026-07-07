@@ -48,22 +48,28 @@ describe('ChatFilterBar', () => {
     expect(dispatch).toHaveBeenCalledWith({ type: 'setCompanyMine', value: 'company' })
   })
 
-  it('clears all filters in one tap when a filter is active', async () => {
+  it('clears all filters from the popover Clear all when a filter is active', async () => {
     const dispatch = mock(() => {})
     const active: ChatFilters = { agentIds: ['team-1'], companyMine: 'all' }
     render(<ChatFilterBar options={options} filters={active} dispatch={dispatch} />)
 
-    // The inline Clear affordance is shown next to the filter button.
+    // No external clear button; the reset lives inside the popover.
+    expect(screen.queryByLabelText('Clear filters')).toBeNull()
     await act(async () => {
-      fireEvent.click(screen.getByLabelText('Clear filters'))
+      fireEvent.click(screen.getByLabelText('Filter chats'))
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByText('Clear all'))
     })
 
     expect(dispatch).toHaveBeenCalledWith({ type: 'clear' })
   })
 
-  it('hides the clear affordance when no filter is active', () => {
+  it('just highlights the filter button when active (no external clear affordance)', () => {
     const dispatch = mock(() => {})
-    render(<ChatFilterBar options={options} filters={initialChatFilters} dispatch={dispatch} />)
+    const active: ChatFilters = { agentIds: ['team-1'], companyMine: 'all' }
+    render(<ChatFilterBar options={options} filters={active} dispatch={dispatch} />)
     expect(screen.queryByLabelText('Clear filters')).toBeNull()
+    expect(screen.getByLabelText('Filter chats')).toHaveAttribute('aria-pressed', 'true')
   })
 })

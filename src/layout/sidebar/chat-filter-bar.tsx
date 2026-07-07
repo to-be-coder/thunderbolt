@@ -112,18 +112,6 @@ export const ChatFilterBar = ({ options, filters, dispatch }: ChatFilterBarProps
           </div>
         </PopoverContent>
       </Popover>
-
-      {active && (
-        <Button
-          variant="ghost"
-          size="xs"
-          aria-label="Clear filters"
-          className="cursor-pointer text-muted-foreground"
-          onClick={() => dispatch({ type: 'clear' })}
-        >
-          Clear
-        </Button>
-      )}
     </div>
   )
 }

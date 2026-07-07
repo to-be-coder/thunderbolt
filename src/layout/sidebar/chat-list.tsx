@@ -53,13 +53,13 @@ export const ChatList = ({
           <div className="flex items-center justify-between flex-shrink-0">
             <SidebarGroupLabel>Recent Chats</SidebarGroupLabel>
             <div className="flex items-center gap-0.5">
-              <ChatFilterBar options={agentFilterOptions} filters={filters} dispatch={onFilterChange} />
               <ChatActions
                 isCollapsed={isCollapsed}
                 debouncedSearchQuery={debouncedSearchQuery}
                 deleteAllChatsMutation={deleteAllChatsMutation}
                 deleteAllChatsDialogRef={deleteAllChatsDialogRef}
                 onSearchClick={onSearchClick}
+                middleSlot={<ChatFilterBar options={agentFilterOptions} filters={filters} dispatch={onFilterChange} />}
               />
             </div>
           </div>

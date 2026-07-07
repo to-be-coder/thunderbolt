@@ -5,7 +5,7 @@
 import type { DeleteAllChatsDialogRef } from '@/components/delete-all-chats-dialog'
 import type { DeleteChatDialogRef } from '@/components/delete-chat-dialog'
 import type { UseMutationResult } from '@tanstack/react-query'
-import type { Dispatch, MouseEvent, RefObject } from 'react'
+import type { Dispatch, MouseEvent, ReactNode, RefObject } from 'react'
 import type { AgentFilterOption, ChatFilterAction, ChatFilters } from './chat-filters'
 
 export type ChatThread = {
@@ -24,6 +24,9 @@ export type ChatActionsProps = {
   deleteAllChatsMutation: DeleteAllChatsMutationType
   deleteAllChatsDialogRef: RefObject<DeleteAllChatsDialogRef | null>
   onSearchClick: (e?: MouseEvent) => void
+  /** Rendered between the search and delete buttons (e.g. the filter control),
+   *  so the toolbar order reads search · filter · delete. */
+  middleSlot?: ReactNode
 }
 
 export type ChatListProps = {

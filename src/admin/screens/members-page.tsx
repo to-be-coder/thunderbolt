@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { SlideInPanel } from '@/components/slide-in-panel'
 import { Button } from '@/components/ui/button'
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
@@ -24,7 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
-import { Check, ChevronDown, MoreHorizontal, Plus, X } from 'lucide-react'
+import { ChevronDown, MoreHorizontal, Plus, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 import {
@@ -429,7 +429,7 @@ const GroupMultiSelect = ({
   onToggle: (groupId: string) => void
 }) => {
   const groupsQuery = useGroups()
-  const groups = groupsQuery.data ?? []
+  const groups = [...(groupsQuery.data ?? [])].sort((a, b) => a.name.localeCompare(b.name))
   const [open, setOpen] = useState(false)
 
   const selected = groups.filter((group) => selectedIds.has(group.id))
@@ -447,19 +447,25 @@ const GroupMultiSelect = ({
             <ChevronDown className="size-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-0">
-          <Command>
-            <CommandInput placeholder="Search groups…" />
-            <CommandList>
-              <CommandEmpty>No groups found</CommandEmpty>
+        <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-1">
+          {groups.length === 0 ? (
+            <p className="px-2 py-1.5 text-sm text-muted-foreground">No groups yet.</p>
+          ) : (
+            <ul className="flex max-h-56 flex-col gap-0.5 overflow-y-auto">
               {groups.map((group) => (
-                <CommandItem key={group.id} value={group.name} onSelect={() => onToggle(group.id)}>
-                  <Check className={cn('size-4', selectedIds.has(group.id) ? 'opacity-100' : 'opacity-0')} />
-                  {group.name}
-                </CommandItem>
+                <li key={group.id}>
+                  <button
+                    type="button"
+                    onClick={() => onToggle(group.id)}
+                    className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent/50"
+                  >
+                    <Checkbox checked={selectedIds.has(group.id)} className="pointer-events-none" />
+                    <span className="truncate">{group.name}</span>
+                  </button>
+                </li>
               ))}
-            </CommandList>
-          </Command>
+            </ul>
+          )}
         </PopoverContent>
       </Popover>
       {selected.length > 0 && (
