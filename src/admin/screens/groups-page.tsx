@@ -238,13 +238,9 @@ const GroupDetailPanel = ({
   )
 }
 
-/** The leading toggle icon of a member row in the search list. Three states that
- *  cross-morph (rotate + scale):
- *   - not a member → muted plus (click to add).
- *   - a member, idle → green check.
- *   - a member, row hovered → red cross (click to remove).
- *  Adding morphs plus→check; removing morphs check→plus. The `group/row` hover
- *  lives on the CommandItem. */
+/** The leading toggle icon of a member row in the search list. A member shows a
+ *  green check, a non-member a muted plus; clicking morphs one into the other
+ *  (rotate + scale) — the plus rotates out while the check rotates in, and back. */
 const ToggleIcon = ({ checked }: { checked: boolean }) => (
   <span className="relative inline-flex size-4 shrink-0 items-center justify-center">
     <Plus
@@ -256,13 +252,7 @@ const ToggleIcon = ({ checked }: { checked: boolean }) => (
     <Check
       className={cn(
         'absolute size-4 text-green-600 transition-all duration-300 ease-out dark:text-green-500',
-        checked ? 'rotate-0 scale-100 opacity-100 group-hover/row:opacity-0' : '-rotate-90 scale-0 opacity-0',
-      )}
-    />
-    <X
-      className={cn(
-        'absolute size-4 text-destructive transition-opacity duration-150',
-        checked ? 'opacity-0 group-hover/row:opacity-100' : 'opacity-0',
+        checked ? 'rotate-0 scale-100 opacity-100' : '-rotate-90 scale-0 opacity-0',
       )}
     />
   </span>
@@ -333,7 +323,6 @@ const GroupMembership = ({ group }: { group: Group }) => {
                 key={member.id}
                 value={member.name ? `${member.name} ${member.email}` : member.email}
                 onSelect={() => handleToggle(member.id)}
-                className="group/row"
               >
                 <ToggleIcon checked={isChecked(member.id)} />
                 {member.name || member.email}
