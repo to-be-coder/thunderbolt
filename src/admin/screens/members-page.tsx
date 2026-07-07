@@ -208,7 +208,7 @@ const MemberRow = ({
         <StatusPill tone={member.status === 'active' ? 'success' : 'muted'}>{member.status}</StatusPill>
       </TableCell>
       <TableCell className={member.isAdmin ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'}>
-        {member.isAdmin ? 'admin' : 'member'}
+        {member.isAdmin ? 'Admin' : 'Member'}
       </TableCell>
       <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
         <DropdownMenu>
@@ -262,6 +262,8 @@ const MemberDetailPanel = ({ member, onClose }: { member: Member; onClose: () =>
   const agents = agentsQuery.data ?? []
   const setAdmin = useSetMemberAdmin()
   const setGroup = useSetMemberGroup(member.id)
+  const remove = useRemoveMember()
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const savedRole: 'admin' | 'member' = member.isAdmin ? 'admin' : 'member'
   // `null` = follow the saved value; a value = an unsaved edit.
@@ -315,9 +317,47 @@ const MemberDetailPanel = ({ member, onClose }: { member: Member; onClose: () =>
     <div className="flex h-full flex-col rounded-lg border border-border">
       <div className="flex items-start justify-between gap-3 p-6 pb-4">
         <h2 className="truncate text-xl font-semibold">{member.name || member.email}</h2>
-        <Button variant="ghost" size="icon-sm" aria-label="Close details" onClick={onClose}>
-          <X className="size-4" />
-        </Button>
+        <div className="flex shrink-0 items-center gap-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label="Member actions">
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button variant="ghost" size="icon-sm" aria-label="Close details" onClick={onClose}>
+            <X className="size-4" />
+          </Button>
+        </div>
+
+        <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove {member.name || member.email}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This removes the member from the org, drops their group memberships and any individual grants, and
+                invalidates their sessions. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  remove.mutate(member.id)
+                  onClose()
+                }}
+                className="bg-destructive text-white hover:bg-destructive/90"
+              >
+                Remove member
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <section className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 pb-6">
