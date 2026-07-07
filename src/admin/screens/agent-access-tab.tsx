@@ -82,28 +82,26 @@ export const AgentAccessTab = ({ agentId }: { agentId: string }) => {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
         <p className="text-sm font-medium text-muted-foreground">Access</p>
-        <div className="flex items-center gap-2">
-          <Select value={mode} onValueChange={(value) => setPending(value as AccessMode)}>
-            <SelectTrigger className="w-40" aria-label="Access level">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="everyone">Everyone</SelectItem>
-              <SelectItem value="restricted">Restricted</SelectItem>
-              <SelectItem value="admins">Admin only</SelectItem>
-            </SelectContent>
-          </Select>
-          {dirty && (
-            <>
-              <Button variant="ghost" size="sm" onClick={() => setPending(null)} disabled={busy}>
-                Discard
-              </Button>
-              <Button size="sm" onClick={handleSaveMode} disabled={busy}>
-                {busy ? 'Saving…' : 'Save'}
-              </Button>
-            </>
-          )}
-        </div>
+        <Select value={mode} onValueChange={(value) => setPending(value as AccessMode)}>
+          <SelectTrigger className="w-full" aria-label="Access level">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="everyone">Everyone</SelectItem>
+            <SelectItem value="restricted">Restricted</SelectItem>
+            <SelectItem value="admins">Admin only</SelectItem>
+          </SelectContent>
+        </Select>
+        {dirty && (
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setPending(null)} disabled={busy}>
+              Discard
+            </Button>
+            <Button size="sm" onClick={handleSaveMode} disabled={busy}>
+              {busy ? 'Saving…' : 'Save'}
+            </Button>
+          </div>
+        )}
       </div>
 
       {savedMode === 'everyone' && (
