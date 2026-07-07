@@ -238,21 +238,31 @@ const GroupDetailPanel = ({
   )
 }
 
-/** The leading icon of an add-candidate row. On `added` the plus morphs into a
- *  green check — the plus rotates out and shrinks while the check rotates in and
- *  grows, so the two strokes appear to remould into the tick. */
-const MorphAddIcon = ({ added }: { added: boolean }) => (
+/** The leading toggle icon of a member row in the search list. Three states that
+ *  cross-morph (rotate + scale):
+ *   - not a member → muted plus (click to add).
+ *   - a member, idle → green check.
+ *   - a member, row hovered → red cross (click to remove).
+ *  Adding morphs plus→check; removing morphs check→plus. The `group/row` hover
+ *  lives on the CommandItem. */
+const ToggleIcon = ({ checked }: { checked: boolean }) => (
   <span className="relative inline-flex size-4 shrink-0 items-center justify-center">
     <Plus
       className={cn(
         'absolute size-4 text-muted-foreground transition-all duration-300 ease-out',
-        added ? 'rotate-90 scale-0 opacity-0' : 'rotate-0 scale-100 opacity-100',
+        checked ? 'rotate-90 scale-0 opacity-0' : 'rotate-0 scale-100 opacity-100',
       )}
     />
     <Check
       className={cn(
         'absolute size-4 text-green-600 transition-all duration-300 ease-out dark:text-green-500',
-        added ? 'rotate-0 scale-100 opacity-100' : '-rotate-90 scale-0 opacity-0',
+        checked ? 'rotate-0 scale-100 opacity-100 group-hover/row:opacity-0' : '-rotate-90 scale-0 opacity-0',
+      )}
+    />
+    <X
+      className={cn(
+        'absolute size-4 text-destructive transition-opacity duration-150',
+        checked ? 'opacity-0 group-hover/row:opacity-100' : 'opacity-0',
       )}
     />
   </span>
@@ -264,24 +274,36 @@ const GroupMembership = ({ group }: { group: Group }) => {
   const addMember = useAddGroupMember(group.id)
   const removeMember = useRemoveGroupMember(group.id)
   const [focused, setFocused] = useState(false)
-  const [added, setAdded] = useState<Set<string>>(new Set())
+  // In-flight toggles: 'add' | 'remove' per member id. Drives the morph and lets
+  // the icon flip instantly on click while the mutation commits after it plays.
+  const [pending, setPending] = useState<Record<string, 'add' | 'remove'>>({})
 
   const current = membershipQuery.data ?? []
   const currentIds = new Set(current.map((member) => member.id))
-  const candidates = (allMembersQuery.data ?? []).filter((member) => !currentIds.has(member.id))
+  const allMembers = allMembersQuery.data ?? []
 
-  // Play the plus→check morph first, then commit after it finishes so the row
-  // stays visible long enough for the confirmation to register before it drops.
-  const handleAdd = (memberId: string) => {
-    if (added.has(memberId)) {
+  const isChecked = (memberId: string) => {
+    const state = pending[memberId]
+    return state === 'add' ? true : state === 'remove' ? false : currentIds.has(memberId)
+  }
+
+  // Flip the icon immediately (via `pending`) so the morph plays, then commit the
+  // add/remove once it finishes.
+  const handleToggle = (memberId: string) => {
+    if (pending[memberId]) {
       return
     }
-    setAdded((prev) => new Set(prev).add(memberId))
+    const removing = currentIds.has(memberId)
+    setPending((prev) => ({ ...prev, [memberId]: removing ? 'remove' : 'add' }))
     setTimeout(() => {
-      addMember.mutate(memberId)
-      setAdded((prev) => {
-        const next = new Set(prev)
-        next.delete(memberId)
+      if (removing) {
+        removeMember.mutate(memberId)
+      } else {
+        addMember.mutate(memberId)
+      }
+      setPending((prev) => {
+        const next = { ...prev }
+        delete next[memberId]
         return next
       })
     }, 450)
@@ -289,7 +311,7 @@ const GroupMembership = ({ group }: { group: Group }) => {
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm font-medium text-muted-foreground">Add member</p>
+      <p className="text-sm font-medium text-muted-foreground">Add or remove members</p>
       <Command
         // Dictionary-style substring match: empty query shows everyone, typing
         // narrows to names/emails that CONTAIN the query (not cmdk's fuzzy scorer).
@@ -305,14 +327,15 @@ const GroupMembership = ({ group }: { group: Group }) => {
             className="absolute inset-x-0 top-full z-50 mt-1 max-h-56 rounded-lg border border-border bg-popover shadow-md"
             onMouseDown={(event) => event.preventDefault()}
           >
-            <CommandEmpty>{candidates.length === 0 ? 'No more members to add' : 'No members found'}</CommandEmpty>
-            {candidates.map((member) => (
+            <CommandEmpty>No members found</CommandEmpty>
+            {allMembers.map((member) => (
               <CommandItem
                 key={member.id}
                 value={member.name ? `${member.name} ${member.email}` : member.email}
-                onSelect={() => handleAdd(member.id)}
+                onSelect={() => handleToggle(member.id)}
+                className="group/row"
               >
-                <MorphAddIcon added={added.has(member.id)} />
+                <ToggleIcon checked={isChecked(member.id)} />
                 {member.name || member.email}
               </CommandItem>
             ))}
