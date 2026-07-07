@@ -7,12 +7,76 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { PageHeader } from '@/components/ui/page-header'
 import { cn } from '@/lib/utils'
-import { Building2, ChevronRight, Plus } from 'lucide-react'
+import { AlertTriangle, Building2, ChevronRight, Plus } from 'lucide-react'
 import { useRef, useState } from 'react'
-import { useAgents } from '../api/hooks'
-import type { TeamAgentWithCapabilities } from '../api/types'
+import { useAgents, useConnectionFailures, useGrants } from '../api/hooks'
+import type { Grant, TeamAgentWithCapabilities } from '../api/types'
 import { AgentDetailPanel } from './agent-detail-panel'
 import { AgentForm } from './agent-form'
+
+/** The agent's access mode, derived from its grants (mirrors the Access tab). */
+const accessModeLabel = (grants: Grant[]): string => {
+  if (grants.some((g) => g.targetType === 'everyone')) {
+    return 'Everyone'
+  }
+  if (grants.some((g) => g.targetType === 'admins')) {
+    return 'Admin only'
+  }
+  return 'Restricted'
+}
+
+/** A registry list row (spec §3): governance-dense — access mode · category, and
+ *  a passive failure count only when the agent has recent connection failures. */
+const RegistryCard = ({
+  agent,
+  selected,
+  onSelect,
+}: {
+  agent: TeamAgentWithCapabilities
+  selected: boolean
+  onSelect: () => void
+}) => {
+  const grantsQuery = useGrants()
+  const failures = useConnectionFailures(agent.id)
+  const agentGrants = (grantsQuery.data ?? []).filter((grant) => grant.agentId === agent.id)
+  const count = failures.data?.count ?? 0
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      data-testid={`agent-card-${agent.id}`}
+      aria-label={`Open ${agent.name}`}
+      aria-pressed={selected}
+      className={cn(
+        'flex items-center gap-3 rounded-lg border border-border px-4 py-3 text-left transition-colors',
+        selected ? 'bg-accent' : 'hover:bg-secondary/50',
+      )}
+    >
+      <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+        <Building2 className="size-5 text-muted-foreground" aria-hidden />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-medium">{agent.name}</div>
+        {/* Governance signals, static — the roster opens no connection (spec §0/§1/§3). */}
+        <p className="text-sm text-muted-foreground">
+          {accessModeLabel(agentGrants)} · <span className="capitalize">{agent.category}</span>
+        </p>
+      </div>
+      {count > 0 && (
+        <span
+          className="inline-flex items-center gap-1 text-sm font-medium text-destructive"
+          title={`${count} recent connection failure${count === 1 ? '' : 's'}`}
+          data-testid={`agent-failures-${agent.id}`}
+        >
+          <AlertTriangle className="size-3.5" />
+          {count}
+        </span>
+      )}
+      <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+    </button>
+  )
+}
 
 /**
  * S1 — Registry. The agent list fills the page until one is selected; then the
@@ -68,28 +132,12 @@ export const RegistryPage = () => {
               <p className="text-sm text-muted-foreground">No agents registered yet.</p>
             )}
             {agents.map((agent) => (
-              <button
+              <RegistryCard
                 key={agent.id}
-                type="button"
-                onClick={() => setSelectedId(agent.id)}
-                data-testid={`agent-card-${agent.id}`}
-                aria-label={`Open ${agent.name}`}
-                aria-pressed={agent.id === selectedId}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg border border-border px-4 py-3 text-left transition-colors',
-                  agent.id === selectedId ? 'bg-accent' : 'hover:bg-secondary/50',
-                )}
-              >
-                <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-md bg-muted">
-                  <Building2 className="size-5 text-muted-foreground" aria-hidden />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{agent.name}</div>
-                  {/* Static category — no ambient connection probe on the roster (spec §0/§1). */}
-                  <p className="text-sm capitalize text-muted-foreground">{agent.category}</p>
-                </div>
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-              </button>
+                agent={agent}
+                selected={agent.id === selectedId}
+                onSelect={() => setSelectedId(agent.id)}
+              />
             ))}
           </div>
         </div>
