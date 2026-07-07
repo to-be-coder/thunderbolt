@@ -16,8 +16,9 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { AlertTriangle, Info, KeyRound, MoreHorizontal, Pencil, X } from 'lucide-react'
+import { AlertTriangle, Check, Info, KeyRound, MoreHorizontal, Pencil, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useReducer, useState } from 'react'
 import {
@@ -29,13 +30,13 @@ import {
 } from '../api/hooks'
 import type { AgentCategory, TeamAgentWithCapabilities } from '../api/types'
 import { AgentAccessTab } from './agent-access-tab'
-import { CategoryInfoTooltip } from './category-info'
 import { PillTabs } from './pill-tabs'
 
 type EditorState = {
   name: string
   category: AgentCategory
   acpUrl: string
+  description: string
   editingName: boolean
   editingEndpoint: boolean
 }
@@ -44,6 +45,7 @@ const initEditor = (agent: TeamAgentWithCapabilities): EditorState => ({
   name: agent.name,
   category: agent.category,
   acpUrl: agent.acpUrl,
+  description: agent.description,
   editingName: false,
   editingEndpoint: false,
 })
@@ -52,6 +54,7 @@ type EditorAction =
   | { type: 'SET_NAME'; value: string }
   | { type: 'SET_CATEGORY'; value: AgentCategory }
   | { type: 'SET_ACP'; value: string }
+  | { type: 'SET_DESCRIPTION'; value: string }
   | { type: 'EDIT_NAME'; value: boolean }
   | { type: 'EDIT_ENDPOINT'; value: boolean }
   | { type: 'CLOSE_EDITS' }
@@ -65,6 +68,8 @@ const editorReducer = (state: EditorState, action: EditorAction): EditorState =>
       return { ...state, category: action.value }
     case 'SET_ACP':
       return { ...state, acpUrl: action.value }
+    case 'SET_DESCRIPTION':
+      return { ...state, description: action.value }
     case 'EDIT_NAME':
       return { ...state, editingName: action.value }
     case 'EDIT_ENDPOINT':
@@ -92,16 +97,25 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
   const [state, dispatch] = useReducer(editorReducer, agent, initEditor)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [tab, setTab] = useState<'details' | 'access'>('details')
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   const dirty =
-    state.name.trim() !== agent.name || state.category !== agent.category || state.acpUrl.trim() !== agent.acpUrl
+    state.name.trim() !== agent.name ||
+    state.category !== agent.category ||
+    state.acpUrl.trim() !== agent.acpUrl ||
+    state.description.trim() !== agent.description
   const saving = updateAgent.isPending
   const canSave = dirty && state.name.trim() !== '' && state.acpUrl.trim() !== ''
 
   const handleSave = async () => {
     await updateAgent.mutateAsync({
       id: agent.id,
-      patch: { name: state.name.trim(), category: state.category, acpUrl: state.acpUrl.trim() },
+      patch: {
+        name: state.name.trim(),
+        category: state.category,
+        acpUrl: state.acpUrl.trim(),
+        description: state.description.trim(),
+      },
     })
     dispatch({ type: 'CLOSE_EDITS' })
   }
@@ -182,8 +196,9 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
 
       {tab === 'details' && (
         <section className="flex flex-col gap-3">
+          {/* (a) Controls — what the admin SETS (Job 2). */}
           <div className="flex flex-col gap-4 rounded-xl bg-secondary p-4 dark:bg-sidebar">
-            <Field label="Category" labelExtra={<CategoryInfoTooltip />}>
+            <Field label="Category">
               <Select
                 value={state.category}
                 onValueChange={(value) => dispatch({ type: 'SET_CATEGORY', value: value as AgentCategory })}
@@ -196,6 +211,8 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
                   <SelectItem value="extensible">Extensible</SelectItem>
                 </SelectContent>
               </Select>
+              {/* Inline consequence, not a tooltip (spec §5.2a / D62). */}
+              <p className="text-sm text-muted-foreground">{categoryConsequence(state.category)}</p>
             </Field>
 
             <div className="flex flex-col gap-1">
@@ -223,7 +240,42 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
             </div>
           </div>
 
+          {/* (b) Authoring zone — the one prose field the admin owns + a preview (Job 3). */}
+          <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
+            <p className="text-sm font-medium text-muted-foreground">What members see</p>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="agent-purpose" className="text-sm text-muted-foreground">
+                Purpose — one honest sentence about what this agent is for.
+              </label>
+              <Textarea
+                id="agent-purpose"
+                rows={2}
+                value={state.description}
+                placeholder="e.g. Reviews pull requests and proposes fixes."
+                onChange={(event) => dispatch({ type: 'SET_DESCRIPTION', value: event.target.value })}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setPreviewOpen((open) => !open)}
+              className="w-fit cursor-pointer text-sm font-medium text-primary hover:underline"
+            >
+              {previewOpen ? 'Hide member-card preview' : 'Preview member card'}
+            </button>
+            {previewOpen && (
+              <MemberCardPreview
+                name={state.name}
+                description={state.description}
+                category={state.category}
+                acpUrl={agent.acpUrl}
+              />
+            )}
+          </div>
+
+          {/* (c) Reference — from the agent's server, read-only verification material (Job 4). */}
           <div className="flex flex-col gap-4 rounded-xl bg-secondary p-4 dark:bg-sidebar">
+            <p className="text-sm font-medium text-muted-foreground">From the agent's server — read-only</p>
+            <MatchSignal description={state.description} acpUrl={agent.acpUrl} />
             <AgentHealth agentId={agent.id} acpUrl={agent.acpUrl} />
             <AdminWiring acpUrl={agent.acpUrl} />
           </div>
@@ -313,6 +365,90 @@ const AgentHealth = ({ agentId, acpUrl }: { agentId: string; acpUrl: string }) =
     </Field>
   )
 }
+
+/** Plain-language consequence of the category — shown inline for the admin too
+ *  (spec §5.2a): the sentence, not a tooltip. */
+const categoryConsequence = (category: AgentCategory): string =>
+  category === 'extensible'
+    ? "Extensible — members' enabled skills & integrations are available to this agent."
+    : 'Sealed — runs only what it came with.'
+
+/**
+ * The authored-vs-live consistency signal (spec §5.3) — the reason this page
+ * beats unverified self-declaration. Soft v1: confirm the card is backed by a
+ * live, reachable endpoint and surface a rough capability count.
+ */
+const MatchSignal = ({ description, acpUrl }: { description: string; acpUrl: string }) => {
+  const detailQuery = useAgentEndpointDetail(acpUrl)
+  if (detailQuery.isPending) {
+    return null
+  }
+  if (detailQuery.isError || !detailQuery.data) {
+    return (
+      <p className="inline-flex items-center gap-1.5 text-sm text-destructive">
+        <AlertTriangle className="size-3.5 shrink-0" />
+        Couldn’t verify — the endpoint is unreachable.
+      </p>
+    )
+  }
+  const toolCount = detailQuery.data.tools.length
+  return (
+    <p className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+      <Check className="size-3.5 shrink-0 text-green-600 dark:text-green-500" />
+      {description.trim() ? 'Card verified against the live endpoint' : 'Add a purpose sentence to publish'} · the agent
+      advertises {toolCount} tool{toolCount === 1 ? '' : 's'}.
+    </p>
+  )
+}
+
+/** Inline "what members see" preview (spec §5.2b) — the authored About + Category
+ *  the admin controls, plus the handshake-derived kinds shown read-only. */
+const MemberCardPreview = ({
+  name,
+  description,
+  category,
+  acpUrl,
+}: {
+  name: string
+  description: string
+  category: AgentCategory
+  acpUrl: string
+}) => {
+  const detail = useAgentEndpointDetail(acpUrl).data
+  const integrations = detail?.credentials.map((credential) => credential.label) ?? []
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3" data-testid="member-preview">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Member preview</p>
+      <p className="text-base font-medium">{name}</p>
+      <PreviewField label="About">
+        <p className="text-sm">
+          {description.trim() || <span className="text-muted-foreground">No purpose yet.</span>}
+        </p>
+      </PreviewField>
+      <PreviewField label="Category">
+        <p className="text-sm">{categoryConsequence(category)}</p>
+      </PreviewField>
+      {integrations.length > 0 && (
+        <PreviewField label="Integrations">
+          <p className="text-sm">{integrations.join(' · ')}</p>
+        </PreviewField>
+      )}
+      {detail && detail.models.length > 0 && (
+        <PreviewField label="Models">
+          <p className="text-sm">{detail.models.join(' · ')} — supplied by your organization</p>
+        </PreviewField>
+      )}
+    </div>
+  )
+}
+
+const PreviewField = ({ label, children }: { label: string; children: ReactNode }) => (
+  <div className="flex flex-col gap-0.5">
+    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+    {children}
+  </div>
+)
 
 /** Live, admin-only endpoint wiring for the SAVED endpoint. */
 const AdminWiring = ({ acpUrl }: { acpUrl: string }) => {
