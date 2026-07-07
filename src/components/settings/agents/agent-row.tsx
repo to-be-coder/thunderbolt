@@ -72,10 +72,7 @@ export const AgentRow = ({
   isNewlyGranted,
   onOpen,
 }: AgentRowProps) => (
-  <Card
-    data-testid={`agent-row-${agentId}`}
-    className={cn('border border-border p-0', isNewlyGranted && 'ring-2 ring-primary/40')}
-  >
+  <Card data-testid={`agent-row-${agentId}`} className="border border-border p-0">
     <button
       type="button"
       onClick={onOpen}

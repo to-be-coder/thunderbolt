@@ -53,9 +53,14 @@ describe('PersonalAgentDetail', () => {
     expect(refresh).toHaveBeenCalledTimes(1)
   })
 
-  it('gently explains the seal in the About block', () => {
+  it('mirrors the admin wiring fields (Models / MCP servers / Tools), no Category or tabs', () => {
     renderDetail()
-    expect(screen.getByText(/your Library items/i)).toHaveTextContent(/don.?t apply here/i)
+    expect(screen.getByText('Models')).toBeInTheDocument()
+    expect(screen.getByText('MCP servers')).toBeInTheDocument()
+    expect(screen.getByText('Tools')).toBeInTheDocument()
+    // A personal agent is never shared, so there is no Category or Access tab.
+    expect(screen.queryByText('Category')).not.toBeInTheDocument()
+    expect(screen.queryByText('Access')).not.toBeInTheDocument()
   })
 
   it('is read-only apart from Test and Remove — no Start a chat', () => {

@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { Loader2, MoreHorizontal } from 'lucide-react'
 import {
@@ -17,11 +18,13 @@ import {
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useAcpAgentStatus as useAcpAgentStatus_default, type AcpAgentStatus } from '@/hooks/use-acp-agent-status'
+import { isDemoMode } from '@/lib/demo-mode'
+import { cn } from '@/lib/utils'
 import type { Agent } from '@/types/acp'
-import { AgentDetailLayout, DetailSection } from './agent-detail-layout'
-import { personalProvenanceLine } from '../agent-provenance'
+import { AgentDetailLayout } from './agent-detail-layout'
 
-/** The Status line's dot + label for the personal detail (agents-page-spec §4). */
+/** The Status line's dot + label for the personal detail — colored to match the
+ *  list row (green Connected / red Offline). */
 const StatusValue = ({ status }: { status: AcpAgentStatus }) => {
   if (status === 'checking') {
     return (
@@ -31,20 +34,38 @@ const StatusValue = ({ status }: { status: AcpAgentStatus }) => {
       </span>
     )
   }
-  if (status === 'online') {
-    return (
-      <span className="inline-flex items-center gap-1.5" data-testid="personal-status">
-        <span className="inline-block size-2 rounded-full bg-green-500" aria-hidden="true" />
-        Connected
-      </span>
-    )
-  }
+  const online = status === 'online'
   return (
-    <span className="inline-flex items-center gap-1.5 text-muted-foreground" data-testid="personal-status">
-      <span className="inline-block size-2 rounded-full border border-muted-foreground" aria-hidden="true" />
-      Offline
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 font-medium',
+        online ? 'text-green-600 dark:text-green-500' : 'text-destructive',
+      )}
+      data-testid="personal-status"
+    >
+      <span
+        className={cn('inline-block size-2 rounded-full', online ? 'bg-green-500' : 'bg-destructive')}
+        aria-hidden="true"
+      />
+      {online ? 'Connected' : 'Offline'}
     </span>
   )
+}
+
+/** The agent's brain lives on the far end of the URL. A live server would report
+ *  its own wiring; in the demo we derive a plausible per-endpoint descriptor so
+ *  the view reads like the admin registry. Outside the demo we can't introspect
+ *  a personal endpoint, so the wiring is left empty. */
+const endpointWiring = (url: string): { models: string[]; mcpServers: string[]; tools: string[] } => {
+  if (!isDemoMode() || !url) {
+    return { models: [], mcpServers: [], tools: [] }
+  }
+  const seed = url.split('/').filter(Boolean).pop() ?? 'agent'
+  return {
+    models: ['claude-opus-4-8', 'claude-haiku-4-5'],
+    mcpServers: [`${seed}-mcp`, 'shared-knowledge-mcp'],
+    tools: [`search_${seed}`, `summarize_${seed}`, 'create_note'],
+  }
 }
 
 type PersonalAgentDetailProps = {
@@ -56,12 +77,11 @@ type PersonalAgentDetailProps = {
 }
 
 /**
- * Thin management view for a personal ACP agent (agents-page-spec §4). The
- * agent's brain lives on the other end of the URL, so this view is read-only
- * apart from Test (re-runs the connection probe) and Remove. The About block
- * gently explains the seal — the member's Library items don't apply here — and
- * NO capability list is cached across disconnects. There is no Start a chat and
- * nothing configurable.
+ * Management view for a personal ACP agent. It mirrors the admin registry's
+ * detail panel — Status, Endpoint, and the live wiring (Models / MCP servers /
+ * Tools) — MINUS the tabs and Category, since a personal agent is only ever the
+ * member's own and is never shared/granted. Read-only apart from Test (re-probe)
+ * and Remove.
  */
 export const PersonalAgentDetail = ({
   agent,
@@ -71,6 +91,7 @@ export const PersonalAgentDetail = ({
 }: PersonalAgentDetailProps) => {
   const { status, refresh } = useAcpAgentStatus(agent.url)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const wiring = endpointWiring(agent.url ?? '')
 
   const handleRemove = () => {
     setConfirmOpen(false)
@@ -81,7 +102,7 @@ export const PersonalAgentDetail = ({
     <>
       <AgentDetailLayout
         name={agent.name}
-        subtitle={personalProvenanceLine(agent.url)}
+        subtitle="Your connected agent"
         menu={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -101,38 +122,38 @@ export const PersonalAgentDetail = ({
           </DropdownMenu>
         }
         body={
-          <>
-            <dl className="flex flex-col gap-3">
-              <div className="flex items-baseline gap-4">
-                <dt className="w-24 shrink-0 text-sm text-muted-foreground">Endpoint</dt>
-                <dd className="min-w-0 break-all text-base" data-testid="personal-endpoint">
-                  {agent.url}
-                </dd>
+          <section className="flex flex-col gap-4">
+            <Field label="Status">
+              <div className="flex items-center gap-3">
+                <StatusValue status={status} />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={refresh}
+                  disabled={status === 'checking'}
+                  data-testid="personal-test"
+                >
+                  Test
+                </Button>
               </div>
-              <div className="flex items-center gap-4">
-                <dt className="w-24 shrink-0 text-sm text-muted-foreground">Status</dt>
-                <dd className="flex items-center gap-3 text-base">
-                  <StatusValue status={status} />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={refresh}
-                    disabled={status === 'checking'}
-                    data-testid="personal-test"
-                  >
-                    Test
-                  </Button>
-                </dd>
-              </div>
-            </dl>
+            </Field>
 
-            <DetailSection title="About">
-              <p className="text-base text-muted-foreground">
-                This agent is configured on its own server — its model, skills, and tools come with it. Your Library
-                items don&apos;t apply here.
-              </p>
-            </DetailSection>
-          </>
+            <Field label="Endpoint">
+              <code className="text-sm break-all" data-testid="personal-endpoint">
+                {agent.url}
+              </code>
+            </Field>
+
+            <Field label="Models">
+              <TagList items={wiring.models} />
+            </Field>
+            <Field label="MCP servers">
+              <TagList items={wiring.mcpServers} />
+            </Field>
+            <Field label="Tools">
+              <TagList items={wiring.tools} />
+            </Field>
+          </section>
         }
         onBack={onBack}
       />
@@ -160,3 +181,23 @@ export const PersonalAgentDetail = ({
     </>
   )
 }
+
+const Field = ({ label, children }: { label: string; children: ReactNode }) => (
+  <div className="flex flex-col gap-1">
+    <p className="text-sm font-medium text-muted-foreground">{label}</p>
+    {children}
+  </div>
+)
+
+const TagList = ({ items }: { items: string[] }) =>
+  items.length === 0 ? (
+    <span className="text-sm text-muted-foreground">None</span>
+  ) : (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((item) => (
+        <span key={item} className="rounded-md bg-muted px-2 py-0.5 text-base">
+          {item}
+        </span>
+      ))}
+    </div>
+  )
