@@ -46,6 +46,10 @@ export type AgentCard = {
   capabilities: AgentCardCapability[]
   /** Model NAMES the agent advertises (display copy), not model configs. */
   advertisedModels: string[]
+  /** Abstracted integration CATEGORIES the agent touches — the KIND of system
+   *  ("code host", "CRM") or one rung more specific ("GitHub"), never the
+   *  instance, endpoint, scope, or credential (INVARIANT 2). Optional. */
+  integrations?: string[]
   /** Display name of the org/team that manages the agent. */
   managedBy: string
   /** Display name of the grant that made this card visible to the user. */

@@ -102,7 +102,6 @@ export const PersonalAgentDetail = ({
     <>
       <AgentDetailLayout
         name={agent.name}
-        subtitle="Your connected agent"
         menu={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

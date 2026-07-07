@@ -16,8 +16,8 @@ import { Button } from '@/components/ui/button'
  */
 type AgentDetailLayoutProps = {
   name: string
-  /** Provenance / attribution subtitle under the name. */
-  subtitle: ReactNode
+  /** Provenance / attribution subtitle under the name. Omitted when empty. */
+  subtitle?: ReactNode
   /** Read-only content sections (what-it-uses / what-it-can-do / about). */
   body: ReactNode
   /** Bottom action row (Start a chat / Remove). Absent when the view is a bare
@@ -38,7 +38,7 @@ export const AgentDetailLayout = ({ name, subtitle, body, actions, menu, onBack 
       <div className="flex min-w-0 items-center gap-2">
         <div className="min-w-0">
           <h1 className="text-xl font-medium truncate">{name}</h1>
-          <div className="text-sm text-muted-foreground">{subtitle}</div>
+          {subtitle && <div className="text-sm text-muted-foreground">{subtitle}</div>}
         </div>
         {menu}
       </div>
@@ -54,7 +54,7 @@ export const AgentDetailLayout = ({ name, subtitle, body, actions, menu, onBack 
       </Button>
     </div>
 
-    <div className="flex flex-col gap-6">{body}</div>
+    <div className="flex flex-col gap-3">{body}</div>
 
     {actions && <div className="flex flex-wrap gap-3">{actions}</div>}
   </div>

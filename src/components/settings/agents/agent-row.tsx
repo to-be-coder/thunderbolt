@@ -52,6 +52,9 @@ export type AgentRowProps = {
   status?: AcpAgentStatus
   /** One-time "grant received" highlight — a ring + "New" badge (Stage 7 T2). */
   isNewlyGranted?: boolean
+  /** Whether this row's detail is open — brightens the row like other selected
+   *  items across the app. */
+  selected?: boolean
   /** Opens the read-only detail view. Every row has a chevron and opens. */
   onOpen: () => void
 }
@@ -70,6 +73,7 @@ export const AgentRow = ({
   provenanceLine,
   status,
   isNewlyGranted,
+  selected,
   onOpen,
 }: AgentRowProps) => (
   <Card data-testid={`agent-row-${agentId}`} className="border border-border p-0">
@@ -77,7 +81,11 @@ export const AgentRow = ({
       type="button"
       onClick={onOpen}
       aria-label={`Open ${name}`}
-      className="flex items-center gap-3 w-full text-left px-4 py-3 cursor-pointer rounded-[inherit] hover:bg-secondary/50 transition-colors"
+      aria-pressed={selected}
+      className={cn(
+        'flex w-full items-center gap-3 rounded-[inherit] px-4 py-3 text-left transition-colors',
+        selected ? 'bg-accent' : 'cursor-pointer hover:bg-secondary/50',
+      )}
     >
       <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-md bg-muted">
         <Icon className="size-5 text-muted-foreground" aria-hidden="true" />

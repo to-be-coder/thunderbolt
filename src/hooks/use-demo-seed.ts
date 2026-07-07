@@ -25,6 +25,7 @@ const demoTeamAgents: AgentCard[] = [
       { label: 'Acts as you in the CRM', credentialMode: 'as_you' },
     ],
     advertisedModels: ['claude-opus-4-8', 'claude-haiku-4-5'],
+    integrations: ['Salesforce', 'Web search'],
     managedBy: 'Demo IT',
     grantedVia: 'Sales (group)',
   },

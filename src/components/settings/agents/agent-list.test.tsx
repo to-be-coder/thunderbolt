@@ -81,15 +81,18 @@ describe('AgentList — sections + provenance', () => {
     expect(screen.getByTestId('agent-section-yours')).toBeInTheDocument()
   })
 
-  it('renders the exact provenance copy per agent kind', () => {
+  it('renders the exact secondary line per agent kind', () => {
     renderList()
-    expect(screen.getByTestId('agent-provenance-sales')).toHaveTextContent('Extensible')
-    expect(screen.getByTestId('agent-provenance-finance')).toHaveTextContent('Sealed')
+    // Org agents show a connection status (not their category) in the list.
+    const salesLine = screen.getByTestId('agent-provenance-sales')
+    expect(salesLine).toHaveTextContent('Connected')
+    expect(salesLine).not.toHaveTextContent(/extensible/i)
+    expect(screen.getByTestId('agent-provenance-finance')).toHaveTextContent('Connected')
+    // The native row keeps its Library provenance.
     expect(screen.getByTestId(`agent-provenance-${builtInAgent.id}`)).toHaveTextContent(
       'Your agent · uses your Library',
     )
-    // Personal rows show the live connection status (colored) in place of the
-    // endpoint provenance — the stub reports 'online' → "Connected".
+    // Personal rows show the live connection status in place of the endpoint.
     const personalStatus = screen.getByTestId('agent-provenance-custom-1')
     expect(personalStatus).toHaveTextContent('Connected')
     expect(personalStatus).not.toHaveTextContent('home.example.dev')

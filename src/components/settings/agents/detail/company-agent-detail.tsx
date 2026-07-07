@@ -40,6 +40,24 @@ const CategorySection = ({ card }: { card: AgentCard }) => {
   )
 }
 
+/** Info tooltip next to the Integrations section — the abstraction is the point. */
+const IntegrationsInfoTooltip = () => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <button
+        type="button"
+        aria-label="What are these?"
+        className="text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <Info className="size-3.5" />
+      </button>
+    </TooltipTrigger>
+    <TooltipContent className="max-w-xs text-sm">
+      The kinds of systems this agent connects to — never the specific instance, endpoint, scope, or credentials.
+    </TooltipContent>
+  </Tooltip>
+)
+
 /** Info tooltip next to the Models section — the member can't change these. */
 const ModelsInfoTooltip = () => (
   <Tooltip>
@@ -106,6 +124,18 @@ export const CompanyAgentDetail = ({
             ))}
           </ul>
         </DetailSection>
+
+        {card.integrations && card.integrations.length > 0 && (
+          <DetailSection title="Integrations" titleExtra={<IntegrationsInfoTooltip />}>
+            <div className="flex flex-wrap gap-1.5" data-testid="company-integrations">
+              {card.integrations.map((integration) => (
+                <span key={integration} className="rounded-md bg-muted px-2 py-0.5 text-base">
+                  {integration}
+                </span>
+              ))}
+            </div>
+          </DetailSection>
+        )}
 
         <DetailSection title="Models" titleExtra={<ModelsInfoTooltip />}>
           {card.advertisedModels.length === 0 ? (

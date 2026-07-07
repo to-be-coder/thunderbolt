@@ -28,6 +28,7 @@ export const rowToCard = (row: TeamAgentsCacheRow): AgentCard => ({
   category: row.category,
   capabilities: row.capabilities,
   advertisedModels: row.advertisedModels,
+  integrations: row.integrations ?? undefined,
   managedBy: row.managedBy,
   grantedVia: row.grantedVia,
 })

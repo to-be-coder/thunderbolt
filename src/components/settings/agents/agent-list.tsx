@@ -10,7 +10,7 @@ import { useNewlyGrantedTeamAgents as useNewlyGrantedTeamAgents_default } from '
 import type { Agent } from '@/types/acp'
 import { AgentRow } from './agent-row'
 import { PersonalAgentRow } from './personal-agent-row'
-import { companyProvenanceLine, nativeProvenanceLine } from './agent-provenance'
+import { nativeProvenanceLine } from './agent-provenance'
 
 /** The section label copy mirrors the composer agent selector (spec §1). */
 const ORG_SECTION_LABEL = 'FROM YOUR ORGANIZATION'
@@ -29,6 +29,8 @@ type AgentListProps = {
   /** The member removed the built-in Thunderbolt agent (a per-user preference) —
    *  hide its row here even when org policy would otherwise show it. */
   nativeHidden?: boolean
+  /** The agent id whose detail is currently open — brightens that row. */
+  selectedId?: string | null
   /** Opens the read-only detail view for the given agent id. */
   onOpenAgent: (agentId: string) => void
   /** Injectable status probe for the personal rows (tests inject a stub). */
@@ -54,6 +56,7 @@ export const AgentList = ({
   personalAgents,
   policy,
   nativeHidden = false,
+  selectedId,
   onOpenAgent,
   useAcpAgentStatus,
   useNewlyGrantedTeamAgents = useNewlyGrantedTeamAgents_default,
@@ -75,8 +78,12 @@ export const AgentList = ({
                 agentId={card.id}
                 icon={Building2}
                 name={card.name}
-                provenanceLine={companyProvenanceLine(card)}
+                provenanceLine=""
+                // Org agents are hosted + granted by the org, so in the member
+                // view they read as connected (no category shown here).
+                status="online"
                 isNewlyGranted={newlyGranted.has(card.id)}
+                selected={selectedId === card.id}
                 onOpen={() => onOpenAgent(card.id)}
               />
             ))}
@@ -94,6 +101,7 @@ export const AgentList = ({
                 icon={Zap}
                 name={builtInAgent.name}
                 provenanceLine={nativeProvenanceLine()}
+                selected={selectedId === builtInAgent.id}
                 onOpen={() => onOpenAgent(builtInAgent.id)}
               />
             )}
@@ -101,6 +109,7 @@ export const AgentList = ({
               <PersonalAgentRow
                 key={agent.id}
                 agent={agent}
+                selected={selectedId === agent.id}
                 onOpen={() => onOpenAgent(agent.id)}
                 useAcpAgentStatus={useAcpAgentStatus}
               />

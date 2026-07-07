@@ -330,6 +330,7 @@ export const teamAgentsCacheTable = sqliteTable('team_agents_cache', {
   category: text('category', { enum: ['sealed', 'extensible'] }).notNull(),
   capabilities: text('capabilities', { mode: 'json' }).$type<AgentCardCapability[]>().notNull(),
   advertisedModels: text('advertised_models', { mode: 'json' }).$type<string[]>().notNull(),
+  integrations: text('integrations', { mode: 'json' }).$type<string[]>(),
   managedBy: text('managed_by').notNull(),
   grantedVia: text('granted_via').notNull(),
   fetchedAt: text('fetched_at').notNull(),

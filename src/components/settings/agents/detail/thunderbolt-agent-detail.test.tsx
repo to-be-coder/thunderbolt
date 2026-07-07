@@ -24,19 +24,19 @@ const renderDetail = (overrides: { onRemove?: () => void; onBack?: () => void } 
   )
 
 describe('ThunderboltAgentDetail', () => {
-  it('renders the native provenance subtitle', () => {
+  it('has no provenance subtitle under the title', () => {
     renderDetail()
-    expect(screen.getByText('Your agent · uses your Library')).toBeInTheDocument()
+    expect(screen.queryByText('Your agent · uses your Library')).not.toBeInTheDocument()
   })
 
   it('shows the live Library counts in the "What it uses" summary', () => {
     renderDetail()
-    expect(screen.getByTestId('library-summary')).toHaveTextContent('4 skills · 2 MCP servers · 1 extension')
+    expect(screen.getByTestId('library-summary')).toHaveTextContent('4 skills · 2 MCP servers · 1 integration')
   })
 
-  it('renders the instrumented Manage in Library link', () => {
+  it('has no Manage in Library link', () => {
     renderDetail()
-    expect(screen.getByTestId('manage-in-library-link')).toBeInTheDocument()
+    expect(screen.queryByTestId('manage-in-library-link')).not.toBeInTheDocument()
   })
 
   it('is read-only — no model line, no form fields, no Start a chat', () => {

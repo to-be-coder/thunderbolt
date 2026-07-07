@@ -100,6 +100,7 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
             personalAgents={personalAgents}
             policy={policy}
             nativeHidden={nativeHidden}
+            selectedId={detailMatch?.params.agentId ?? null}
             onOpenAgent={(agentId) => navigate(`/settings/agents/${agentId}`)}
           />
         </div>

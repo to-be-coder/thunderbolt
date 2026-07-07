@@ -16,11 +16,10 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Link } from 'react-router'
 import { builtInAgent } from '@/defaults/agents'
 import { useLibraryCounts as useLibraryCounts_default } from '@/hooks/use-library-counts'
 import { AgentDetailLayout, DetailSection } from './agent-detail-layout'
-import { ManageInLibraryLink } from '../manage-in-library-link'
-import { formatLibrarySummary, nativeProvenanceLine } from '../agent-provenance'
 
 type ThunderboltAgentDetailProps = {
   onBack: () => void
@@ -55,7 +54,6 @@ export const ThunderboltAgentDetail = ({
     <>
       <AgentDetailLayout
         name={builtInAgent.name}
-        subtitle={nativeProvenanceLine()}
         menu={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -85,9 +83,29 @@ export const ThunderboltAgentDetail = ({
             <DetailSection title="What it uses">
               <p className="text-base">Uses everything enabled in your Library:</p>
               <p className="text-base font-medium" data-testid="library-summary">
-                {formatLibrarySummary(counts)}
+                {[
+                  { count: counts.skills, singular: 'skill', plural: 'skills', to: '/settings/skills' },
+                  {
+                    count: counts.mcpServers,
+                    singular: 'MCP server',
+                    plural: 'MCP servers',
+                    to: '/settings/mcp-servers',
+                  },
+                  {
+                    count: counts.extensions,
+                    singular: 'integration',
+                    plural: 'integrations',
+                    to: '/settings/integrations',
+                  },
+                ].map((link, index) => (
+                  <span key={link.to}>
+                    {index > 0 && <span className="text-muted-foreground"> · </span>}
+                    <Link to={link.to} className="underline underline-offset-4 hover:text-foreground">
+                      {link.count} {link.count === 1 ? link.singular : link.plural}
+                    </Link>
+                  </span>
+                ))}
               </p>
-              <ManageInLibraryLink agentKind="thunderbolt" agentId={builtInAgent.id} />
             </DetailSection>
           </>
         }

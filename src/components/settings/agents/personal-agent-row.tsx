@@ -10,6 +10,7 @@ import { personalProvenanceLine } from './agent-provenance'
 
 type PersonalAgentRowProps = {
   agent: Agent
+  selected?: boolean
   onOpen: () => void
   /** Injectable for tests — production probes the real endpoint on mount. */
   useAcpAgentStatus?: typeof useAcpAgentStatus_default
@@ -22,6 +23,7 @@ type PersonalAgentRowProps = {
  */
 export const PersonalAgentRow = ({
   agent,
+  selected,
   onOpen,
   useAcpAgentStatus = useAcpAgentStatus_default,
 }: PersonalAgentRowProps) => {
@@ -33,6 +35,7 @@ export const PersonalAgentRow = ({
       name={agent.name}
       provenanceLine={personalProvenanceLine(agent.url)}
       status={status}
+      selected={selected}
       onOpen={onOpen}
     />
   )
