@@ -9,12 +9,16 @@ import { Suspense } from 'react'
 import { Outlet, useLocation } from 'react-router'
 
 // Sub-routes that provide their own page chrome and want the full content height.
-// The settings-level Header would otherwise add ~56px of unused space at the top.
-const routesWithOwnHeader = new Set(['/settings/skills'])
+// The settings-level Header (sidebar toggle + PowerSync status) would otherwise
+// add ~56px of unused space at the top. Matched by prefix so nested detail routes
+// (e.g. /settings/agents/:agentId) are covered too.
+const routesWithOwnHeader = ['/settings/skills', '/settings/agents']
 
 const SettingsLayout = () => {
   const location = useLocation()
-  const showHeader = !routesWithOwnHeader.has(location.pathname)
+  const showHeader = !routesWithOwnHeader.some(
+    (route) => location.pathname === route || location.pathname.startsWith(`${route}/`),
+  )
 
   return (
     <>

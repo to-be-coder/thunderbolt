@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import '@testing-library/jest-dom'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, mock } from 'bun:test'
+import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it } from 'bun:test'
 import { MemoryRouter } from 'react-router'
 import type { AgentCard } from '@shared/agent-cards'
 import { CompanyAgentDetail } from './company-agent-detail'
@@ -30,10 +30,10 @@ const baseCard: AgentCard = {
   grantedVia: 'Sales (group)',
 }
 
-const renderCard = (card: AgentCard, onStartChat: () => void = () => {}) =>
+const renderCard = (card: AgentCard) =>
   render(
     <MemoryRouter>
-      <CompanyAgentDetail card={card} onBack={() => {}} onStartChat={onStartChat} />
+      <CompanyAgentDetail card={card} onBack={() => {}} />
     </MemoryRouter>,
   )
 
@@ -70,10 +70,8 @@ describe('CompanyAgentDetail', () => {
     expect(screen.queryByTestId('capability-connect')).not.toBeInTheDocument()
   })
 
-  it('fires onStartChat', () => {
-    const onStartChat = mock(() => {})
-    renderCard(baseCard, onStartChat)
-    fireEvent.click(screen.getByTestId('agent-start-chat'))
-    expect(onStartChat).toHaveBeenCalledTimes(1)
+  it('has no Start a chat action', () => {
+    renderCard(baseCard)
+    expect(screen.queryByTestId('agent-start-chat')).not.toBeInTheDocument()
   })
 })

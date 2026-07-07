@@ -12,12 +12,12 @@ afterEach(() => {
   cleanup()
 })
 
-const renderDetail = (overrides: { onStartChat?: () => void; onBack?: () => void } = {}) =>
+const renderDetail = (overrides: { onRemove?: () => void; onBack?: () => void } = {}) =>
   render(
     <MemoryRouter>
       <ThunderboltAgentDetail
         onBack={overrides.onBack ?? (() => {})}
-        onStartChat={overrides.onStartChat ?? (() => {})}
+        onRemove={overrides.onRemove ?? (() => {})}
         useLibraryCounts={() => ({ skills: 4, mcpServers: 2, extensions: 1 })}
       />
     </MemoryRouter>,
@@ -39,16 +39,22 @@ describe('ThunderboltAgentDetail', () => {
     expect(screen.getByTestId('manage-in-library-link')).toBeInTheDocument()
   })
 
-  it('is read-only — no model line and no form fields', () => {
+  it('is read-only — no model line, no form fields, no Start a chat', () => {
     renderDetail()
     expect(screen.queryByText(/set by your organization/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-start-chat')).not.toBeInTheDocument()
   })
 
-  it('fires onStartChat from the only primary action', () => {
-    const onStartChat = mock(() => {})
-    renderDetail({ onStartChat })
-    fireEvent.click(screen.getByTestId('agent-start-chat'))
-    expect(onStartChat).toHaveBeenCalledTimes(1)
+  it('fires onRemove after confirming from the 3-dots menu', () => {
+    const onRemove = mock(() => {})
+    renderDetail({ onRemove })
+    // Remove lives behind the 3-dots menu; Radix opens on pointerdown.
+    const trigger = screen.getByTestId('thunderbolt-menu')
+    fireEvent.pointerDown(trigger, { button: 0, pointerType: 'mouse' })
+    fireEvent.pointerUp(trigger, { button: 0, pointerType: 'mouse' })
+    fireEvent.click(screen.getByTestId('thunderbolt-remove'))
+    fireEvent.click(screen.getByTestId('thunderbolt-remove-confirm'))
+    expect(onRemove).toHaveBeenCalledTimes(1)
   })
 })

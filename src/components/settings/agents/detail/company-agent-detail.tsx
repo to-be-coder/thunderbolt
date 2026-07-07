@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import type { AgentCard, AgentCardCapability } from '@shared/agent-cards'
-import { Button } from '@/components/ui/button'
 import { AgentDetailLayout, DetailSection } from './agent-detail-layout'
 import { CompanyCapabilityRow } from './company-capability-row'
 import { ManageInLibraryLink } from '../manage-in-library-link'
@@ -43,7 +42,6 @@ const CategoryBanner = ({ card, agentId }: { card: AgentCard; agentId: string })
 type CompanyAgentDetailProps = {
   card: AgentCard
   onBack: () => void
-  onStartChat: () => void
   onConnectCapability?: (capability: AgentCardCapability) => void
   onDisconnectCapability?: (capability: AgentCardCapability) => void
 }
@@ -59,7 +57,6 @@ type CompanyAgentDetailProps = {
 export const CompanyAgentDetail = ({
   card,
   onBack,
-  onStartChat,
   onConnectCapability = () => {},
   onDisconnectCapability = () => {},
 }: CompanyAgentDetailProps) => (
@@ -95,11 +92,6 @@ export const CompanyAgentDetail = ({
           <p data-testid="company-managed-by">Managed by: {card.managedBy}</p>
         </div>
       </>
-    }
-    actions={
-      <Button onClick={onStartChat} data-testid="agent-start-chat">
-        Start a chat
-      </Button>
     }
     onBack={onBack}
   />

@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
 import { SlideInPanel } from '@/components/slide-in-panel'
 import { AgentList } from '@/components/settings/agents/agent-list'
-import { AgentCatalog } from '@/components/settings/agents/agent-catalog'
 import { AddCustomAgentDialog, type AddCustomAgentPayload } from '@/components/settings/agents/add-custom-agent-dialog'
 import { testAcpConnection } from '@/acp'
 import { createAgent } from '@/dal'
@@ -20,6 +19,7 @@ import { useOrgPolicy } from '@/dal/use-org-policy'
 import { useDatabase, useAuth } from '@/contexts'
 import { selectAllowCustomAgents, useConfigStore } from '@/api/config-store'
 import { useAgentsSettingsHidden } from '@/hooks/use-agents-settings-hidden'
+import { useThunderboltAgentHidden } from '@/hooks/use-thunderbolt-agent-hidden'
 
 type AgentsSettingsPageProps = {
   /** Test seam — production omits; the hidden-check hook falls back to
@@ -48,6 +48,7 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
   const { data: session } = authClient.useSession()
   const currentUserId = session?.user?.id ?? null
   const agentsHidden = useAgentsSettingsHidden({ isStandalone })
+  const nativeHidden = useThunderboltAgentHidden()
   const allowCustomAgents = useConfigStore((state) => selectAllowCustomAgents(state.config))
 
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -98,6 +99,7 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
             teamCards={teamCards}
             personalAgents={personalAgents}
             policy={policy}
+            nativeHidden={nativeHidden}
             onOpenAgent={(agentId) => navigate(`/settings/agents/${agentId}`)}
           />
         </div>
@@ -114,7 +116,6 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
         onOpenChange={setDialogOpen}
         onSubmit={handleSubmit}
         testAcpConnection={testAcpConnection}
-        catalogSlot={<AgentCatalog />}
       />
     </div>
   )

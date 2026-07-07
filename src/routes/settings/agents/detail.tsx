@@ -6,7 +6,7 @@ import { useNavigate, useParams } from 'react-router'
 import type { AgentCard } from '@shared/agent-cards'
 import { useDatabase } from '@/contexts'
 import { deleteAgent, updateSettings } from '@/dal'
-import type { AgentKind } from '@/dal/chat-threads'
+import { THUNDERBOLT_HIDDEN_SETTING_KEY } from '@/hooks/use-thunderbolt-agent-hidden'
 import { useAgents } from '@/dal/agents'
 import { useTeamAgents } from '@/dal/use-team-agents'
 import { builtInAgent } from '@/defaults/agents'
@@ -61,30 +61,20 @@ export default function AgentDetailPage() {
 
   const onBack = () => navigate('/settings/agents')
 
-  // Start a chat: persist the agent (and its kind) as the last-used default,
-  // then open a fresh chat which hydrates against that selection. The kind is
-  // essential for TEAM agents — they aren't `Agent` rows, so without the crumb
-  // hydration can't tell a company-card id from a personal-agent id and the
-  // binding is lost (the new thread would fall back to the built-in agent).
-  const startChatWith = async (id: string, kind: AgentKind) => {
-    await updateSettings(db, { selected_agent: id, selected_agent_kind: kind })
-    navigate('/chats/new')
-  }
-
   if (target.kind === 'thunderbolt') {
     return (
-      <ThunderboltAgentDetail onBack={onBack} onStartChat={() => void startChatWith(builtInAgent.id, 'thunderbolt')} />
+      <ThunderboltAgentDetail
+        onBack={onBack}
+        onRemove={async () => {
+          await updateSettings(db, { [THUNDERBOLT_HIDDEN_SETTING_KEY]: 'true' })
+          navigate('/settings/agents')
+        }}
+      />
     )
   }
 
   if (target.kind === 'team') {
-    return (
-      <CompanyAgentDetail
-        card={target.card}
-        onBack={onBack}
-        onStartChat={() => void startChatWith(target.card.id, 'team')}
-      />
-    )
+    return <CompanyAgentDetail card={target.card} onBack={onBack} />
   }
 
   if (target.kind === 'personal') {

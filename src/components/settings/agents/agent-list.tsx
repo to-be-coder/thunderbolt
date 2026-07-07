@@ -26,6 +26,9 @@ type AgentListProps = {
   teamCards: AgentCard[]
   personalAgents: Agent[]
   policy: OrgPolicy
+  /** The member removed the built-in Thunderbolt agent (a per-user preference) —
+   *  hide its row here even when org policy would otherwise show it. */
+  nativeHidden?: boolean
   /** Opens the read-only detail view for the given agent id. */
   onOpenAgent: (agentId: string) => void
   /** Injectable status probe for the personal rows (tests inject a stub). */
@@ -50,13 +53,14 @@ export const AgentList = ({
   teamCards,
   personalAgents,
   policy,
+  nativeHidden = false,
   onOpenAgent,
   useAcpAgentStatus,
   useNewlyGrantedTeamAgents = useNewlyGrantedTeamAgents_default,
 }: AgentListProps) => {
   const showOrgSection = teamCards.length > 0
   const showYoursSection = policy.personalAgentPolicy !== 'company_only'
-  const showNativeRow = policy.personalAgentPolicy !== 'no_native'
+  const showNativeRow = policy.personalAgentPolicy !== 'no_native' && !nativeHidden
   const newlyGranted = useNewlyGrantedTeamAgents()
 
   return (
