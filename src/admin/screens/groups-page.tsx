@@ -243,6 +243,7 @@ const GroupMembership = ({ group }: { group: Group }) => {
   const allMembersQuery = useMembers()
   const addMember = useAddGroupMember(group.id)
   const removeMember = useRemoveGroupMember(group.id)
+  const [focused, setFocused] = useState(false)
 
   const current = membershipQuery.data ?? []
   const currentIds = new Set(current.map((member) => member.id))
@@ -257,22 +258,26 @@ const GroupMembership = ({ group }: { group: Group }) => {
         // Dictionary-style substring match: empty query shows everyone, typing
         // narrows to names/emails that CONTAIN the query (not cmdk's fuzzy scorer).
         filter={(value, search) => (value.toLowerCase().includes(search.toLowerCase().trim()) ? 1 : 0)}
-        className="rounded-lg border border-border"
+        className="overflow-visible rounded-lg border border-border"
       >
-        <CommandInput placeholder="Search members…" />
-        <CommandList className="max-h-56">
-          <CommandEmpty>{candidates.length === 0 ? 'No more members to add' : 'No members found'}</CommandEmpty>
-          {candidates.map((member) => (
-            <CommandItem
-              key={member.id}
-              value={member.name ? `${member.name} ${member.email}` : member.email}
-              onSelect={() => handleAdd(member.id)}
-            >
-              <Plus className="size-4 text-muted-foreground" />
-              {member.name || member.email}
-            </CommandItem>
-          ))}
-        </CommandList>
+        <CommandInput placeholder="Search members…" onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
+        {/* The candidate list is only revealed on focus. `onMouseDown` preventDefault
+            keeps the input focused so a click lands on the item instead of blurring first. */}
+        {focused && (
+          <CommandList className="max-h-56" onMouseDown={(event) => event.preventDefault()}>
+            <CommandEmpty>{candidates.length === 0 ? 'No more members to add' : 'No members found'}</CommandEmpty>
+            {candidates.map((member) => (
+              <CommandItem
+                key={member.id}
+                value={member.name ? `${member.name} ${member.email}` : member.email}
+                onSelect={() => handleAdd(member.id)}
+              >
+                <Plus className="size-4 text-muted-foreground" />
+                {member.name || member.email}
+              </CommandItem>
+            ))}
+          </CommandList>
+        )}
       </Command>
 
       <p className="mt-2 text-sm font-medium text-muted-foreground">Members</p>
