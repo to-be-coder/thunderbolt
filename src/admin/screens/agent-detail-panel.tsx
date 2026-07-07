@@ -189,7 +189,7 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
               type="button"
               aria-label="Edit endpoint"
               onClick={() => dispatch({ type: 'EDIT_ENDPOINT', value: !state.editingEndpoint })}
-              className="text-muted-foreground transition-colors hover:text-foreground"
+              className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
             >
               <Pencil className="size-3.5" />
             </button>
