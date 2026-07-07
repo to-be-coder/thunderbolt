@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react'
 import { useDatabase } from '@/contexts'
 import { replaceTeamAgentsCache } from '@/dal/team-agents-cache'
 import { setOrgPolicy } from '@/dal/org-policy'
+import { createAgent, getAllAgents } from '@/dal/agents'
 import { isDemoMode } from '@/lib/demo-mode'
 import type { AgentCard, OrgPolicy } from '@shared/agent-cards'
 
@@ -40,6 +41,15 @@ const demoTeamAgents: AgentCard[] = [
   },
 ]
 
+/** A demo personal (custom ACP) agent so the Agents page "Yours" section isn't
+ *  just the built-in — a pretend endpoint the member connected themselves. */
+const demoPersonalAgent = {
+  id: 'demo-personal-acp',
+  name: 'Research Assistant',
+  acpUrl: 'wss://acp.demo.thunderbolt/research',
+  userId: 'demo-user',
+}
+
 const demoPolicy: OrgPolicy = {
   personalAgentPolicy: 'all',
   userModelsAllowed: true,
@@ -65,5 +75,18 @@ export const useDemoSeed = (): void => {
     seededRef.current = true
     void replaceTeamAgentsCache(db, demoTeamAgents)
     void setOrgPolicy(db, demoPolicy)
+    // Insert the demo personal agent once — the seed re-runs on every reload, so
+    // guard on its id (createAgent does a plain insert and would collide).
+    void (async () => {
+      const existing = await getAllAgents(db)
+      if (!existing.some((row) => row.id === demoPersonalAgent.id)) {
+        await createAgent(db, {
+          id: demoPersonalAgent.id,
+          name: demoPersonalAgent.name,
+          acpUrl: demoPersonalAgent.acpUrl,
+          userId: demoPersonalAgent.userId,
+        })
+      }
+    })()
   }, [db])
 }
