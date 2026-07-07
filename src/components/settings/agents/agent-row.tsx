@@ -71,7 +71,9 @@ export const AgentRow = ({
       aria-label={`Open ${name}`}
       className="flex items-center gap-3 w-full text-left px-4 py-3 cursor-pointer rounded-[inherit] hover:bg-secondary/50 transition-colors"
     >
-      <Icon className="size-5 text-muted-foreground shrink-0" aria-hidden="true" />
+      <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+        <Icon className="size-5 text-muted-foreground" aria-hidden="true" />
+      </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-[length:var(--font-size-body)] font-medium truncate">{name}</span>

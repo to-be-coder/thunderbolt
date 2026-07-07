@@ -81,7 +81,9 @@ export const RegistryPage = () => {
                   agent.id === selectedId ? 'bg-accent' : 'hover:bg-secondary/50',
                 )}
               >
-                <Building2 className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+                <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+                  <Building2 className="size-5 text-muted-foreground" aria-hidden />
+                </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{agent.name}</div>
                   <AgentConnectionIndicator acpUrl={agent.acpUrl} />
