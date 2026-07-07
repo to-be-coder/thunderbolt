@@ -473,6 +473,10 @@ export const createDemoAdminApi = (): AdminApi => {
       return { count: incidents.length, since: incidents[0]?.ts ?? null }
     },
     describeEndpoint: async (acpUrl: string): Promise<AgentEndpointDetail> => {
+      // An unreachable endpoint has no wiring to report — the live fetch fails.
+      if (acpUrl === FLAKY_ACP_URL) {
+        throw new Error('Could not reach the endpoint')
+      }
       // A live server returns its own wiring; the demo derives a plausible,
       // per-endpoint descriptor from the URL so each agent reads differently.
       const seed = acpUrl.split('/').filter(Boolean).pop() ?? 'agent'

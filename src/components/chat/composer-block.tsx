@@ -28,7 +28,13 @@ export const resolveComposerBlock = (params: {
   if (descriptor.kind === 'team' && descriptor.revoked) {
     return { kind: 'revoked' }
   }
-  if (descriptor.kind === 'personal' && connectionStatus === 'error' && connectionError != null) {
+  // A failed connection at session start blocks the composer for any connected
+  // agent kind — personal ACP or team (spec §5). Thunderbolt never connects.
+  if (
+    (descriptor.kind === 'personal' || descriptor.kind === 'team') &&
+    connectionStatus === 'error' &&
+    connectionError != null
+  ) {
     return { kind: 'offline' }
   }
   if (descriptor.kind === 'thunderbolt' && modelCount === 0) {
@@ -100,19 +106,31 @@ export const ComposerBlock = ({
     setTestResult(result.success ? 'Connection restored — reopen the chat to continue.' : result.error)
   }
 
+  // Spec §5: only an AGENT-side failure was reported to the admin — a member's
+  // own offline state was not, so the copy must not claim a report was sent.
+  const isMemberOffline = typeof navigator !== 'undefined' && navigator.onLine === false
+  const message = isMemberOffline
+    ? "Couldn't connect. Check your connection and try again."
+    : `Couldn't connect to ${descriptor.name}. This has been reported to your admin.`
+
   return (
     <div className="flex flex-col items-center gap-2 rounded-2xl border bg-card px-4 py-3 text-center">
       <div className="flex items-center gap-2 text-muted-foreground text-[length:var(--font-size-sm)]">
         <WifiOff className="size-[var(--icon-size-default)] shrink-0" />
-        <span>{descriptor.name} is offline. Messages can't be sent right now.</span>
+        <span role="alert">{message}</span>
       </div>
-      <Button size="sm" variant="outline" disabled={isTesting} onClick={handleTest}>
-        {isTesting ? 'Testing…' : 'Test connection'}
-      </Button>
-      {testResult && (
-        <span role="status" className="text-muted-foreground text-[length:var(--font-size-xs)]">
-          {testResult}
-        </span>
+      {/* Members can only re-probe their own (personal) endpoint. */}
+      {agentUrl && (
+        <>
+          <Button size="sm" variant="outline" disabled={isTesting} onClick={handleTest}>
+            {isTesting ? 'Testing…' : 'Test connection'}
+          </Button>
+          {testResult && (
+            <span role="status" className="text-muted-foreground text-[length:var(--font-size-xs)]">
+              {testResult}
+            </span>
+          )}
+        </>
       )}
     </div>
   )

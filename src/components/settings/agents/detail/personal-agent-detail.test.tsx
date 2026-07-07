@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import '@testing-library/jest-dom'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, mock } from 'bun:test'
 import type { Agent } from '@/types/acp'
 import { PersonalAgentDetail } from './personal-agent-detail'
@@ -26,31 +26,33 @@ const agent: Agent = {
   userId: 'user-1',
 }
 
-const onlineStatus = (() => ({ status: 'online' as const, refresh: () => {} })) as never
+const reachableProbe = (async () => ({ success: true }) as const) as never
 
-const renderDetail = (overrides: { onRemove?: () => void; useAcpAgentStatus?: never } = {}) =>
+const renderDetail = (overrides: { onRemove?: () => void; testAcpConnection?: never } = {}) =>
   render(
     <PersonalAgentDetail
       agent={agent}
       onBack={() => {}}
       onRemove={overrides.onRemove ?? (() => {})}
-      useAcpAgentStatus={overrides.useAcpAgentStatus ?? onlineStatus}
+      testAcpConnection={overrides.testAcpConnection ?? reachableProbe}
     />,
   )
 
 describe('PersonalAgentDetail', () => {
-  it('renders the endpoint and connected status', () => {
+  it('shows the endpoint and a Not-tested status on view (no probe on open — spec §0)', () => {
     renderDetail()
     expect(screen.getByTestId('personal-endpoint')).toHaveTextContent('wss://home.example.dev/agent')
-    expect(screen.getByTestId('personal-status')).toHaveTextContent('Connected')
+    expect(screen.getByTestId('personal-status')).toHaveTextContent('Not tested')
   })
 
-  it('re-probes when Test is clicked', () => {
-    const refresh = mock(() => {})
-    const stub = (() => ({ status: 'online' as const, refresh })) as never
-    renderDetail({ useAcpAgentStatus: stub })
-    fireEvent.click(screen.getByTestId('personal-test'))
-    expect(refresh).toHaveBeenCalledTimes(1)
+  it('probes on demand when Test is clicked and shows the result', async () => {
+    const probe = mock(async () => ({ success: true }) as const) as never
+    renderDetail({ testAcpConnection: probe })
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('personal-test'))
+    })
+    expect(probe).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId('personal-status')).toHaveTextContent('Reachable')
   })
 
   it('mirrors the admin wiring fields (Models / MCP servers / Tools), no Category or tabs', () => {

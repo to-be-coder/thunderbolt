@@ -40,6 +40,20 @@ const demoTeamAgents: AgentCard[] = [
     managedBy: 'Demo IT',
     grantedVia: 'Finance (group)',
   },
+  // Demo-only agent whose connection always fails — granted to everyone so the
+  // member sees the connection-failure states (spec §6). Its member card matches
+  // the admin registry entry.
+  {
+    id: 'demo-flaky-agent',
+    name: 'Flaky Test Agent',
+    icon: 'bug',
+    description: 'A demo agent whose endpoint always fails to connect — used to review the connection-failure states.',
+    category: 'sealed',
+    capabilities: [],
+    advertisedModels: [],
+    managedBy: 'Demo IT',
+    grantedVia: 'Everyone',
+  },
 ]
 
 /** A demo personal (custom ACP) agent so the Agents page "Yours" section isn't

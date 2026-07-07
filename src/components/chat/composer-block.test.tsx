@@ -102,7 +102,9 @@ describe('ComposerBlock', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText(/is offline/i)).toBeInTheDocument()
+    // Agent-side failure (jsdom navigator is online) → the "reported to admin" copy (spec §5).
+    expect(screen.getByText(/reported to your admin/i)).toBeInTheDocument()
+    expect(screen.getByText(/couldn.t connect to my agent/i)).toBeInTheDocument()
     await act(async () => {
       fireEvent.click(screen.getByText('Test connection'))
     })

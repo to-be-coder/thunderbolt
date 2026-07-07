@@ -15,39 +15,48 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { testAcpConnection as testAcpConnection_default } from '@/acp'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { useAcpAgentStatus as useAcpAgentStatus_default, type AcpAgentStatus } from '@/hooks/use-acp-agent-status'
 import { isDemoMode } from '@/lib/demo-mode'
 import { cn } from '@/lib/utils'
 import type { Agent } from '@/types/acp'
 import { AgentDetailLayout } from './agent-detail-layout'
 
-/** The Status line's dot + label for the personal detail — colored to match the
- *  list row (green Connected / red Offline). */
-const StatusValue = ({ status }: { status: AcpAgentStatus }) => {
-  if (status === 'checking') {
+/** On-demand test result (spec §0/§2/§4): the personal Status never polls on view
+ *  — it starts `not_tested` and reflects the last explicit Test. */
+type TestState = 'not_tested' | 'testing' | { reachable: boolean; reason?: string }
+
+/** The Status line's dot + label, derived from the last-known Test result. */
+const StatusValue = ({ result }: { result: TestState }) => {
+  if (result === 'testing') {
     return (
       <span className="inline-flex items-center gap-1.5 text-muted-foreground" data-testid="personal-status">
         <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-        Checking…
+        testing…
       </span>
     )
   }
-  const online = status === 'online'
+  if (result === 'not_tested') {
+    return (
+      <span className="text-sm text-muted-foreground" data-testid="personal-status">
+        Not tested
+      </span>
+    )
+  }
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 font-medium',
-        online ? 'text-green-600 dark:text-green-500' : 'text-destructive',
+        'inline-flex items-center gap-1.5 text-sm font-medium',
+        result.reachable ? 'text-green-600 dark:text-green-500' : 'text-destructive',
       )}
       data-testid="personal-status"
     >
       <span
-        className={cn('inline-block size-2 rounded-full', online ? 'bg-green-500' : 'bg-destructive')}
+        className={cn('inline-block size-2 rounded-full', result.reachable ? 'bg-green-500' : 'bg-destructive')}
         aria-hidden="true"
       />
-      {online ? 'Connected' : 'Offline'}
+      {result.reachable ? 'Reachable' : `Unreachable (${result.reason})`}
     </span>
   )
 }
@@ -73,7 +82,8 @@ type PersonalAgentDetailProps = {
   onBack: () => void
   /** Soft-deletes the reference only — nothing on the remote server is touched. */
   onRemove: () => void
-  useAcpAgentStatus?: typeof useAcpAgentStatus_default
+  /** Injectable probe for the on-demand Test (tests stub it). */
+  testAcpConnection?: typeof testAcpConnection_default
 }
 
 /**
@@ -87,11 +97,20 @@ export const PersonalAgentDetail = ({
   agent,
   onBack,
   onRemove,
-  useAcpAgentStatus = useAcpAgentStatus_default,
+  testAcpConnection = testAcpConnection_default,
 }: PersonalAgentDetailProps) => {
-  const { status, refresh } = useAcpAgentStatus(agent.url)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [result, setResult] = useState<TestState>('not_tested')
   const wiring = endpointWiring(agent.url ?? '')
+
+  const handleTest = async () => {
+    if (!agent.url) {
+      return
+    }
+    setResult('testing')
+    const probe = await testAcpConnection({ url: agent.url })
+    setResult(probe.success ? { reachable: true } : { reachable: false, reason: probe.error })
+  }
 
   const handleRemove = () => {
     setConfirmOpen(false)
@@ -124,15 +143,15 @@ export const PersonalAgentDetail = ({
           <section className="flex flex-col gap-4">
             <Field label="Status">
               <div className="flex items-center gap-3">
-                <StatusValue status={status} />
+                <StatusValue result={result} />
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={refresh}
-                  disabled={status === 'checking'}
+                  onClick={handleTest}
+                  disabled={result === 'testing'}
                   data-testid="personal-test"
                 >
-                  Test
+                  Test connection
                 </Button>
               </div>
             </Field>
