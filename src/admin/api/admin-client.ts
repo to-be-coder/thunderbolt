@@ -45,6 +45,9 @@ export const createAdminApi = (httpClient: HttpClient) => ({
   setMemberAdmin: (id: string, isAdmin: boolean) =>
     httpClient.patch(`admin/members/${id}`, { json: { isAdmin } }).json<Member>(),
   listMemberGroups: (id: string) => httpClient.get(`admin/members/${id}/groups`).json<Group[]>(),
+  // Agents the member can access — resolved from their grants (direct, via a
+  // group they're in, or org-wide "everyone").
+  listMemberAgents: (id: string) => httpClient.get(`admin/members/${id}/agents`).json<{ id: string; name: string }[]>(),
 
   // Groups
   listGroups: () => httpClient.get('admin/groups').json<Group[]>(),

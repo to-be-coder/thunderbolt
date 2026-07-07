@@ -25,7 +25,14 @@ import { cn } from '@/lib/utils'
 import { MoreHorizontal, Plus, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
-import { useInviteMember, useMemberGroups, useMembers, useRemoveMember, useSetMemberAdmin } from '../api/hooks'
+import {
+  useInviteMember,
+  useMemberAgents,
+  useMemberGroups,
+  useMembers,
+  useRemoveMember,
+  useSetMemberAdmin,
+} from '../api/hooks'
 import type { Member } from '../api/types'
 import { StatusPill } from './status-pill'
 
@@ -239,6 +246,8 @@ const MemberRow = ({
 const MemberDetailPanel = ({ member, onClose }: { member: Member; onClose: () => void }) => {
   const groupsQuery = useMemberGroups(member.id)
   const groups = groupsQuery.data ?? []
+  const agentsQuery = useMemberAgents(member.id)
+  const agents = agentsQuery.data ?? []
 
   return (
     <div className="flex h-full flex-col gap-5 overflow-y-auto rounded-lg border border-border p-6">
@@ -271,6 +280,21 @@ const MemberDetailPanel = ({ member, onClose }: { member: Member; onClose: () =>
               {groups.map((group) => (
                 <span key={group.id} className="rounded-md bg-muted px-2 py-0.5 text-sm">
                   {group.name}
+                </span>
+              ))}
+            </div>
+          )}
+        </MemberField>
+        <MemberField label="Agent access">
+          {agentsQuery.isPending ? (
+            <span className="text-sm text-muted-foreground">Loading…</span>
+          ) : agents.length === 0 ? (
+            <span className="text-sm text-muted-foreground">No agents granted.</span>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {agents.map((agent) => (
+                <span key={agent.id} className="rounded-md bg-muted px-2 py-0.5 text-sm">
+                  {agent.name}
                 </span>
               ))}
             </div>

@@ -28,6 +28,7 @@ export const adminKeys = {
   groups: ['admin', 'groups'] as const,
   groupMembers: (groupId: string) => ['admin', 'groups', groupId, 'members'] as const,
   memberGroups: (memberId: string) => ['admin', 'members', memberId, 'groups'] as const,
+  memberAgents: (memberId: string) => ['admin', 'members', memberId, 'agents'] as const,
   agents: ['admin', 'agents'] as const,
   agentEndpoint: (acpUrl: string) => ['admin', 'agents', 'endpoint', acpUrl] as const,
   agentStatus: (acpUrl: string) => ['admin', 'agents', 'status', acpUrl] as const,
@@ -98,6 +99,16 @@ export const useMemberGroups = (memberId: string | null) => {
   return useQuery({
     queryKey: adminKeys.memberGroups(memberId ?? ''),
     queryFn: () => api.listMemberGroups(memberId ?? ''),
+    enabled: memberId !== null,
+  })
+}
+
+/** The agents a member can access (via grants) — for the member detail panel. */
+export const useMemberAgents = (memberId: string | null) => {
+  const api = useAdminApi()
+  return useQuery({
+    queryKey: adminKeys.memberAgents(memberId ?? ''),
+    queryFn: () => api.listMemberAgents(memberId ?? ''),
     enabled: memberId !== null,
   })
 }

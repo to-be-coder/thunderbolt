@@ -195,6 +195,14 @@ const seedStore = (): DemoStore => {
         createdAt: now(),
         deletedAt: null,
       },
+      {
+        id: id(),
+        agentId: financeAgent.id,
+        targetType: 'group',
+        targetId: financeGroup.id,
+        createdAt: now(),
+        deletedAt: null,
+      },
     ],
     policy: {
       personalAgentPolicy: 'all',
@@ -273,6 +281,24 @@ export const createDemoAdminApi = (): AdminApi => {
     listMemberGroups: async (memberId) => {
       const groupIds = new Set(store.groupMembers.filter((gm) => gm.memberId === memberId).map((gm) => gm.groupId))
       return live(store.groups).filter((group) => groupIds.has(group.id))
+    },
+    listMemberAgents: async (memberId) => {
+      const memberGroupIds = new Set(
+        store.groupMembers.filter((gm) => gm.memberId === memberId).map((gm) => gm.groupId),
+      )
+      const agentIds = new Set(
+        live(store.grants)
+          .filter(
+            (grant) =>
+              grant.targetType === 'everyone' ||
+              (grant.targetType === 'member' && grant.targetId === memberId) ||
+              (grant.targetType === 'group' && grant.targetId !== null && memberGroupIds.has(grant.targetId)),
+          )
+          .map((grant) => grant.agentId),
+      )
+      return live(store.agents)
+        .filter((agent) => agentIds.has(agent.id))
+        .map((agent) => ({ id: agent.id, name: agent.name }))
     },
 
     listGroups: async () => live(store.groups),
