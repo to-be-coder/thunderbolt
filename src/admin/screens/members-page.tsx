@@ -26,7 +26,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/lib/utils'
 import { Check, ChevronDown, MoreHorizontal, Plus, X } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   useGroups,
   useInviteMember,
@@ -172,7 +172,9 @@ export const MembersPage = () => {
 
       <SlideInPanel open={selectedMember !== null}>
         <div className="h-full pl-6">
-          {selectedMember && <MemberDetailPanel member={selectedMember} onClose={() => setSelectedId(null)} />}
+          {selectedMember && (
+            <MemberDetailPanel key={selectedMember.id} member={selectedMember} onClose={() => setSelectedId(null)} />
+          )}
         </div>
       </SlideInPanel>
     </div>
@@ -247,25 +249,78 @@ const MemberRow = ({
   )
 }
 
-/** Right-side detail panel for a selected member — identity plus the groups they
- *  currently belong to. */
+/** Right-side detail panel for a selected member. Role and group membership are
+ *  edited as PENDING state — nothing persists until Save (a footer bar that
+ *  appears only when something changed). */
 const MemberDetailPanel = ({ member, onClose }: { member: Member; onClose: () => void }) => {
   const memberGroupsQuery = useMemberGroups(member.id)
-  const memberGroups = memberGroupsQuery.data ?? []
+  const savedGroupIds = useMemo(
+    () => new Set((memberGroupsQuery.data ?? []).map((group) => group.id)),
+    [memberGroupsQuery.data],
+  )
   const agentsQuery = useMemberAgents(member.id)
   const agents = agentsQuery.data ?? []
   const setAdmin = useSetMemberAdmin()
+  const setGroup = useSetMemberGroup(member.id)
+
+  const savedRole: 'admin' | 'member' = member.isAdmin ? 'admin' : 'member'
+  // `null` = follow the saved value; a value = an unsaved edit.
+  const [pendingRole, setPendingRole] = useState<'admin' | 'member' | null>(null)
+  const [pendingGroups, setPendingGroups] = useState<Set<string> | null>(null)
+
+  const role = pendingRole ?? savedRole
+  const groupIds = pendingGroups ?? savedGroupIds
+  const groupsChanged =
+    pendingGroups !== null &&
+    (pendingGroups.size !== savedGroupIds.size || [...pendingGroups].some((id) => !savedGroupIds.has(id)))
+  const dirty = role !== savedRole || groupsChanged
+  const busy = setAdmin.isPending || setGroup.isPending
+
+  const toggleGroup = (groupId: string) => {
+    const next = new Set(groupIds)
+    if (next.has(groupId)) {
+      next.delete(groupId)
+    } else {
+      next.add(groupId)
+    }
+    setPendingGroups(next)
+  }
+
+  const handleSave = async () => {
+    if (role !== savedRole) {
+      await setAdmin.mutateAsync({ id: member.id, isAdmin: role === 'admin' })
+    }
+    if (pendingGroups !== null) {
+      for (const id of pendingGroups) {
+        if (!savedGroupIds.has(id)) {
+          await setGroup.mutateAsync({ groupId: id, member: true })
+        }
+      }
+      for (const id of savedGroupIds) {
+        if (!pendingGroups.has(id)) {
+          await setGroup.mutateAsync({ groupId: id, member: false })
+        }
+      }
+    }
+    setPendingRole(null)
+    setPendingGroups(null)
+  }
+
+  const handleDiscard = () => {
+    setPendingRole(null)
+    setPendingGroups(null)
+  }
 
   return (
-    <div className="flex h-full flex-col gap-5 overflow-y-auto rounded-lg border border-border p-6">
-      <div className="flex items-start justify-between gap-3">
+    <div className="flex h-full flex-col rounded-lg border border-border">
+      <div className="flex items-start justify-between gap-3 p-6 pb-4">
         <h2 className="truncate text-xl font-semibold">{member.name || member.email}</h2>
         <Button variant="ghost" size="icon-sm" aria-label="Close details" onClick={onClose}>
           <X className="size-4" />
         </Button>
       </div>
 
-      <section className="flex flex-col gap-4">
+      <section className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 pb-6">
         <MemberField label="Email">
           <span className="text-sm break-all">{member.email}</span>
         </MemberField>
@@ -275,10 +330,7 @@ const MemberDetailPanel = ({ member, onClose }: { member: Member; onClose: () =>
           </div>
         </MemberField>
         <MemberField label="Role">
-          <Select
-            value={member.isAdmin ? 'admin' : 'member'}
-            onValueChange={(value) => setAdmin.mutate({ id: member.id, isAdmin: value === 'admin' })}
-          >
+          <Select value={role} onValueChange={(value) => setPendingRole(value as 'admin' | 'member')}>
             <SelectTrigger className="w-full" aria-label="Role">
               <SelectValue />
             </SelectTrigger>
@@ -292,7 +344,7 @@ const MemberDetailPanel = ({ member, onClose }: { member: Member; onClose: () =>
           {memberGroupsQuery.isPending ? (
             <span className="text-sm text-muted-foreground">Loading…</span>
           ) : (
-            <GroupMultiSelect memberId={member.id} selectedIds={new Set(memberGroups.map((group) => group.id))} />
+            <GroupMultiSelect selectedIds={groupIds} onToggle={toggleGroup} />
           )}
         </MemberField>
         <MemberField label="Agent access">
@@ -311,20 +363,35 @@ const MemberDetailPanel = ({ member, onClose }: { member: Member; onClose: () =>
           )}
         </MemberField>
       </section>
+
+      {dirty && (
+        <div className="flex justify-end gap-2 border-t border-border p-4">
+          <Button variant="ghost" size="sm" onClick={handleDiscard} disabled={busy}>
+            Discard
+          </Button>
+          <Button size="sm" onClick={handleSave} disabled={busy}>
+            {busy ? 'Saving…' : 'Save'}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
 
-/** Multi-select over all org groups for a member — a member can belong to many
- *  groups, so toggling an item adds/removes their membership immediately. The
- *  trigger shows the current groups as chips (each removable). */
-const GroupMultiSelect = ({ memberId, selectedIds }: { memberId: string; selectedIds: Set<string> }) => {
+/** Multi-select over all org groups for a member (a member can belong to many
+ *  groups). Controlled — toggling reports up to the panel's pending state; the
+ *  trigger summarizes the count and selected groups render as removable chips. */
+const GroupMultiSelect = ({
+  selectedIds,
+  onToggle,
+}: {
+  selectedIds: Set<string>
+  onToggle: (groupId: string) => void
+}) => {
   const groupsQuery = useGroups()
   const groups = groupsQuery.data ?? []
-  const setGroup = useSetMemberGroup(memberId)
   const [open, setOpen] = useState(false)
 
-  const toggle = (groupId: string) => setGroup.mutate({ groupId, member: !selectedIds.has(groupId) })
   const selected = groups.filter((group) => selectedIds.has(group.id))
 
   return (
@@ -346,7 +413,7 @@ const GroupMultiSelect = ({ memberId, selectedIds }: { memberId: string; selecte
             <CommandList>
               <CommandEmpty>No groups found</CommandEmpty>
               {groups.map((group) => (
-                <CommandItem key={group.id} value={group.name} onSelect={() => toggle(group.id)}>
+                <CommandItem key={group.id} value={group.name} onSelect={() => onToggle(group.id)}>
                   <Check className={cn('size-4', selectedIds.has(group.id) ? 'opacity-100' : 'opacity-0')} />
                   {group.name}
                 </CommandItem>
@@ -363,7 +430,7 @@ const GroupMultiSelect = ({ memberId, selectedIds }: { memberId: string; selecte
               <button
                 type="button"
                 aria-label={`Remove from ${group.name}`}
-                onClick={() => toggle(group.id)}
+                onClick={() => onToggle(group.id)}
                 className="text-muted-foreground hover:text-foreground"
               >
                 <X className="size-3" />
