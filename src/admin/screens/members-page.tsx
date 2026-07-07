@@ -155,7 +155,7 @@ const MemberRow = ({
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   return (
-    <TableRow>
+    <TableRow className="hover:bg-transparent">
       <TableCell className="font-medium">{member.name || <span className="text-muted-foreground">—</span>}</TableCell>
       <TableCell className="text-muted-foreground">{member.email}</TableCell>
       <TableCell>
