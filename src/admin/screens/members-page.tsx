@@ -205,7 +205,9 @@ const MemberRow = ({
       <TableCell>
         <StatusPill tone={member.status === 'active' ? 'success' : 'muted'}>{member.status}</StatusPill>
       </TableCell>
-      <TableCell className="text-muted-foreground">{member.isAdmin ? 'admin' : 'member'}</TableCell>
+      <TableCell className={member.isAdmin ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'}>
+        {member.isAdmin ? 'admin' : 'member'}
+      </TableCell>
       <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
