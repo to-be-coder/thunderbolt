@@ -175,55 +175,59 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
       {tab === 'access' && <AgentAccessTab agentId={agent.id} />}
 
       {tab === 'details' && (
-        <section className="flex flex-col gap-4">
-          <Field label="Status">
-            <div>
-              <span className="inline-flex rounded-md bg-muted px-2 py-0.5">
-                <AgentConnectionIndicator acpUrl={agent.acpUrl} showDot={false} />
-              </span>
-            </div>
-          </Field>
-
-          <Field label="Category" labelExtra={<CategoryInfoTooltip />}>
-            <Select
-              value={state.category}
-              onValueChange={(value) => dispatch({ type: 'SET_CATEGORY', value: value as AgentCategory })}
-            >
-              <SelectTrigger className="w-fit" aria-label="Category">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sealed">Sealed</SelectItem>
-                <SelectItem value="extensible">Extensible</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-1.5">
-              <p className="text-sm font-medium text-muted-foreground">Endpoint</p>
-              <button
-                type="button"
-                aria-label="Edit endpoint"
-                onClick={() => dispatch({ type: 'EDIT_ENDPOINT', value: !state.editingEndpoint })}
-                className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+        <section className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4 rounded-xl bg-secondary p-4 dark:bg-sidebar">
+            <Field label="Category" labelExtra={<CategoryInfoTooltip />}>
+              <Select
+                value={state.category}
+                onValueChange={(value) => dispatch({ type: 'SET_CATEGORY', value: value as AgentCategory })}
               >
-                <Pencil className="size-3.5" />
-              </button>
+                <SelectTrigger className="w-fit" aria-label="Category">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sealed">Sealed</SelectItem>
+                  <SelectItem value="extensible">Extensible</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-medium text-muted-foreground">Endpoint</p>
+                <button
+                  type="button"
+                  aria-label="Edit endpoint"
+                  onClick={() => dispatch({ type: 'EDIT_ENDPOINT', value: !state.editingEndpoint })}
+                  className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <Pencil className="size-3.5" />
+                </button>
+              </div>
+              {state.editingEndpoint ? (
+                <Input
+                  autoFocus
+                  aria-label="ACP URL"
+                  value={state.acpUrl}
+                  onChange={(event) => dispatch({ type: 'SET_ACP', value: event.target.value })}
+                />
+              ) : (
+                <code className="text-sm break-all">{state.acpUrl}</code>
+              )}
             </div>
-            {state.editingEndpoint ? (
-              <Input
-                autoFocus
-                aria-label="ACP URL"
-                value={state.acpUrl}
-                onChange={(event) => dispatch({ type: 'SET_ACP', value: event.target.value })}
-              />
-            ) : (
-              <code className="text-sm break-all">{state.acpUrl}</code>
-            )}
           </div>
 
-          <AdminWiring acpUrl={agent.acpUrl} />
+          <div className="flex flex-col gap-4 rounded-xl bg-secondary p-4 dark:bg-sidebar">
+            <Field label="Status">
+              <div>
+                <span className="inline-flex rounded-md bg-muted px-2 py-0.5">
+                  <AgentConnectionIndicator acpUrl={agent.acpUrl} showDot={false} />
+                </span>
+              </div>
+            </Field>
+
+            <AdminWiring acpUrl={agent.acpUrl} />
+          </div>
         </section>
       )}
 
