@@ -16,13 +16,15 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { MoreHorizontal, Pencil, X } from 'lucide-react'
+import { Info, KeyRound, MoreHorizontal, Pencil, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useReducer, useState } from 'react'
 import { useAgentEndpointDetail, useDeleteAgent, useUpdateAgent } from '../api/hooks'
 import type { AgentCategory, TeamAgentWithCapabilities } from '../api/types'
+import { AgentAccessTab } from './agent-access-tab'
 import { AgentConnectionIndicator } from './connection-status'
 import { CategoryInfoTooltip } from './category-info'
+import { PillTabs } from './pill-tabs'
 
 type EditorState = {
   name: string
@@ -83,6 +85,7 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
   const deleteAgent = useDeleteAgent()
   const [state, dispatch] = useReducer(editorReducer, agent, initEditor)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [tab, setTab] = useState<'details' | 'access'>('details')
 
   const dirty =
     state.name.trim() !== agent.name || state.category !== agent.category || state.acpUrl.trim() !== agent.acpUrl
@@ -158,56 +161,69 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
         </div>
       )}
 
-      <section className="flex flex-col gap-4">
-        <Field label="Status">
-          <div>
-            <span className="inline-flex rounded-md bg-muted px-2 py-0.5">
-              <AgentConnectionIndicator acpUrl={agent.acpUrl} />
-            </span>
-          </div>
-        </Field>
+      <PillTabs
+        tabs={[
+          { id: 'details', label: 'Details', icon: Info },
+          { id: 'access', label: 'Access', icon: KeyRound },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
 
-        <Field label="Category" labelExtra={<CategoryInfoTooltip />}>
-          <Select
-            value={state.category}
-            onValueChange={(value) => dispatch({ type: 'SET_CATEGORY', value: value as AgentCategory })}
-          >
-            <SelectTrigger className="w-fit" aria-label="Category">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="sealed">Sealed</SelectItem>
-              <SelectItem value="extensible">Extensible</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
+      {tab === 'access' && <AgentAccessTab agentId={agent.id} />}
 
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-1.5">
-            <p className="text-sm font-medium text-muted-foreground">Endpoint</p>
-            <button
-              type="button"
-              aria-label="Edit endpoint"
-              onClick={() => dispatch({ type: 'EDIT_ENDPOINT', value: !state.editingEndpoint })}
-              className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+      {tab === 'details' && (
+        <section className="flex flex-col gap-4">
+          <Field label="Status">
+            <div>
+              <span className="inline-flex rounded-md bg-muted px-2 py-0.5">
+                <AgentConnectionIndicator acpUrl={agent.acpUrl} />
+              </span>
+            </div>
+          </Field>
+
+          <Field label="Category" labelExtra={<CategoryInfoTooltip />}>
+            <Select
+              value={state.category}
+              onValueChange={(value) => dispatch({ type: 'SET_CATEGORY', value: value as AgentCategory })}
             >
-              <Pencil className="size-3.5" />
-            </button>
-          </div>
-          {state.editingEndpoint ? (
-            <Input
-              autoFocus
-              aria-label="ACP URL"
-              value={state.acpUrl}
-              onChange={(event) => dispatch({ type: 'SET_ACP', value: event.target.value })}
-            />
-          ) : (
-            <code className="text-sm break-all">{state.acpUrl}</code>
-          )}
-        </div>
+              <SelectTrigger className="w-fit" aria-label="Category">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="sealed">Sealed</SelectItem>
+                <SelectItem value="extensible">Extensible</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
 
-        <AdminWiring acpUrl={agent.acpUrl} />
-      </section>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-medium text-muted-foreground">Endpoint</p>
+              <button
+                type="button"
+                aria-label="Edit endpoint"
+                onClick={() => dispatch({ type: 'EDIT_ENDPOINT', value: !state.editingEndpoint })}
+                className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Pencil className="size-3.5" />
+              </button>
+            </div>
+            {state.editingEndpoint ? (
+              <Input
+                autoFocus
+                aria-label="ACP URL"
+                value={state.acpUrl}
+                onChange={(event) => dispatch({ type: 'SET_ACP', value: event.target.value })}
+              />
+            ) : (
+              <code className="text-sm break-all">{state.acpUrl}</code>
+            )}
+          </div>
+
+          <AdminWiring acpUrl={agent.acpUrl} />
+        </section>
+      )}
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
