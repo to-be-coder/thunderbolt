@@ -40,7 +40,7 @@ export const PillTabs = <T extends string>({
           aria-selected={active}
           onClick={() => onChange(tab.id)}
           className={cn(
-            'relative isolate inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors',
+            'relative isolate inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors',
             active ? 'text-foreground' : 'text-muted-foreground hover:bg-accent/50',
           )}
         >
