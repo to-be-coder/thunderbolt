@@ -71,6 +71,37 @@ const seedStore = (): DemoStore => {
     createdAt: now(),
     deletedAt: null,
   }
+  // A fuller roster so the Members table feels realistic — a mix of active /
+  // invited and a couple of extra admins.
+  const extraMembers: Member[] = [
+    'Ava Chen',
+    'Liam Patel',
+    'Mia Rodriguez',
+    'Noah Kim',
+    'Sofia Nguyen',
+    'Ethan Okafor',
+    'Isabella Rossi',
+    'Lucas Silva',
+    'Amara Johnson',
+    'Kai Tanaka',
+    'Priya Sharma',
+    'Diego Morales',
+    'Zoe Anderson',
+    'Omar Haddad',
+    'Lily Zhang',
+    'Marcus Brown',
+    'Hana Suzuki',
+    'Elena Popov',
+    'Jamal Wright',
+    'Nina Kowalski',
+  ].map((name, index) => ({
+    id: id(),
+    email: `${name.toLowerCase().replace(' ', '.')}@demo.thunderbolt`,
+    status: index % 5 === 0 ? 'invited' : 'active',
+    isAdmin: index === 3 || index === 11,
+    createdAt: now(),
+    deletedAt: null,
+  }))
 
   const salesAgent: TeamAgentWithCapabilities = {
     id: id(),
@@ -140,7 +171,7 @@ const seedStore = (): DemoStore => {
   }
 
   return {
-    members: [admin, rae, jordan],
+    members: [admin, rae, jordan, ...extraMembers],
     groups: [salesGroup, financeGroup],
     groupMembers: [{ groupId: salesGroup.id, memberId: rae.id }],
     agents: [salesAgent, financeAgent],
