@@ -51,4 +51,23 @@ describe('MembersPage', () => {
     expect(post).toBeDefined()
     expect(post?.body).toEqual({ email: 'new@corp.test', isAdmin: false })
   })
+
+  it('the row menu promotes a member to admin via PATCH', async () => {
+    const { client, calls } = createRecordingClient((call) =>
+      call.path === '/v1/admin/members' && call.method === 'GET' ? [member({ isAdmin: false })] : {},
+    )
+    renderAdmin(<MembersPage />, client)
+    await flush()
+
+    // Actions live behind the 3-dots menu; Radix opens on pointerdown.
+    const trigger = screen.getByRole('button', { name: 'Actions for existing@corp.test' })
+    fireEvent.pointerDown(trigger, { button: 0, pointerType: 'mouse' })
+    fireEvent.pointerUp(trigger, { button: 0, pointerType: 'mouse' })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Make admin' }))
+    await flush()
+
+    const patch = calls.find((call) => call.method === 'PATCH' && call.path === '/v1/admin/members/m1')
+    expect(patch).toBeDefined()
+    expect(patch?.body).toEqual({ isAdmin: true })
+  })
 })

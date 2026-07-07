@@ -248,6 +248,15 @@ export const createDemoAdminApi = (): AdminApi => {
       }
       return { success: true } as const
     },
+    setMemberAdmin: async (memberId, isAdmin) => {
+      const member = store.members.find((m) => m.id === memberId)
+      if (!member) {
+        throw new Error('demo: member not found')
+      }
+      member.isAdmin = isAdmin
+      writeAudit(isAdmin ? 'member.promote' : 'member.demote', member.email)
+      return { ...member }
+    },
 
     listGroups: async () => live(store.groups),
     createGroup: async (name) => {

@@ -82,6 +82,15 @@ export const useRemoveMember = () => {
   })
 }
 
+export const useSetMemberAdmin = () => {
+  const api = useAdminApi()
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: ({ id, isAdmin }: { id: string; isAdmin: boolean }) => api.setMemberAdmin(id, isAdmin),
+    onSuccess: () => invalidate([adminKeys.members]),
+  })
+}
+
 // ── Groups ──────────────────────────────────────────────────────────────────
 
 export const useGroups = () => {

@@ -11,18 +11,18 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PageHeader } from '@/components/ui/page-header'
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Plus } from 'lucide-react'
+import { MoreHorizontal, Plus } from 'lucide-react'
 import { useState } from 'react'
-import { useInviteMember, useMembers, useRemoveMember } from '../api/hooks'
+import { useInviteMember, useMembers, useRemoveMember, useSetMemberAdmin } from '../api/hooks'
 import type { Member } from '../api/types'
 import { StatusPill } from './status-pill'
 
@@ -34,6 +34,7 @@ export const MembersPage = () => {
   const membersQuery = useMembers()
   const invite = useInviteMember()
   const remove = useRemoveMember()
+  const setAdmin = useSetMemberAdmin()
   const [email, setEmail] = useState('')
   const [asAdmin, setAsAdmin] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -127,7 +128,12 @@ export const MembersPage = () => {
               </TableRow>
             )}
             {members.map((member) => (
-              <MemberRow key={member.id} member={member} onRemove={() => remove.mutate(member.id)} />
+              <MemberRow
+                key={member.id}
+                member={member}
+                onRemove={() => remove.mutate(member.id)}
+                onSetAdmin={(isAdmin) => setAdmin.mutate({ id: member.id, isAdmin })}
+              />
             ))}
           </TableBody>
         </Table>
@@ -136,36 +142,59 @@ export const MembersPage = () => {
   )
 }
 
-const MemberRow = ({ member, onRemove }: { member: Member; onRemove: () => void }) => (
-  <TableRow>
-    <TableCell className="font-medium">{member.email}</TableCell>
-    <TableCell>
-      <StatusPill tone={member.status === 'active' ? 'success' : 'muted'}>{member.status}</StatusPill>
-    </TableCell>
-    <TableCell>{member.isAdmin ? <StatusPill tone="info">admin</StatusPill> : 'member'}</TableCell>
-    <TableCell className="text-right">
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button variant="ghost" size="sm">
-            Remove
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove {member.email}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This removes the member from the org, drops their group memberships and any individual grants, and
-              invalidates their sessions. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={onRemove} className="bg-destructive text-white hover:bg-destructive/90">
-              Remove member
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </TableCell>
-  </TableRow>
-)
+const MemberRow = ({
+  member,
+  onRemove,
+  onSetAdmin,
+}: {
+  member: Member
+  onRemove: () => void
+  onSetAdmin: (isAdmin: boolean) => void
+}) => {
+  const [deleteOpen, setDeleteOpen] = useState(false)
+
+  return (
+    <TableRow>
+      <TableCell className="font-medium">{member.email}</TableCell>
+      <TableCell>
+        <StatusPill tone={member.status === 'active' ? 'success' : 'muted'}>{member.status}</StatusPill>
+      </TableCell>
+      <TableCell>{member.isAdmin ? <StatusPill tone="info">admin</StatusPill> : 'member'}</TableCell>
+      <TableCell className="text-right">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${member.email}`}>
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onSetAdmin(!member.isAdmin)}>
+              {member.isAdmin ? 'Remove admin' : 'Make admin'}
+            </DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove {member.email}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This removes the member from the org, drops their group memberships and any individual grants, and
+                invalidates their sessions. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={onRemove} className="bg-destructive text-white hover:bg-destructive/90">
+                Remove member
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </TableCell>
+    </TableRow>
+  )
+}
