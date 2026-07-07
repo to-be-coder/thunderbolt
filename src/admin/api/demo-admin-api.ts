@@ -283,6 +283,7 @@ export const createDemoAdminApi = (): AdminApi => {
       return live(store.groups).filter((group) => groupIds.has(group.id))
     },
     listMemberAgents: async (memberId) => {
+      const member = store.members.find((m) => m.id === memberId)
       const memberGroupIds = new Set(
         store.groupMembers.filter((gm) => gm.memberId === memberId).map((gm) => gm.groupId),
       )
@@ -291,6 +292,7 @@ export const createDemoAdminApi = (): AdminApi => {
           .filter(
             (grant) =>
               grant.targetType === 'everyone' ||
+              (grant.targetType === 'admins' && !!member?.isAdmin) ||
               (grant.targetType === 'member' && grant.targetId === memberId) ||
               (grant.targetType === 'group' && grant.targetId !== null && memberGroupIds.has(grant.targetId)),
           )

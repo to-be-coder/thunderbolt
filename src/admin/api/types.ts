@@ -117,7 +117,7 @@ export type AgentEndpointDetail = {
  */
 export type AgentConnectionState = 'ready' | 'working' | 'needs_auth' | 'error' | 'not_connected'
 
-export type GrantTargetType = 'group' | 'everyone' | 'member'
+export type GrantTargetType = 'group' | 'everyone' | 'member' | 'admins'
 
 export type Grant = {
   id: string

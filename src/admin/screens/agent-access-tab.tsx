@@ -21,7 +21,9 @@ export const AgentAccessTab = ({ agentId }: { agentId: string }) => {
   const createGrant = useCreateGrant()
   const revokeGrant = useRevokeGrant()
 
-  const [targetType, setTargetType] = useState<GrantTargetType>('group')
+  // High-level access choice; "limited" then narrows to a group or an individual.
+  const [access, setAccess] = useState<'everyone' | 'limited' | 'admins'>('limited')
+  const [limitedType, setLimitedType] = useState<'group' | 'member'>('group')
   const [targetId, setTargetId] = useState('')
 
   const groups = useMemo(() => groupsQuery.data ?? [], [groupsQuery.data])
@@ -34,13 +36,15 @@ export const AgentAccessTab = ({ agentId }: { agentId: string }) => {
 
   const grants = (grantsQuery.data ?? []).filter((grant) => grant.agentId === agentId)
 
-  const needsTarget = targetType !== 'everyone'
+  const needsTarget = access === 'limited'
   const canGrant = !needsTarget || targetId !== ''
 
   const handleGrant = async () => {
     if (!canGrant) {
       return
     }
+    const targetType: GrantTargetType =
+      access === 'everyone' ? 'everyone' : access === 'admins' ? 'admins' : limitedType
     await createGrant.mutateAsync({ agentId, targetType, ...(needsTarget ? { targetId } : {}) })
     setTargetId('')
   }
@@ -48,6 +52,9 @@ export const AgentAccessTab = ({ agentId }: { agentId: string }) => {
   const describeTarget = (grant: Grant): string => {
     if (grant.targetType === 'everyone') {
       return 'Everyone'
+    }
+    if (grant.targetType === 'admins') {
+      return 'Admins only'
     }
     if (grant.targetType === 'group') {
       return `Group · ${groupName.get(grant.targetId ?? '') ?? grant.targetId}`
@@ -87,49 +94,68 @@ export const AgentAccessTab = ({ agentId }: { agentId: string }) => {
         <p className="text-sm font-medium text-muted-foreground">Grant access</p>
         <div className="flex flex-wrap items-center gap-2">
           <Select
-            value={targetType}
+            value={access}
             onValueChange={(value) => {
-              setTargetType(value as GrantTargetType)
+              setAccess(value as 'everyone' | 'limited' | 'admins')
               setTargetId('')
             }}
           >
-            <SelectTrigger className="w-36" aria-label="Grant to">
+            <SelectTrigger className="w-40" aria-label="Access level">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="group">Group</SelectItem>
               <SelectItem value="everyone">Everyone</SelectItem>
-              <SelectItem value="member">Member</SelectItem>
+              <SelectItem value="limited">Limited</SelectItem>
+              <SelectItem value="admins">Admin only</SelectItem>
             </SelectContent>
           </Select>
 
-          {targetType === 'group' && (
-            <Select value={targetId} onValueChange={setTargetId}>
-              <SelectTrigger className="w-48" aria-label="Group">
-                <SelectValue placeholder="Select group…" />
-              </SelectTrigger>
-              <SelectContent>
-                {groups.map((group) => (
-                  <SelectItem key={group.id} value={group.id}>
-                    {group.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {targetType === 'member' && (
-            <Select value={targetId} onValueChange={setTargetId}>
-              <SelectTrigger className="w-48" aria-label="Member">
-                <SelectValue placeholder="Select member…" />
-              </SelectTrigger>
-              <SelectContent>
-                {members.map((member) => (
-                  <SelectItem key={member.id} value={member.id}>
-                    {member.name || member.email}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {access === 'limited' && (
+            <>
+              <Select
+                value={limitedType}
+                onValueChange={(value) => {
+                  setLimitedType(value as 'group' | 'member')
+                  setTargetId('')
+                }}
+              >
+                <SelectTrigger className="w-32" aria-label="Limit to">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="group">Group</SelectItem>
+                  <SelectItem value="member">Individual</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {limitedType === 'group' ? (
+                <Select value={targetId} onValueChange={setTargetId}>
+                  <SelectTrigger className="w-48" aria-label="Group">
+                    <SelectValue placeholder="Select group…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups.map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Select value={targetId} onValueChange={setTargetId}>
+                  <SelectTrigger className="w-48" aria-label="Member">
+                    <SelectValue placeholder="Select individual…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {members.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.name || member.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </>
           )}
 
           <Button onClick={handleGrant} disabled={!canGrant || createGrant.isPending}>
