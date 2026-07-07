@@ -14,13 +14,14 @@ import {
 } from '@/components/ui/alert-dialog'
 import { SlideInPanel } from '@/components/slide-in-panel'
 import { Button } from '@/components/ui/button'
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/ui/page-header'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import { ChevronRight, MoreHorizontal, Plus, Users, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, MoreHorizontal, Plus, Users, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import {
   useAddGroupMember,
@@ -243,35 +244,52 @@ const GroupMembership = ({ group }: { group: Group }) => {
   const allMembersQuery = useMembers()
   const addMember = useAddGroupMember(group.id)
   const removeMember = useRemoveGroupMember(group.id)
-  const [pendingMemberId, setPendingMemberId] = useState('')
+  const [open, setOpen] = useState(false)
 
   const current = membershipQuery.data ?? []
   const currentIds = new Set(current.map((member) => member.id))
   const candidates = (allMembersQuery.data ?? []).filter((member) => !currentIds.has(member.id))
 
   const handleAdd = async (memberId: string) => {
+    setOpen(false)
     await addMember.mutateAsync(memberId)
-    setPendingMemberId('')
   }
 
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm font-medium text-muted-foreground">Members</p>
-      <Select value={pendingMemberId} onValueChange={handleAdd}>
-        <SelectTrigger className="w-full" aria-label="Add member to group">
-          <SelectValue placeholder="Add a member…" />
-        </SelectTrigger>
-        <SelectContent>
-          {candidates.length === 0 && (
-            <div className="px-2 py-1.5 text-sm text-muted-foreground">No more members to add</div>
-          )}
-          {candidates.map((member) => (
-            <SelectItem key={member.id} value={member.id}>
-              {member.name || member.email}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            aria-label="Add member to group"
+            className="w-full justify-between font-normal text-muted-foreground"
+          >
+            <span className="truncate">Add a member…</span>
+            <ChevronDown className="size-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-0">
+          <Command>
+            <CommandInput placeholder="Search members…" />
+            <CommandList>
+              <CommandEmpty>{candidates.length === 0 ? 'No more members to add' : 'No members found'}</CommandEmpty>
+              {candidates.map((member) => (
+                <CommandItem
+                  key={member.id}
+                  value={member.name ? `${member.name} ${member.email}` : member.email}
+                  onSelect={() => handleAdd(member.id)}
+                >
+                  <Plus className="size-4 text-muted-foreground" />
+                  {member.name || member.email}
+                </CommandItem>
+              ))}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
       <ul className="flex flex-col gap-1.5">
         {current.length === 0 && <li className="text-sm text-muted-foreground">No members in this group.</li>}
         {current.map((member: Member) => (
