@@ -179,7 +179,7 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
           <Field label="Status">
             <div>
               <span className="inline-flex rounded-md bg-muted px-2 py-0.5">
-                <AgentConnectionIndicator acpUrl={agent.acpUrl} />
+                <AgentConnectionIndicator acpUrl={agent.acpUrl} showDot={false} />
               </span>
             </div>
           </Field>

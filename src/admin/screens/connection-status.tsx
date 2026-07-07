@@ -32,14 +32,16 @@ const META: Record<IndicatorState, { label: string; dot: string; text: string; p
  * {@link useAgentConnectionStatus}; renders `Connecting…` while in flight and
  * `Error` if the probe itself fails.
  */
-export const AgentConnectionIndicator = ({ acpUrl }: { acpUrl: string }) => {
+export const AgentConnectionIndicator = ({ acpUrl, showDot = true }: { acpUrl: string; showDot?: boolean }) => {
   const query = useAgentConnectionStatus(acpUrl)
   const state: IndicatorState = query.isPending ? 'connecting' : (query.data?.state ?? 'error')
   const meta = META[state]
 
   return (
     <span className={cn('inline-flex items-center gap-1.5 text-sm', meta.text)} data-testid="agent-connection-status">
-      <span className={cn('inline-block size-2 rounded-full', meta.dot, meta.pulse && 'animate-pulse')} aria-hidden />
+      {showDot && (
+        <span className={cn('inline-block size-2 rounded-full', meta.dot, meta.pulse && 'animate-pulse')} aria-hidden />
+      )}
       {meta.label}
     </span>
   )
