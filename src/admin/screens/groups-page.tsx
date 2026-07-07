@@ -20,7 +20,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/ui/page-header'
 import { cn } from '@/lib/utils'
-import { ChevronRight, MoreHorizontal, Plus, Users, X } from 'lucide-react'
+import { Check, ChevronRight, MoreHorizontal, Plus, Users, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import {
   useAddGroupMember,
@@ -238,18 +238,54 @@ const GroupDetailPanel = ({
   )
 }
 
+/** The leading icon of an add-candidate row. On `added` the plus morphs into a
+ *  green check — the plus rotates out and shrinks while the check rotates in and
+ *  grows, so the two strokes appear to remould into the tick. */
+const MorphAddIcon = ({ added }: { added: boolean }) => (
+  <span className="relative inline-flex size-4 shrink-0 items-center justify-center">
+    <Plus
+      className={cn(
+        'absolute size-4 text-muted-foreground transition-all duration-300 ease-out',
+        added ? 'rotate-90 scale-0 opacity-0' : 'rotate-0 scale-100 opacity-100',
+      )}
+    />
+    <Check
+      className={cn(
+        'absolute size-4 text-green-600 transition-all duration-300 ease-out dark:text-green-500',
+        added ? 'rotate-0 scale-100 opacity-100' : '-rotate-90 scale-0 opacity-0',
+      )}
+    />
+  </span>
+)
+
 const GroupMembership = ({ group }: { group: Group }) => {
   const membershipQuery = useGroupMembers(group.id)
   const allMembersQuery = useMembers()
   const addMember = useAddGroupMember(group.id)
   const removeMember = useRemoveGroupMember(group.id)
   const [focused, setFocused] = useState(false)
+  const [added, setAdded] = useState<Set<string>>(new Set())
 
   const current = membershipQuery.data ?? []
   const currentIds = new Set(current.map((member) => member.id))
   const candidates = (allMembersQuery.data ?? []).filter((member) => !currentIds.has(member.id))
 
-  const handleAdd = (memberId: string) => addMember.mutate(memberId)
+  // Play the plus→check morph first, then commit after it finishes so the row
+  // stays visible long enough for the confirmation to register before it drops.
+  const handleAdd = (memberId: string) => {
+    if (added.has(memberId)) {
+      return
+    }
+    setAdded((prev) => new Set(prev).add(memberId))
+    setTimeout(() => {
+      addMember.mutate(memberId)
+      setAdded((prev) => {
+        const next = new Set(prev)
+        next.delete(memberId)
+        return next
+      })
+    }, 450)
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -258,13 +294,17 @@ const GroupMembership = ({ group }: { group: Group }) => {
         // Dictionary-style substring match: empty query shows everyone, typing
         // narrows to names/emails that CONTAIN the query (not cmdk's fuzzy scorer).
         filter={(value, search) => (value.toLowerCase().includes(search.toLowerCase().trim()) ? 1 : 0)}
-        className="overflow-visible rounded-lg border border-border"
+        className="relative overflow-visible rounded-lg border border-border [&_[data-slot=command-input-wrapper]]:border-b-0"
       >
         <CommandInput placeholder="Search members…" onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
-        {/* The candidate list is only revealed on focus. `onMouseDown` preventDefault
-            keeps the input focused so a click lands on the item instead of blurring first. */}
+        {/* Floated so revealing it OVERLAYS the members list below rather than
+            pushing it down. `onMouseDown` preventDefault keeps the input focused
+            so a click lands on the item instead of blurring the list away first. */}
         {focused && (
-          <CommandList className="max-h-56" onMouseDown={(event) => event.preventDefault()}>
+          <CommandList
+            className="absolute inset-x-0 top-full z-50 mt-1 max-h-56 rounded-lg border border-border bg-popover shadow-md"
+            onMouseDown={(event) => event.preventDefault()}
+          >
             <CommandEmpty>{candidates.length === 0 ? 'No more members to add' : 'No members found'}</CommandEmpty>
             {candidates.map((member) => (
               <CommandItem
@@ -272,7 +312,7 @@ const GroupMembership = ({ group }: { group: Group }) => {
                 value={member.name ? `${member.name} ${member.email}` : member.email}
                 onSelect={() => handleAdd(member.id)}
               >
-                <Plus className="size-4 text-muted-foreground" />
+                <MorphAddIcon added={added.has(member.id)} />
                 {member.name || member.email}
               </CommandItem>
             ))}
