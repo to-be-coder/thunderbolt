@@ -28,6 +28,9 @@ const agentCardKeys = [
   'capabilities',
   'advertisedModels',
   'integrations',
+  'toolKinds',
+  'accepts',
+  'modes',
   'managedBy',
   'grantedVia',
 ] as const
@@ -54,6 +57,9 @@ describe('agent-cards frozen contract', () => {
       capabilities: [{ label: 'Search Confluence', credentialMode: 'as_you', connected: false }],
       advertisedModels: ['gpt-oss-120b'],
       integrations: ['code host'],
+      toolKinds: ['read', 'fetch'],
+      accepts: ['images'],
+      modes: ['Ask'],
       managedBy: 'Acme Corp',
       grantedVia: 'Legal team',
     }

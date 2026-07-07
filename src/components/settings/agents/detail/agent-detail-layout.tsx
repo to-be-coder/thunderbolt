@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { X } from 'lucide-react'
+import { X, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 
@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button'
  * connect/disconnect, Test) or `actions` (Start a chat / Remove).
  */
 type AgentDetailLayoutProps = {
+  /** Kind icon shown beside the name (agent-card-content spec §4 header). */
+  icon: LucideIcon
   name: string
   /** Provenance / attribution subtitle under the name. Omitted when empty. */
   subtitle?: ReactNode
@@ -29,13 +31,24 @@ type AgentDetailLayoutProps = {
   onBack: () => void
 }
 
-export const AgentDetailLayout = ({ name, subtitle, body, actions, menu, onBack }: AgentDetailLayoutProps) => (
+export const AgentDetailLayout = ({
+  icon: Icon,
+  name,
+  subtitle,
+  body,
+  actions,
+  menu,
+  onBack,
+}: AgentDetailLayoutProps) => (
   <div
     className="flex h-full flex-col gap-6 overflow-y-auto rounded-lg border border-border p-6"
     data-testid="agent-detail"
   >
     <div className="flex items-start justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2">
+        <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+          <Icon className="size-5 text-muted-foreground" aria-hidden="true" />
+        </div>
         <div className="min-w-0">
           <h1 className="text-xl font-medium truncate">{name}</h1>
           {subtitle && <div className="text-sm text-muted-foreground">{subtitle}</div>}

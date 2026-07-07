@@ -19,13 +19,12 @@ const baseCard: AgentCard = {
   icon: 'chart',
   description: 'Drafts outreach, summarizes accounts, and answers pipeline questions.',
   category: 'extensible',
-  capabilities: [
-    { label: 'Searches the web' },
-    { label: 'Reads the Sales knowledge base', credentialMode: 'service_account' },
-    { label: 'Acts as you in Jira', credentialMode: 'as_you', connected: false },
-    { label: 'Acts as a service account in Salesforce', credentialMode: 'service_account' },
-  ],
+  capabilities: [],
   advertisedModels: [],
+  integrations: ['Salesforce', 'Web search'],
+  toolKinds: ['read', 'delete', 'fetch'],
+  accepts: ['images', 'context'],
+  modes: ['Ask', 'Autonomous'],
   managedBy: 'ACME IT',
   grantedVia: 'Sales (group)',
 }
@@ -58,20 +57,25 @@ describe('CompanyAgentDetail', () => {
     expect(screen.queryByTestId('manage-in-library-link')).not.toBeInTheDocument()
   })
 
-  it('lists capabilities and the org-supplied models (no Managed by)', () => {
-    renderCard({ ...baseCard, advertisedModels: ['claude-opus-4-8', 'claude-haiku-4-5'] })
-    expect(screen.getByText('Searches the web')).toBeInTheDocument()
-    expect(screen.getByText('Reads the Sales knowledge base')).toBeInTheDocument()
-    expect(screen.getByTestId('company-model-line')).toHaveTextContent('claude-opus-4-8')
-    expect(screen.getByTestId('company-model-line')).toHaveTextContent('claude-haiku-4-5')
-    expect(screen.queryByTestId('company-managed-by')).not.toBeInTheDocument()
-    expect(screen.queryByText(/managed by/i)).not.toBeInTheDocument()
+  it('shows tool KINDS destructive-first (delete before read/fetch), never targets', () => {
+    renderCard(baseCard)
+    const kinds = screen.getByTestId('tool-kinds')
+    expect(kinds).toHaveTextContent('Delete')
+    expect(kinds).toHaveTextContent('Read')
+    // Destructive-first ordering: Delete precedes Fetch/Read in the DOM.
+    expect(kinds.textContent).toMatch(/Delete.*(Fetch|Read)/)
+    // No target/prose leaks (e.g. "knowledge base").
+    expect(kinds).not.toHaveTextContent(/knowledge base/i)
   })
 
-  it('shows as_you rows truthfully as unsupported on the v1 external transport (no Connect)', () => {
-    renderCard(baseCard)
-    expect(screen.getByTestId('capability-unsupported')).toBeInTheDocument()
-    expect(screen.queryByTestId('capability-connect')).not.toBeInTheDocument()
+  it('shows Accepts, Available modes, org-supplied models (no Managed by)', () => {
+    renderCard({ ...baseCard, advertisedModels: ['claude-opus-4-8', 'claude-haiku-4-5'] })
+    expect(screen.getByTestId('accepts-line')).toHaveTextContent('Accepts images')
+    expect(screen.getByTestId('accepts-line')).toHaveTextContent(/remembers context/i)
+    expect(screen.getByTestId('available-modes')).toHaveTextContent('Autonomous')
+    expect(screen.getByTestId('company-model-line')).toHaveTextContent('claude-opus-4-8')
+    expect(screen.getByTestId('company-model-line')).toHaveTextContent('claude-haiku-4-5')
+    expect(screen.queryByText(/managed by/i)).not.toBeInTheDocument()
   })
 
   it('has no Start a chat action', () => {

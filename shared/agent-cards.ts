@@ -50,6 +50,18 @@ export type AgentCard = {
    *  ("code host", "CRM") or one rung more specific ("GitHub"), never the
    *  instance, endpoint, scope, or credential (INVARIANT 2). Optional. */
   integrations?: string[]
+  /** Tool KINDS the agent can perform, as classes of action ("read" / "edit" /
+   *  "delete" / "execute" / "fetch") — the class, never the target (handshake-
+   *  derived). Rendered destructive-first. Optional. */
+  toolKinds?: string[]
+  /** Input modalities / session capability flags the agent accepts ("images",
+   *  "audio", "context" = remembers context across a session). What you can send
+   *  it, not what it can do (`promptCapabilities` / `loadSession`). Optional. */
+  accepts?: string[]
+  /** Raw mode names the agent advertises (e.g. "Ask", "Auto-edit", "Autonomous")
+   *  — the RANGE it supports, not the active choice (ACP permission modes).
+   *  Optional. */
+  modes?: string[]
   /** Display name of the org/team that manages the agent. */
   managedBy: string
   /** Display name of the grant that made this card visible to the user. */

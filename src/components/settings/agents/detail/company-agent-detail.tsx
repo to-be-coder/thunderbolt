@@ -2,19 +2,43 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Info } from 'lucide-react'
-import type { AgentCard, AgentCardCapability } from '@shared/agent-cards'
+import { Building2, Info } from 'lucide-react'
+import type { AgentCard } from '@shared/agent-cards'
+import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { AgentDetailLayout, DetailSection } from './agent-detail-layout'
-import { CompanyCapabilityRow } from './company-capability-row'
 
-/**
- * External team agents reach their upstream through the service-identity relay,
- * which strips the caller bearer — so the transport CANNOT pass the invoker's
- * identity (Stage-3 finding). `as_you` capabilities therefore resolve to
- * `unsupported_as_you` and show truthfully. This is the v1 constant.
- */
-const TRANSPORT_PASSES_INVOKER = false
+/** Tool KINDS shown destructive-first — the scariest-sounding facts are the
+ *  safest to show because they name no target, and they're the trust question
+ *  (spec §4). Order: delete, execute, then edit, fetch, read. */
+const KIND_ORDER = ['delete', 'execute', 'edit', 'fetch', 'read']
+const KIND_LABEL: Record<string, string> = {
+  delete: 'Delete',
+  execute: 'Execute',
+  edit: 'Edit',
+  fetch: 'Fetch',
+  read: 'Read',
+}
+const orderedKinds = (kinds: string[]): string[] =>
+  [...kinds].sort((a, b) => {
+    const ia = KIND_ORDER.indexOf(a)
+    const ib = KIND_ORDER.indexOf(b)
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
+  })
+const isDestructiveKind = (kind: string): boolean => kind === 'delete' || kind === 'execute'
+
+/** "Accepts images, audio · Remembers context across a session" from the flags. */
+const acceptsLine = (accepts: string[]): string => {
+  const modalities = accepts.filter((a) => a !== 'context')
+  const parts: string[] = []
+  if (modalities.length > 0) {
+    parts.push(`Accepts ${modalities.join(', ')}`)
+  }
+  if (accepts.includes('context')) {
+    parts.push('Remembers context across a session')
+  }
+  return parts.join(' · ')
+}
 
 /** The Category section names the card's category (Extensible / Sealed). The
  *  explanation lives in a tooltip on the word itself (agents-page-spec §3). */
@@ -79,24 +103,18 @@ const ModelsInfoTooltip = () => (
 type CompanyAgentDetailProps = {
   card: AgentCard
   onBack: () => void
-  onConnectCapability?: (capability: AgentCardCapability) => void
-  onDisconnectCapability?: (capability: AgentCardCapability) => void
 }
 
 /**
- * Read-only rendered agent card for a company (team) agent (agents-page-spec §3).
- * The card is DISPLAY-ONLY (INVARIANT 2) — capabilities are plain-language
- * labels, never skill names or prompt text. Models are supplied by the org (with
- * a tooltip saying so); the only interactive elements are the `as_you` credential
- * rows (Connect / Disconnect).
+ * Read-only rendered agent card for a company (team) agent (agent-card-content
+ * spec §4). Built entirely from `AgentCard`, never live ACP. "What it can do" is
+ * tool KINDS as verbs (class of action, never the target), destructive-first;
+ * Accepts is input plumbing; Available modes is the RANGE the agent supports.
+ * Members configure nothing here.
  */
-export const CompanyAgentDetail = ({
-  card,
-  onBack,
-  onConnectCapability = () => {},
-  onDisconnectCapability = () => {},
-}: CompanyAgentDetailProps) => (
+export const CompanyAgentDetail = ({ card, onBack }: CompanyAgentDetailProps) => (
   <AgentDetailLayout
+    icon={Building2}
     name={card.name}
     subtitle={`Granted via ${card.grantedVia}`}
     body={
@@ -109,21 +127,25 @@ export const CompanyAgentDetail = ({
 
         <CategorySection card={card} />
 
-        <DetailSection title="What it can do">
-          <ul className="flex flex-col" data-testid="capability-list">
-            {card.capabilities.map((capability, index) => (
-              <CompanyCapabilityRow
-                // Capability labels are display copy and may repeat; index keys
-                // are stable for this static, non-reordered list.
-                key={`${capability.label}-${index}`}
-                capability={capability}
-                transportPassesInvoker={TRANSPORT_PASSES_INVOKER}
-                onConnect={onConnectCapability}
-                onDisconnect={onDisconnectCapability}
-              />
-            ))}
-          </ul>
-        </DetailSection>
+        {card.toolKinds && card.toolKinds.length > 0 && (
+          <DetailSection title="What it can do">
+            <div className="flex flex-wrap gap-1.5" data-testid="tool-kinds">
+              {orderedKinds(card.toolKinds).map((kind) => (
+                <span
+                  key={kind}
+                  className={cn(
+                    'rounded-md px-2 py-0.5 text-base',
+                    isDestructiveKind(kind)
+                      ? 'bg-destructive/10 font-medium text-destructive'
+                      : 'bg-muted text-foreground',
+                  )}
+                >
+                  {KIND_LABEL[kind] ?? kind}
+                </span>
+              ))}
+            </div>
+          </DetailSection>
+        )}
 
         {card.integrations && card.integrations.length > 0 && (
           <DetailSection title="Integrations" titleExtra={<IntegrationsInfoTooltip />}>
@@ -134,6 +156,27 @@ export const CompanyAgentDetail = ({
                 </span>
               ))}
             </div>
+          </DetailSection>
+        )}
+
+        {card.accepts && card.accepts.length > 0 && (
+          <DetailSection title="Accepts">
+            <p className="text-base" data-testid="accepts-line">
+              {acceptsLine(card.accepts)}
+            </p>
+          </DetailSection>
+        )}
+
+        {card.modes && card.modes.length > 0 && (
+          <DetailSection title="Available modes">
+            <div className="flex flex-wrap gap-1.5" data-testid="available-modes">
+              {card.modes.map((mode) => (
+                <span key={mode} className="rounded-md bg-muted px-2 py-0.5 text-base">
+                  {mode}
+                </span>
+              ))}
+            </div>
+            <p className="text-sm text-muted-foreground">The range this agent supports — you pick one per chat.</p>
           </DetailSection>
         )}
 

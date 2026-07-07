@@ -4,7 +4,7 @@
 
 import type { ReactNode } from 'react'
 import { useState } from 'react'
-import { Loader2, MoreHorizontal } from 'lucide-react'
+import { Globe, Loader2, MoreHorizontal } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -120,6 +120,7 @@ export const PersonalAgentDetail = ({
   return (
     <>
       <AgentDetailLayout
+        icon={Globe}
         name={agent.name}
         menu={
           <DropdownMenu>

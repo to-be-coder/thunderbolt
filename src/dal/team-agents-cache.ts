@@ -29,6 +29,9 @@ export const rowToCard = (row: TeamAgentsCacheRow): AgentCard => ({
   capabilities: row.capabilities,
   advertisedModels: row.advertisedModels,
   integrations: row.integrations ?? undefined,
+  toolKinds: row.toolKinds ?? undefined,
+  accepts: row.accepts ?? undefined,
+  modes: row.modes ?? undefined,
   managedBy: row.managedBy,
   grantedVia: row.grantedVia,
 })

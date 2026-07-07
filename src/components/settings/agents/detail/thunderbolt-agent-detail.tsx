@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { useState } from 'react'
-import { MoreHorizontal } from 'lucide-react'
+import { MoreHorizontal, Zap } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,6 +53,7 @@ export const ThunderboltAgentDetail = ({
   return (
     <>
       <AgentDetailLayout
+        icon={Zap}
         name={builtInAgent.name}
         menu={
           <DropdownMenu>
