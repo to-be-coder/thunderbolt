@@ -88,7 +88,11 @@ describe('AgentList — sections + provenance', () => {
     expect(screen.getByTestId(`agent-provenance-${builtInAgent.id}`)).toHaveTextContent(
       'Your agent · uses your Library',
     )
-    expect(screen.getByTestId('agent-provenance-custom-1')).toHaveTextContent('Connected agent · home.example.dev')
+    // Personal rows show the live connection status (colored) in place of the
+    // endpoint provenance — the stub reports 'online' → "Connected".
+    const personalStatus = screen.getByTestId('agent-provenance-custom-1')
+    expect(personalStatus).toHaveTextContent('Connected')
+    expect(personalStatus).not.toHaveTextContent('home.example.dev')
   })
 
   it('pins the Thunderbolt row first in YOURS and shows a chevron on EVERY row', () => {

@@ -8,24 +8,35 @@ import { cn } from '@/lib/utils'
 import type { AcpAgentStatus } from '@/hooks/use-acp-agent-status'
 import { NewGrantBadge } from './new-grant-badge'
 
-/** Live status dot for a personal ACP row (agents-page-spec §1: ● online /
- *  ○ offline). `checking` renders a muted pulsing dot with no label; `unknown`
- *  renders nothing. */
-const AgentStatusDot = ({ status }: { status: AcpAgentStatus }) => {
+/** Live connection status for a personal ACP row — a colored dot + label:
+ *  green "Connected" / red "Offline". `checking` shows a muted pulse; `unknown`
+ *  renders nothing. This is the secondary line for personal agents (it replaces
+ *  the endpoint provenance). */
+const AgentStatus = ({ status }: { status: AcpAgentStatus }) => {
   if (status === 'unknown') {
     return null
   }
   if (status === 'checking') {
-    return <span className="inline-block size-2 rounded-full bg-muted-foreground/50 animate-pulse" aria-hidden="true" />
+    return (
+      <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+        <span className="inline-block size-2 rounded-full bg-muted-foreground/50 animate-pulse" aria-hidden="true" />
+        Checking…
+      </span>
+    )
   }
   const online = status === 'online'
   return (
-    <span className="inline-flex items-center gap-1">
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 font-medium',
+        online ? 'text-green-600 dark:text-green-500' : 'text-destructive',
+      )}
+    >
       <span
-        className={cn('inline-block size-2 rounded-full', online ? 'bg-green-500' : 'border border-muted-foreground')}
+        className={cn('inline-block size-2 rounded-full', online ? 'bg-green-500' : 'bg-destructive')}
         aria-hidden="true"
       />
-      <span>{online ? 'online' : 'offline'}</span>
+      {online ? 'Connected' : 'Offline'}
     </span>
   )
 }
@@ -80,11 +91,14 @@ export const AgentRow = ({
           {isNewlyGranted && <NewGrantBadge />}
         </div>
         <div
-          className="flex items-center gap-1.5 text-[length:var(--font-size-sm)] text-muted-foreground truncate"
+          className="flex items-center gap-1.5 text-[length:var(--font-size-sm)] truncate"
           data-testid={`agent-provenance-${agentId}`}
         >
-          <span className="truncate">{provenanceLine}</span>
-          {status !== undefined && <AgentStatusDot status={status} />}
+          {status === undefined ? (
+            <span className="truncate text-muted-foreground">{provenanceLine}</span>
+          ) : (
+            <AgentStatus status={status} />
+          )}
         </div>
       </div>
       <ChevronRight
