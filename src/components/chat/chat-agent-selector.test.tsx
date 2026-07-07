@@ -17,7 +17,7 @@ import { createQueryTestWrapper } from '@/test-utils/react-query'
 import { extensibleTeamAgent, sealedTeamAgent, teamAgentCardFixtures } from '@/test-utils/agent-card-fixtures'
 import type { Agent } from '@/types/acp'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { MemoryRouter } from 'react-router'
 import type { ReactNode } from 'react'
 import { ChatAgentSelector } from './chat-agent-selector'
@@ -57,16 +57,10 @@ const setup = () => {
   })
 }
 
-const renderSelector = (readOnly: boolean, navigate = mock(() => {})) =>
-  render(
-    <ChatAgentSelector
-      readOnly={readOnly}
-      useTeamAgents={useTeamAgentsFixture}
-      useAgents={useAgentsFixture}
-      useNavigate={() => navigate as unknown as ReturnType<typeof import('react-router').useNavigate>}
-    />,
-    { wrapper: TestWrapper },
-  )
+const renderSelector = (readOnly: boolean) =>
+  render(<ChatAgentSelector readOnly={readOnly} useTeamAgents={useTeamAgentsFixture} useAgents={useAgentsFixture} />, {
+    wrapper: TestWrapper,
+  })
 
 describe('ChatAgentSelector', () => {
   beforeAll(async () => {
@@ -162,16 +156,16 @@ describe('ChatAgentSelector', () => {
     })
   })
 
-  it('renders read-only and navigates to the agent detail view on a thread with messages', () => {
-    const navigate = mock(() => {})
-    renderSelector(true, navigate)
+  it('renders read-only and inert on a thread with messages — tapping does nothing', () => {
+    renderSelector(true)
 
     const readonly = screen.getByTestId('chat-agent-selector-readonly')
     fireEvent.click(readonly)
 
-    // Tapping opens the agent detail view (Stage 5), never the picker.
+    // The agent is locked once the conversation starts: no picker opens and the
+    // control carries no chevron affordance.
     expect(screen.queryByText('From your organization')).toBeNull()
-    expect(navigate).toHaveBeenCalledTimes(1)
-    expect((navigate.mock.calls[0] as unknown[])[0]).toMatch(/^\/settings\/agents\//)
+    expect(screen.queryByText('Yours')).toBeNull()
+    expect(readonly.querySelector('.lucide-chevron-down')).toBeNull()
   })
 })

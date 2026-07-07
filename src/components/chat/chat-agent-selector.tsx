@@ -10,6 +10,7 @@ import { useTeamAgents as useTeamAgents_default } from '@/dal/use-team-agents'
 import { useNewlyGrantedTeamAgents as useNewlyGrantedTeamAgents_default } from '@/hooks/use-newly-granted-agents'
 import type { AgentRef } from '@/dal/chat-threads'
 import { NewGrantBadge } from '@/components/settings/agents/new-grant-badge'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { builtInAgent } from '@/defaults/agents'
 import { useHaptics } from '@/hooks/use-haptics'
 import { cn } from '@/lib/utils'
@@ -17,20 +18,18 @@ import type { AgentCard } from '@shared/agent-cards'
 import type { Agent } from '@/types/acp'
 import { Building2, ChevronDown, Globe, Zap, type LucideIcon } from 'lucide-react'
 import { useState, type ComponentType } from 'react'
-import { useNavigate as useNavigate_default } from 'react-router'
 
 /** Item payload: an org card OR one of the user's own agents. */
 type AgentSelectItemData = { kind: 'card'; card: AgentCard } | { kind: 'agent'; agent: Agent }
 
 type ChatAgentSelectorProps = {
   /** Once the thread has any message the agentRef is immutable (Stage 1), so the
-   *  control renders read-only: tapping it opens the agent detail view (Stage 5)
-   *  rather than the picker. */
+   *  control renders read-only and inert — it can't be tapped; a tooltip explains
+   *  the agent is fixed for the conversation. */
   readOnly: boolean
   useTeamAgents?: typeof useTeamAgents_default
   useAgents?: typeof useAgents_default
   useNewlyGrantedTeamAgents?: typeof useNewlyGrantedTeamAgents_default
-  useNavigate?: typeof useNavigate_default
 }
 
 const IconForYours = (agent: Agent): ComponentType<{ className?: string }> => (agent.type === 'built-in' ? Zap : Globe)
@@ -113,7 +112,6 @@ export const ChatAgentSelector = ({
   useTeamAgents = useTeamAgents_default,
   useAgents = useAgents_default,
   useNewlyGrantedTeamAgents = useNewlyGrantedTeamAgents_default,
-  useNavigate = useNavigate_default,
 }: ChatAgentSelectorProps) => {
   const { id: chatThreadId } = useCurrentChatSession()
   const setSelectedAgentRef = useChatStore((state) => state.setSelectedAgentRef)
@@ -121,7 +119,6 @@ export const ChatAgentSelector = ({
   const teamCards = useTeamAgents()
   const personalAgents = useAgents()
   const newlyGranted = useNewlyGrantedTeamAgents(useTeamAgents)
-  const navigate = useNavigate()
   const { triggerSelection } = useHaptics()
   const [open, setOpen] = useState(false)
 
@@ -144,8 +141,8 @@ export const ChatAgentSelector = ({
       data-testid="chat-agent-selector-trigger"
       aria-disabled={readOnly}
       className={cn(
-        'flex items-center gap-2 px-3 h-[var(--touch-height-sm)] rounded-full transition-colors text-[length:var(--font-size-body)] max-w-[50vw] md:max-w-none cursor-pointer',
-        !readOnly && isOpen ? 'bg-secondary' : 'hover:bg-secondary/50',
+        'flex items-center gap-2 px-3 h-[var(--touch-height-sm)] rounded-full transition-colors text-[length:var(--font-size-body)] max-w-[50vw] md:max-w-none',
+        readOnly ? 'cursor-default' : cn('cursor-pointer', isOpen ? 'bg-secondary' : 'hover:bg-secondary/50'),
       )}
     >
       <TriggerIcon icon={triggerIcon} />
@@ -158,18 +155,21 @@ export const ChatAgentSelector = ({
     </div>
   )
 
-  // Read-only (thread has messages): the control is present but tapping it opens
-  // the agent detail view (Stage 5), never the picker. Stage 2 placeholder nav.
+  // Read-only (thread has messages): the agentRef is locked for the conversation,
+  // so the control is inert — not clickable, with a tooltip explaining why.
   if (readOnly) {
     return (
-      <button
-        type="button"
-        data-testid="chat-agent-selector-readonly"
-        className="flex items-center focus:outline-none"
-        onClick={() => navigate(`/settings/agents/${descriptor.id}`)}
-      >
-        {triggerInner(false)}
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div data-testid="chat-agent-selector-readonly" className="flex items-center">
+            {triggerInner(false)}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs text-sm">
+          The agent is set when a chat begins and can’t be changed mid-conversation. Start a new chat to use a different
+          agent.
+        </TooltipContent>
+      </Tooltip>
     )
   }
 
