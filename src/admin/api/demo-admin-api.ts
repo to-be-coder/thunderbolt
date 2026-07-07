@@ -177,7 +177,14 @@ const seedStore = (): DemoStore => {
   return {
     members: [admin, rae, jordan, ...extraMembers],
     groups: [salesGroup, financeGroup],
-    groupMembers: [{ groupId: salesGroup.id, memberId: rae.id }],
+    groupMembers: [
+      { groupId: salesGroup.id, memberId: rae.id },
+      { groupId: salesGroup.id, memberId: extraMembers[0].id },
+      { groupId: financeGroup.id, memberId: extraMembers[0].id },
+      { groupId: salesGroup.id, memberId: extraMembers[1].id },
+      { groupId: financeGroup.id, memberId: extraMembers[2].id },
+      { groupId: financeGroup.id, memberId: extraMembers[8].id },
+    ],
     agents: [salesAgent, financeAgent],
     grants: [
       {
@@ -262,6 +269,10 @@ export const createDemoAdminApi = (): AdminApi => {
       member.isAdmin = isAdmin
       writeAudit(isAdmin ? 'member.promote' : 'member.demote', member.email)
       return { ...member }
+    },
+    listMemberGroups: async (memberId) => {
+      const groupIds = new Set(store.groupMembers.filter((gm) => gm.memberId === memberId).map((gm) => gm.groupId))
+      return live(store.groups).filter((group) => groupIds.has(group.id))
     },
 
     listGroups: async () => live(store.groups),

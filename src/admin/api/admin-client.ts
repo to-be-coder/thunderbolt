@@ -44,6 +44,7 @@ export const createAdminApi = (httpClient: HttpClient) => ({
   removeMember: (id: string) => httpClient.delete(`admin/members/${id}`).json<{ success: true }>(),
   setMemberAdmin: (id: string, isAdmin: boolean) =>
     httpClient.patch(`admin/members/${id}`, { json: { isAdmin } }).json<Member>(),
+  listMemberGroups: (id: string) => httpClient.get(`admin/members/${id}/groups`).json<Group[]>(),
 
   // Groups
   listGroups: () => httpClient.get('admin/groups').json<Group[]>(),

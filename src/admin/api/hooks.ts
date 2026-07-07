@@ -27,6 +27,7 @@ export const adminKeys = {
   members: ['admin', 'members'] as const,
   groups: ['admin', 'groups'] as const,
   groupMembers: (groupId: string) => ['admin', 'groups', groupId, 'members'] as const,
+  memberGroups: (memberId: string) => ['admin', 'members', memberId, 'groups'] as const,
   agents: ['admin', 'agents'] as const,
   agentEndpoint: (acpUrl: string) => ['admin', 'agents', 'endpoint', acpUrl] as const,
   agentStatus: (acpUrl: string) => ['admin', 'agents', 'status', acpUrl] as const,
@@ -88,6 +89,16 @@ export const useSetMemberAdmin = () => {
   return useMutation({
     mutationFn: ({ id, isAdmin }: { id: string; isAdmin: boolean }) => api.setMemberAdmin(id, isAdmin),
     onSuccess: () => invalidate([adminKeys.members]),
+  })
+}
+
+/** The groups a member currently belongs to (for the member detail panel). */
+export const useMemberGroups = (memberId: string | null) => {
+  const api = useAdminApi()
+  return useQuery({
+    queryKey: adminKeys.memberGroups(memberId ?? ''),
+    queryFn: () => api.listMemberGroups(memberId ?? ''),
+    enabled: memberId !== null,
   })
 }
 
