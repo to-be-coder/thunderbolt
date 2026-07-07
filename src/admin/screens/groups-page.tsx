@@ -186,25 +186,25 @@ const GroupDetailPanel = ({
 
   return (
     <div className="flex h-full flex-col rounded-lg border border-border">
-      <div className="flex items-start justify-between gap-3 p-6 pb-4">
-        <h2 className="truncate text-xl font-semibold">{group.name}</h2>
-        <div className="flex shrink-0 items-center gap-1">
+      <div className="flex items-center justify-between gap-3 p-6 pb-4">
+        <div className="flex min-w-0 items-center gap-1">
+          <h2 className="truncate text-xl font-semibold">{group.name}</h2>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Group actions">
+              <Button variant="ghost" size="icon-sm" className="shrink-0" aria-label="Group actions">
                 <MoreHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="start">
               <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="ghost" size="icon-sm" aria-label="Close details" onClick={onClose}>
-            <X className="size-4" />
-          </Button>
         </div>
+        <Button variant="ghost" size="icon-sm" className="shrink-0" aria-label="Close details" onClick={onClose}>
+          <X className="size-4" />
+        </Button>
 
         <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
           <AlertDialogContent>
