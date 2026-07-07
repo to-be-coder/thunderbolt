@@ -42,7 +42,7 @@ export const ManageInLibraryLink = ({
       type="button"
       onClick={handleClick}
       data-testid="manage-in-library-link"
-      className="inline-flex items-center gap-1 text-[length:var(--font-size-sm)] font-medium text-primary hover:underline cursor-pointer"
+      className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline cursor-pointer"
     >
       Manage in Library
       <ArrowRight className="size-3.5" aria-hidden="true" />

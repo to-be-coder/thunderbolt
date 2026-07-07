@@ -77,15 +77,15 @@ export const ThunderboltAgentDetail = ({
         body={
           <>
             <DetailSection title="What it uses">
-              <p className="text-[length:var(--font-size-body)]">Uses everything enabled in your Library:</p>
-              <p className="text-[length:var(--font-size-body)] font-medium" data-testid="library-summary">
+              <p className="text-base">Uses everything enabled in your Library:</p>
+              <p className="text-base font-medium" data-testid="library-summary">
                 {formatLibrarySummary(counts)}
               </p>
               <ManageInLibraryLink agentKind="thunderbolt" agentId={builtInAgent.id} />
             </DetailSection>
 
             <DetailSection title="About">
-              <p className="text-[length:var(--font-size-body)] text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 Runs on your device where the model allows. One Thunderbolt agent per account in this version.
               </p>
             </DetailSection>

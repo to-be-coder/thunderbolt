@@ -17,7 +17,7 @@ export const RevokedAgentDetail = ({ onBack }: { onBack: () => void }) => (
     subtitle=""
     body={
       <div className="rounded-lg border border-border p-3" data-testid="agent-revoked-banner">
-        <p className="text-[length:var(--font-size-body)]">Your access to this agent was removed.</p>
+        <p className="text-base">Your access to this agent was removed.</p>
       </div>
     }
     onBack={onBack}

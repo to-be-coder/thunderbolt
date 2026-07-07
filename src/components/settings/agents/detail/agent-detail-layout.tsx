@@ -38,7 +38,7 @@ export const AgentDetailLayout = ({ name, subtitle, body, actions, menu, onBack 
       <div className="flex min-w-0 items-center gap-2">
         <div className="min-w-0">
           <h1 className="text-xl font-medium truncate">{name}</h1>
-          <div className="text-[length:var(--font-size-sm)] text-muted-foreground">{subtitle}</div>
+          <div className="text-sm text-muted-foreground">{subtitle}</div>
         </div>
         {menu}
       </div>
@@ -64,9 +64,7 @@ export const AgentDetailLayout = ({ name, subtitle, body, actions, menu, onBack 
  *  blocks in the spec mocks). */
 export const DetailSection = ({ title, children }: { title: string; children: ReactNode }) => (
   <section className="flex flex-col gap-2">
-    <h2 className="text-[length:var(--font-size-xs)] font-medium tracking-wide text-muted-foreground uppercase">
-      {title}
-    </h2>
+    <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">{title}</h2>
     {children}
   </section>
 )

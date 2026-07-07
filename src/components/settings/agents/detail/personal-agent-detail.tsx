@@ -104,14 +104,14 @@ export const PersonalAgentDetail = ({
           <>
             <dl className="flex flex-col gap-3">
               <div className="flex items-baseline gap-4">
-                <dt className="w-24 shrink-0 text-[length:var(--font-size-sm)] text-muted-foreground">Endpoint</dt>
-                <dd className="min-w-0 break-all text-[length:var(--font-size-body)]" data-testid="personal-endpoint">
+                <dt className="w-24 shrink-0 text-sm text-muted-foreground">Endpoint</dt>
+                <dd className="min-w-0 break-all text-base" data-testid="personal-endpoint">
                   {agent.url}
                 </dd>
               </div>
               <div className="flex items-center gap-4">
-                <dt className="w-24 shrink-0 text-[length:var(--font-size-sm)] text-muted-foreground">Status</dt>
-                <dd className="flex items-center gap-3 text-[length:var(--font-size-body)]">
+                <dt className="w-24 shrink-0 text-sm text-muted-foreground">Status</dt>
+                <dd className="flex items-center gap-3 text-base">
                   <StatusValue status={status} />
                   <Button
                     size="sm"
@@ -127,7 +127,7 @@ export const PersonalAgentDetail = ({
             </dl>
 
             <DetailSection title="About">
-              <p className="text-[length:var(--font-size-body)] text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 This agent is configured on its own server — its model, skills, and tools come with it. Your Library
                 items don&apos;t apply here.
               </p>

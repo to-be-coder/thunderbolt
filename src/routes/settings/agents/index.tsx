@@ -80,7 +80,7 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
     <div className="flex h-full w-full min-h-0">
       <div className="min-w-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6 p-4">
-          <PageHeader title="Agents">
+          <PageHeader title="Agents" titleClassName="text-[32px]">
             {canConnect && (
               <Button
                 variant="outline"

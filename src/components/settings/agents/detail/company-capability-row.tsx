@@ -54,7 +54,7 @@ export const CompanyCapabilityRow = ({
 
   return (
     <li className="flex items-center justify-between gap-3 py-1" data-testid="capability-row">
-      <span className="text-[length:var(--font-size-body)]">{capability.label}</span>
+      <span className="text-base">{capability.label}</span>
       {control === 'connect' && (
         <Button size="sm" variant="outline" onClick={() => onConnect(capability)} data-testid="capability-connect">
           Connect
@@ -71,10 +71,7 @@ export const CompanyCapabilityRow = ({
         </Button>
       )}
       {control === 'unsupported' && (
-        <span
-          className="text-[length:var(--font-size-xs)] text-muted-foreground shrink-0"
-          data-testid="capability-unsupported"
-        >
+        <span className="text-sm text-muted-foreground shrink-0" data-testid="capability-unsupported">
           Unavailable as you
         </span>
       )}

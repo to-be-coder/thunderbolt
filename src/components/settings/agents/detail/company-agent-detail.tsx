@@ -21,20 +21,16 @@ const CategoryBanner = ({ card, agentId }: { card: AgentCard; agentId: string })
   if (card.category === 'extensible') {
     return (
       <div className="rounded-lg border border-border p-3 flex flex-col gap-1" data-testid="category-banner-extensible">
-        <p className="text-[length:var(--font-size-body)] font-medium">✅ Works with your skills</p>
-        <p className="text-[length:var(--font-size-sm)] text-muted-foreground">
-          Your enabled Library items are available to this agent.
-        </p>
+        <p className="text-base font-medium">✅ Works with your skills</p>
+        <p className="text-sm text-muted-foreground">Your enabled Library items are available to this agent.</p>
         <ManageInLibraryLink agentKind="team" agentId={agentId} />
       </div>
     )
   }
   return (
     <div className="rounded-lg border border-border p-3 flex flex-col gap-1" data-testid="category-banner-sealed">
-      <p className="text-[length:var(--font-size-body)] font-medium">🔒 Comes fully configured</p>
-      <p className="text-[length:var(--font-size-sm)] text-muted-foreground">
-        This agent uses only what your organization built into it.
-      </p>
+      <p className="text-base font-medium">🔒 Comes fully configured</p>
+      <p className="text-sm text-muted-foreground">This agent uses only what your organization built into it.</p>
     </div>
   )
 }
@@ -65,9 +61,7 @@ export const CompanyAgentDetail = ({
     subtitle={`From ${card.managedBy} · granted via: ${card.grantedVia}`}
     body={
       <>
-        {card.description && (
-          <p className="text-[length:var(--font-size-body)] italic text-muted-foreground">“{card.description}”</p>
-        )}
+        {card.description && <p className="text-base italic text-muted-foreground">“{card.description}”</p>}
 
         <CategoryBanner card={card} agentId={card.id} />
 
@@ -87,7 +81,7 @@ export const CompanyAgentDetail = ({
           </ul>
         </DetailSection>
 
-        <div className="flex flex-col gap-1 text-[length:var(--font-size-sm)] text-muted-foreground">
+        <div className="flex flex-col gap-1 text-sm text-muted-foreground">
           <p data-testid="company-model-line">Model: set by your organization</p>
           <p data-testid="company-managed-by">Managed by: {card.managedBy}</p>
         </div>
