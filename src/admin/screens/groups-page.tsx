@@ -19,9 +19,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/ui/page-header'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import { ChevronDown, ChevronRight, MoreHorizontal, Plus, Users, X } from 'lucide-react'
+import { ChevronRight, MoreHorizontal, Plus, Users, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import {
   useAddGroupMember,
@@ -244,52 +243,39 @@ const GroupMembership = ({ group }: { group: Group }) => {
   const allMembersQuery = useMembers()
   const addMember = useAddGroupMember(group.id)
   const removeMember = useRemoveGroupMember(group.id)
-  const [open, setOpen] = useState(false)
 
   const current = membershipQuery.data ?? []
   const currentIds = new Set(current.map((member) => member.id))
   const candidates = (allMembersQuery.data ?? []).filter((member) => !currentIds.has(member.id))
 
-  const handleAdd = async (memberId: string) => {
-    setOpen(false)
-    await addMember.mutateAsync(memberId)
-  }
+  const handleAdd = (memberId: string) => addMember.mutate(memberId)
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm font-medium text-muted-foreground">Members</p>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            aria-label="Add member to group"
-            className="w-full justify-between font-normal text-muted-foreground"
-          >
-            <span className="truncate">Add a member…</span>
-            <ChevronDown className="size-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-0">
-          <Command>
-            <CommandInput placeholder="Search members…" />
-            <CommandList>
-              <CommandEmpty>{candidates.length === 0 ? 'No more members to add' : 'No members found'}</CommandEmpty>
-              {candidates.map((member) => (
-                <CommandItem
-                  key={member.id}
-                  value={member.name ? `${member.name} ${member.email}` : member.email}
-                  onSelect={() => handleAdd(member.id)}
-                >
-                  <Plus className="size-4 text-muted-foreground" />
-                  {member.name || member.email}
-                </CommandItem>
-              ))}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+      <p className="text-sm font-medium text-muted-foreground">Add member</p>
+      <Command
+        // Dictionary-style substring match: empty query shows everyone, typing
+        // narrows to names/emails that CONTAIN the query (not cmdk's fuzzy scorer).
+        filter={(value, search) => (value.toLowerCase().includes(search.toLowerCase().trim()) ? 1 : 0)}
+        className="rounded-lg border border-border"
+      >
+        <CommandInput placeholder="Search members…" />
+        <CommandList className="max-h-56">
+          <CommandEmpty>{candidates.length === 0 ? 'No more members to add' : 'No members found'}</CommandEmpty>
+          {candidates.map((member) => (
+            <CommandItem
+              key={member.id}
+              value={member.name ? `${member.name} ${member.email}` : member.email}
+              onSelect={() => handleAdd(member.id)}
+            >
+              <Plus className="size-4 text-muted-foreground" />
+              {member.name || member.email}
+            </CommandItem>
+          ))}
+        </CommandList>
+      </Command>
+
+      <p className="mt-2 text-sm font-medium text-muted-foreground">Members</p>
       <ul className="flex flex-col gap-1.5">
         {current.length === 0 && <li className="text-sm text-muted-foreground">No members in this group.</li>}
         {current.map((member: Member) => (
