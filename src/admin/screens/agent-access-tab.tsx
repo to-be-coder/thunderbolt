@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { SearchableMenu, type SearchableMenuGroup, type SearchableMenuItem } from '@/components/ui/searchable-menu'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -131,7 +131,7 @@ export const AgentAccessTab = ({ agentId }: { agentId: string }) => {
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-medium text-muted-foreground">Who can access</p>
-            <AddAccessPopover
+            <AddAccessMenu
               agentId={agentId}
               groupOptions={groups.map((group) => ({ id: group.id, label: group.name }))}
               memberOptions={members.map((member) => ({ id: member.id, label: member.name || member.email }))}
@@ -168,8 +168,11 @@ export const AgentAccessTab = ({ agentId }: { agentId: string }) => {
 
 /** The ＋ control on Restricted access — pick a group or individual and grant it. */
 type AccessOption = { id: string; label: string }
+type AddData = { targetType: 'group' | 'member'; targetId: string }
 
-const AddAccessPopover = ({
+/** The ＋ control on Restricted access — a searchable menu over groups AND
+ *  individuals; picking one grants it immediately. */
+const AddAccessMenu = ({
   agentId,
   groupOptions,
   memberOptions,
@@ -180,65 +183,52 @@ const AddAccessPopover = ({
   memberOptions: AccessOption[]
   createGrant: ReturnType<typeof useCreateGrant>
 }) => {
-  const [open, setOpen] = useState(false)
-  const [type, setType] = useState<'group' | 'member'>('group')
-  const [targetId, setTargetId] = useState('')
+  const items: SearchableMenuGroup<AddData>[] = [
+    {
+      id: 'groups',
+      label: 'Groups',
+      items: groupOptions.map((group) => ({
+        id: `group:${group.id}`,
+        label: group.label,
+        data: { targetType: 'group', targetId: group.id },
+      })),
+    },
+    {
+      id: 'individuals',
+      label: 'Individuals',
+      items: memberOptions.map((member) => ({
+        id: `member:${member.id}`,
+        label: member.label,
+        data: { targetType: 'member', targetId: member.id },
+      })),
+    },
+  ]
 
-  const handleAdd = async () => {
-    if (!targetId) {
+  const handleSelect = (_id: string, item: SearchableMenuItem<AddData>) => {
+    if (!item.data) {
       return
     }
-    await createGrant.mutateAsync({ agentId, targetType: type, targetId })
-    setTargetId('')
-    setOpen(false)
+    void createGrant.mutateAsync({ agentId, targetType: item.data.targetType, targetId: item.data.targetId })
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="icon-sm" aria-label="Add access">
+    <SearchableMenu
+      items={items}
+      onValueChange={handleSelect}
+      searchable
+      searchPlaceholder="Search groups or people…"
+      emptyMessage="No groups or people found"
+      align="end"
+      width={280}
+      maxHeight={320}
+      trigger={
+        <div
+          aria-label="Add access"
+          className="inline-flex size-8 cursor-pointer items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
           <Plus className="size-4" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-72">
-        <div className="flex flex-col gap-3">
-          <p className="text-sm font-medium">Add access</p>
-          <Select
-            value={type}
-            onValueChange={(value) => {
-              setType(value as 'group' | 'member')
-              setTargetId('')
-            }}
-          >
-            <SelectTrigger className="w-full" aria-label="Add type">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="group">Group</SelectItem>
-              <SelectItem value="member">Individual</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={targetId} onValueChange={setTargetId}>
-            <SelectTrigger className="w-full" aria-label={type === 'group' ? 'Group' : 'Member'}>
-              <SelectValue placeholder={type === 'group' ? 'Select group…' : 'Select individual…'} />
-            </SelectTrigger>
-            <SelectContent>
-              {(type === 'group' ? groupOptions : memberOptions).map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <div className="flex justify-end">
-            <Button size="sm" onClick={handleAdd} disabled={!targetId || createGrant.isPending}>
-              {createGrant.isPending ? 'Adding…' : 'Add'}
-            </Button>
-          </div>
         </div>
-      </PopoverContent>
-    </Popover>
+      }
+    />
   )
 }
