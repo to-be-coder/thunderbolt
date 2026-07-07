@@ -2,7 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Building2 } from 'lucide-react'
 import type { AgentCard, AgentCardCapability } from '@shared/agent-cards'
 import { Button } from '@/components/ui/button'
 import { AgentDetailLayout, DetailSection } from './agent-detail-layout'
@@ -65,7 +64,6 @@ export const CompanyAgentDetail = ({
   onDisconnectCapability = () => {},
 }: CompanyAgentDetailProps) => (
   <AgentDetailLayout
-    icon={Building2}
     name={card.name}
     subtitle={`From ${card.managedBy} · granted via: ${card.grantedVia}`}
     body={

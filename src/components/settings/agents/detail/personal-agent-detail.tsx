@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { useState } from 'react'
-import { Globe, Loader2, MoreHorizontal } from 'lucide-react'
+import { Loader2, MoreHorizontal } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -80,7 +80,6 @@ export const PersonalAgentDetail = ({
   return (
     <>
       <AgentDetailLayout
-        icon={Globe}
         name={agent.name}
         subtitle={personalProvenanceLine(agent.url)}
         menu={

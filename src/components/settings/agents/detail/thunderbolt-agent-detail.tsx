@@ -2,7 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { builtInAgent } from '@/defaults/agents'
 import { useLibraryCounts as useLibraryCounts_default } from '@/hooks/use-library-counts'
@@ -33,7 +32,6 @@ export const ThunderboltAgentDetail = ({
 
   return (
     <AgentDetailLayout
-      icon={Zap}
       name={builtInAgent.name}
       subtitle={nativeProvenanceLine()}
       body={
