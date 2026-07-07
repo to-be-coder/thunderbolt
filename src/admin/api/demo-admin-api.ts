@@ -30,15 +30,11 @@ import type {
   TeamAgent,
   TeamAgentWithCapabilities,
 } from './types'
+import { demoTeamAgentDefs, FLAKY_ACP_URL } from '@/lib/demo-team-agents'
 
 const now = () => new Date().toISOString()
 const id = () => crypto.randomUUID()
 const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString()
-
-/** Sentinel endpoint whose probe and session-start connection ALWAYS fail — the
- *  demo "Flaky Test Agent" so the connection-failure UX (Test → unreachable,
- *  Health count, member "reported to your admin" message) is demoable. */
-export const FLAKY_ACP_URL = 'wss://agents.demo.thunderbolt/flaky'
 
 /** A single agent-side connection failure at a member's session start (spec §3). */
 type ConnectionFailure = { agentId: string; memberId: string; ts: string; errorKind: string }
@@ -117,89 +113,37 @@ const seedStore = (): DemoStore => {
     deletedAt: null,
   }))
 
-  const salesAgent: TeamAgentWithCapabilities = {
-    id: id(),
-    name: 'Sales Agent',
-    icon: 'chart',
-    description: 'Drafts outreach, summarizes accounts, and answers pipeline questions.',
-    acpUrl: 'wss://agents.demo.thunderbolt/sales',
-    category: 'extensible',
-    status: 'published',
-    managedBy: 'Demo IT',
-    advertisedModels: [],
-    createdAt: now(),
-    deletedAt: null,
-    capabilities: [
-      {
+  // The three demo team agents, projected from the ONE canonical source so the
+  // admin registry entry and the member card are the same object (stable ids +
+  // identical card fields). Order matches demoTeamAgentDefs: sales, finance, flaky.
+  const [salesAgent, financeAgent, flakyAgent] = demoTeamAgentDefs.map(
+    (def): TeamAgentWithCapabilities => ({
+      id: def.id,
+      name: def.name,
+      icon: def.icon,
+      description: def.description,
+      acpUrl: def.acpUrl,
+      category: def.category,
+      status: 'published',
+      managedBy: def.managedBy,
+      advertisedModels: def.advertisedModels,
+      integrations: def.integrations,
+      toolKinds: def.toolKinds,
+      accepts: def.accepts,
+      modes: def.modes,
+      createdAt: now(),
+      deletedAt: null,
+      capabilities: def.capabilities.map((cap, i) => ({
         id: id(),
-        agentId: '',
-        label: 'Searches the web',
-        credentialMode: null,
-        position: 'a',
+        agentId: def.id,
+        label: cap.label,
+        credentialMode: cap.credentialMode ?? null,
+        position: String.fromCharCode(97 + i),
         createdAt: now(),
         deletedAt: null,
-      },
-      {
-        id: id(),
-        agentId: '',
-        label: 'Reads the Sales knowledge base',
-        credentialMode: 'service_account',
-        position: 'b',
-        createdAt: now(),
-        deletedAt: null,
-      },
-      {
-        id: id(),
-        agentId: '',
-        label: 'Acts as you in the CRM',
-        credentialMode: 'as_you',
-        position: 'c',
-        createdAt: now(),
-        deletedAt: null,
-      },
-    ],
-  }
-  const financeAgent: TeamAgentWithCapabilities = {
-    id: id(),
-    name: 'Finance KB',
-    icon: 'book',
-    description: 'Answers questions from the finance knowledge base.',
-    acpUrl: 'wss://agents.demo.thunderbolt/finance',
-    category: 'sealed',
-    status: 'published',
-    managedBy: 'Demo IT',
-    advertisedModels: [],
-    createdAt: now(),
-    deletedAt: null,
-    capabilities: [
-      {
-        id: id(),
-        agentId: '',
-        label: 'Reads the Finance knowledge base',
-        credentialMode: 'service_account',
-        position: 'a',
-        createdAt: now(),
-        deletedAt: null,
-      },
-    ],
-  }
-  // Demo-only agent whose endpoint always fails to connect (spec §6), so the
-  // connection-failure UX is reviewable end to end. STABLE id (matches the
-  // member team-cache card) so a live member failure resolves to this agent.
-  const flakyAgent: TeamAgentWithCapabilities = {
-    id: 'demo-flaky-agent',
-    name: 'Flaky Test Agent',
-    icon: 'bug',
-    description: 'A demo agent whose endpoint always fails to connect — used to review the connection-failure states.',
-    acpUrl: FLAKY_ACP_URL,
-    category: 'sealed',
-    status: 'published',
-    managedBy: 'Demo IT',
-    advertisedModels: [],
-    createdAt: now(),
-    deletedAt: null,
-    capabilities: [],
-  }
+      })),
+    }),
+  )
 
   return {
     members: [admin, rae, jordan, ...extraMembers],

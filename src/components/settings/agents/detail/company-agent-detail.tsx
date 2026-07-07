@@ -117,86 +117,89 @@ export const CompanyAgentDetail = ({ card, onBack }: CompanyAgentDetailProps) =>
     icon={Building2}
     name={card.name}
     subtitle={`Granted via ${card.grantedVia}`}
-    body={
-      <>
-        {card.description && (
-          <DetailSection title="About">
-            <p className="text-base">{card.description}</p>
-          </DetailSection>
-        )}
-
-        <CategorySection card={card} />
-
-        {card.toolKinds && card.toolKinds.length > 0 && (
-          <DetailSection title="What it can do">
-            <div className="flex flex-wrap gap-1.5" data-testid="tool-kinds">
-              {orderedKinds(card.toolKinds).map((kind) => (
-                <span
-                  key={kind}
-                  className={cn(
-                    'rounded-md px-2 py-0.5 text-base',
-                    isDestructiveKind(kind)
-                      ? 'bg-destructive/10 font-medium text-destructive'
-                      : 'bg-muted text-foreground',
-                  )}
-                >
-                  {KIND_LABEL[kind] ?? kind}
-                </span>
-              ))}
-            </div>
-          </DetailSection>
-        )}
-
-        {card.integrations && card.integrations.length > 0 && (
-          <DetailSection title="Integrations" titleExtra={<IntegrationsInfoTooltip />}>
-            <div className="flex flex-wrap gap-1.5" data-testid="company-integrations">
-              {card.integrations.map((integration) => (
-                <span key={integration} className="rounded-md bg-muted px-2 py-0.5 text-base">
-                  {integration}
-                </span>
-              ))}
-            </div>
-          </DetailSection>
-        )}
-
-        {card.accepts && card.accepts.length > 0 && (
-          <DetailSection title="Accepts">
-            <p className="text-base" data-testid="accepts-line">
-              {acceptsLine(card.accepts)}
-            </p>
-          </DetailSection>
-        )}
-
-        {card.modes && card.modes.length > 0 && (
-          <DetailSection title="Available modes">
-            <div className="flex flex-wrap gap-1.5" data-testid="available-modes">
-              {card.modes.map((mode) => (
-                <span key={mode} className="rounded-md bg-muted px-2 py-0.5 text-base">
-                  {mode}
-                </span>
-              ))}
-            </div>
-            <p className="text-sm text-muted-foreground">The range this agent supports — you pick one per chat.</p>
-          </DetailSection>
-        )}
-
-        <DetailSection title="Models" titleExtra={<ModelsInfoTooltip />}>
-          {card.advertisedModels.length === 0 ? (
-            <span className="text-sm text-muted-foreground" data-testid="company-model-line">
-              Set by your organization
-            </span>
-          ) : (
-            <div className="flex flex-wrap gap-1.5" data-testid="company-model-line">
-              {card.advertisedModels.map((model) => (
-                <span key={model} className="rounded-md bg-muted px-2 py-0.5 text-base">
-                  {model}
-                </span>
-              ))}
-            </div>
-          )}
-        </DetailSection>
-      </>
-    }
+    body={<CompanyCardBody card={card} />}
     onBack={onBack}
   />
+)
+
+/** The member card's SECTIONED BODY (About → Category → What it can do →
+ *  Integrations → Accepts → Available modes → Models), split out so the admin's
+ *  "Preview member card" (spec §5.2b) renders the EXACT same thing a member sees. */
+export const CompanyCardBody = ({ card }: { card: AgentCard }) => (
+  <>
+    {card.description && (
+      <DetailSection title="About">
+        <p className="text-base">{card.description}</p>
+      </DetailSection>
+    )}
+
+    <CategorySection card={card} />
+
+    {card.toolKinds && card.toolKinds.length > 0 && (
+      <DetailSection title="What it can do">
+        <div className="flex flex-wrap gap-1.5" data-testid="tool-kinds">
+          {orderedKinds(card.toolKinds).map((kind) => (
+            <span
+              key={kind}
+              className={cn(
+                'rounded-md px-2 py-0.5 text-base',
+                isDestructiveKind(kind) ? 'bg-destructive/10 font-medium text-destructive' : 'bg-muted text-foreground',
+              )}
+            >
+              {KIND_LABEL[kind] ?? kind}
+            </span>
+          ))}
+        </div>
+      </DetailSection>
+    )}
+
+    {card.integrations && card.integrations.length > 0 && (
+      <DetailSection title="Integrations" titleExtra={<IntegrationsInfoTooltip />}>
+        <div className="flex flex-wrap gap-1.5" data-testid="company-integrations">
+          {card.integrations.map((integration) => (
+            <span key={integration} className="rounded-md bg-muted px-2 py-0.5 text-base">
+              {integration}
+            </span>
+          ))}
+        </div>
+      </DetailSection>
+    )}
+
+    {card.accepts && card.accepts.length > 0 && (
+      <DetailSection title="Accepts">
+        <p className="text-base" data-testid="accepts-line">
+          {acceptsLine(card.accepts)}
+        </p>
+      </DetailSection>
+    )}
+
+    {card.modes && card.modes.length > 0 && (
+      <DetailSection title="Available modes">
+        <div className="flex flex-wrap gap-1.5" data-testid="available-modes">
+          {card.modes.map((mode) => (
+            <span key={mode} className="rounded-md bg-muted px-2 py-0.5 text-base">
+              {mode}
+            </span>
+          ))}
+        </div>
+        <p className="text-sm text-muted-foreground">The range this agent supports — you pick one per chat.</p>
+      </DetailSection>
+    )}
+
+    <DetailSection title="Models" titleExtra={<ModelsInfoTooltip />}>
+      {card.advertisedModels.length === 0 ? (
+        <span className="text-sm text-muted-foreground" data-testid="company-model-line">
+          Set by your organization
+        </span>
+      ) : (
+        <div className="flex flex-wrap gap-1.5" data-testid="company-model-line">
+          {card.advertisedModels.map((model) => (
+            <span key={model} className="rounded-md bg-muted px-2 py-0.5 text-base">
+              {model}
+            </span>
+          ))}
+        </div>
+      )}
+    </DetailSection>
+  </>
 )

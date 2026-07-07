@@ -18,7 +18,9 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { AlertTriangle, Check, Info, KeyRound, MoreHorizontal, Pencil, X } from 'lucide-react'
+import { AlertTriangle, Building2, Check, Info, KeyRound, MoreHorizontal, Pencil, X } from 'lucide-react'
+import type { AgentCard } from '@shared/agent-cards'
+import { CompanyCardBody } from '@/components/settings/agents/detail/company-agent-detail'
 import type { ReactNode } from 'react'
 import { useReducer, useState } from 'react'
 import {
@@ -264,10 +266,10 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
             </button>
             {previewOpen && (
               <MemberCardPreview
+                agent={agent}
                 name={state.name}
                 description={state.description}
                 category={state.category}
-                acpUrl={agent.acpUrl}
               />
             )}
           </div>
@@ -401,54 +403,53 @@ const MatchSignal = ({ description, acpUrl }: { description: string; acpUrl: str
   )
 }
 
-/** Inline "what members see" preview (spec §5.2b) — the authored About + Category
- *  the admin controls, plus the handshake-derived kinds shown read-only. */
+/**
+ * Inline "what members see" preview (spec §5.2b). Renders the EXACT member card
+ * body (`CompanyCardBody`) — same component, same data — so the preview is
+ * byte-identical to what a granted member sees. Name / purpose / category reflect
+ * the live, unsaved edits; the rest are the agent's own card fields (admin↔member
+ * identity is unified — see `@/lib/demo-team-agents`).
+ */
 const MemberCardPreview = ({
+  agent,
   name,
   description,
   category,
-  acpUrl,
 }: {
+  agent: TeamAgentWithCapabilities
   name: string
   description: string
   category: AgentCategory
-  acpUrl: string
 }) => {
-  const detail = useAgentEndpointDetail(acpUrl).data
-  const integrations = detail?.credentials.map((credential) => credential.label) ?? []
+  const card: AgentCard = {
+    id: agent.id,
+    name,
+    icon: agent.icon,
+    description,
+    category,
+    capabilities: [],
+    advertisedModels: agent.advertisedModels,
+    integrations: agent.integrations,
+    toolKinds: agent.toolKinds,
+    accepts: agent.accepts,
+    modes: agent.modes,
+    managedBy: agent.managedBy,
+    grantedVia: '',
+  }
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3" data-testid="member-preview">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Member preview</p>
-      <p className="text-base font-medium">{name}</p>
-      <PreviewField label="About">
-        <p className="text-sm">
-          {description.trim() || <span className="text-muted-foreground">No purpose yet.</span>}
-        </p>
-      </PreviewField>
-      <PreviewField label="Category">
-        <p className="text-sm">{categoryConsequence(category)}</p>
-      </PreviewField>
-      {integrations.length > 0 && (
-        <PreviewField label="Integrations">
-          <p className="text-sm">{integrations.join(' · ')}</p>
-        </PreviewField>
-      )}
-      {detail && detail.models.length > 0 && (
-        <PreviewField label="Models">
-          <p className="text-sm">{detail.models.join(' · ')} — supplied by your organization</p>
-        </PreviewField>
-      )}
+      <div className="flex items-center gap-2">
+        <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+          <Building2 className="size-5 text-muted-foreground" aria-hidden />
+        </div>
+        <p className="text-base font-medium">{name}</p>
+      </div>
+      <CompanyCardBody card={card} />
     </div>
   )
 }
-
-const PreviewField = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div className="flex flex-col gap-0.5">
-    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-    {children}
-  </div>
-)
 
 /** Live, admin-only endpoint wiring for the SAVED endpoint. */
 const AdminWiring = ({ acpUrl }: { acpUrl: string }) => {

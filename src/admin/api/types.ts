@@ -61,6 +61,12 @@ export type TeamAgent = {
   status: AgentStatus
   managedBy: string
   advertisedModels: string[]
+  /** Member-card fields (handshake-derived) the admin carries so its preview can
+   *  render the EXACT member card. Abstracted kinds only — see `@shared/agent-cards`. */
+  integrations?: string[]
+  toolKinds?: string[]
+  accepts?: string[]
+  modes?: string[]
   createdAt: string
   deletedAt: string | null
 }
