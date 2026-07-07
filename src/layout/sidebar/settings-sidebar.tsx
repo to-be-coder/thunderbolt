@@ -65,6 +65,7 @@ export const SettingsSidebarContent = ({
 
       {!agentsHidden && (
         <SidebarGroup>
+          <SidebarGroupLabel>Copilots</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
