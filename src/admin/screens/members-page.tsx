@@ -14,24 +14,28 @@ import {
 } from '@/components/ui/alert-dialog'
 import { SlideInPanel } from '@/components/slide-in-panel'
 import { Button } from '@/components/ui/button'
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PageHeader } from '@/components/ui/page-header'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
-import { MoreHorizontal, Plus, X } from 'lucide-react'
+import { Check, ChevronDown, MoreHorizontal, Plus, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import {
+  useGroups,
   useInviteMember,
   useMemberAgents,
   useMemberGroups,
   useMembers,
   useRemoveMember,
   useSetMemberAdmin,
+  useSetMemberGroup,
 } from '../api/hooks'
 import type { Member } from '../api/types'
 import { StatusPill } from './status-pill'
@@ -201,7 +205,7 @@ const MemberRow = ({
       <TableCell>
         <StatusPill tone={member.status === 'active' ? 'success' : 'muted'}>{member.status}</StatusPill>
       </TableCell>
-      <TableCell>{member.isAdmin ? <StatusPill tone="info">admin</StatusPill> : 'member'}</TableCell>
+      <TableCell className="text-muted-foreground">{member.isAdmin ? 'admin' : 'member'}</TableCell>
       <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -244,10 +248,11 @@ const MemberRow = ({
 /** Right-side detail panel for a selected member — identity plus the groups they
  *  currently belong to. */
 const MemberDetailPanel = ({ member, onClose }: { member: Member; onClose: () => void }) => {
-  const groupsQuery = useMemberGroups(member.id)
-  const groups = groupsQuery.data ?? []
+  const memberGroupsQuery = useMemberGroups(member.id)
+  const memberGroups = memberGroupsQuery.data ?? []
   const agentsQuery = useMemberAgents(member.id)
   const agents = agentsQuery.data ?? []
+  const setAdmin = useSetMemberAdmin()
 
   return (
     <div className="flex h-full flex-col gap-5 overflow-y-auto rounded-lg border border-border p-6">
@@ -268,21 +273,24 @@ const MemberDetailPanel = ({ member, onClose }: { member: Member; onClose: () =>
           </div>
         </MemberField>
         <MemberField label="Role">
-          <span className="text-sm">{member.isAdmin ? 'Admin' : 'Member'}</span>
+          <Select
+            value={member.isAdmin ? 'admin' : 'member'}
+            onValueChange={(value) => setAdmin.mutate({ id: member.id, isAdmin: value === 'admin' })}
+          >
+            <SelectTrigger className="w-full" aria-label="Role">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="member">Member</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+            </SelectContent>
+          </Select>
         </MemberField>
         <MemberField label="Groups">
-          {groupsQuery.isPending ? (
+          {memberGroupsQuery.isPending ? (
             <span className="text-sm text-muted-foreground">Loading…</span>
-          ) : groups.length === 0 ? (
-            <span className="text-sm text-muted-foreground">Not in any group.</span>
           ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {groups.map((group) => (
-                <span key={group.id} className="rounded-md bg-muted px-2 py-0.5 text-sm">
-                  {group.name}
-                </span>
-              ))}
-            </div>
+            <GroupMultiSelect memberId={member.id} selectedIds={new Set(memberGroups.map((group) => group.id))} />
           )}
         </MemberField>
         <MemberField label="Agent access">
@@ -301,6 +309,67 @@ const MemberDetailPanel = ({ member, onClose }: { member: Member; onClose: () =>
           )}
         </MemberField>
       </section>
+    </div>
+  )
+}
+
+/** Multi-select over all org groups for a member — a member can belong to many
+ *  groups, so toggling an item adds/removes their membership immediately. The
+ *  trigger shows the current groups as chips (each removable). */
+const GroupMultiSelect = ({ memberId, selectedIds }: { memberId: string; selectedIds: Set<string> }) => {
+  const groupsQuery = useGroups()
+  const groups = groupsQuery.data ?? []
+  const setGroup = useSetMemberGroup(memberId)
+  const [open, setOpen] = useState(false)
+
+  const toggle = (groupId: string) => setGroup.mutate({ groupId, member: !selectedIds.has(groupId) })
+  const selected = groups.filter((group) => selectedIds.has(group.id))
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between font-normal">
+            <span className={cn('truncate', selected.length === 0 && 'text-muted-foreground')}>
+              {selected.length === 0
+                ? 'Not in any group'
+                : `${selected.length} group${selected.length === 1 ? '' : 's'}`}
+            </span>
+            <ChevronDown className="size-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-0">
+          <Command>
+            <CommandInput placeholder="Search groups…" />
+            <CommandList>
+              <CommandEmpty>No groups found</CommandEmpty>
+              {groups.map((group) => (
+                <CommandItem key={group.id} value={group.name} onSelect={() => toggle(group.id)}>
+                  <Check className={cn('size-4', selectedIds.has(group.id) ? 'opacity-100' : 'opacity-0')} />
+                  {group.name}
+                </CommandItem>
+              ))}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map((group) => (
+            <span key={group.id} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-sm">
+              {group.name}
+              <button
+                type="button"
+                aria-label={`Remove from ${group.name}`}
+                onClick={() => toggle(group.id)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

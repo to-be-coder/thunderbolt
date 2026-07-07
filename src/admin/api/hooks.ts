@@ -165,6 +165,19 @@ export const useRemoveGroupMember = (groupId: string) => {
   })
 }
 
+/** Add or remove a member from an arbitrary group — drives the multi-select in
+ *  the member detail panel (a member can belong to many groups). */
+export const useSetMemberGroup = (memberId: string) => {
+  const api = useAdminApi()
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: ({ groupId, member }: { groupId: string; member: boolean }) =>
+      member ? api.addGroupMember(groupId, memberId) : api.removeGroupMember(groupId, memberId),
+    onSuccess: (_result, { groupId }) =>
+      invalidate([adminKeys.memberGroups(memberId), adminKeys.groupMembers(groupId), adminKeys.memberAgents(memberId)]),
+  })
+}
+
 // ── Agents ──────────────────────────────────────────────────────────────────
 
 export const useAgents = () => {
