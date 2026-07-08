@@ -20,6 +20,8 @@ import type {
   AgentInput,
   AgentPatch,
   AuditEvent,
+  CompanySkill,
+  CompanySkillInput,
   ConnectionTestResult,
   Grant,
   GrantInput,
@@ -48,6 +50,12 @@ export const createAdminApi = (httpClient: HttpClient) => ({
   // Agents the member can access — resolved from their grants (direct, via a
   // group they're in, or org-wide "everyone").
   listMemberAgents: (id: string) => httpClient.get(`admin/members/${id}/agents`).json<{ id: string; name: string }[]>(),
+
+  // Company skills (org-scoped Library the admin curates)
+  listCompanySkills: () => httpClient.get('admin/skills').json<CompanySkill[]>(),
+  createCompanySkill: (input: CompanySkillInput) =>
+    httpClient.post('admin/skills', { json: input }).json<CompanySkill>(),
+  deleteCompanySkill: (id: string) => httpClient.delete(`admin/skills/${id}`).json<{ success: true }>(),
 
   // Groups
   listGroups: () => httpClient.get('admin/groups').json<Group[]>(),

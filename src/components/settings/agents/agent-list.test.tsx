@@ -31,6 +31,7 @@ const sealedCard: AgentCard = {
   id: 'finance',
   name: 'Finance KB',
   category: 'sealed',
+  grantedVia: 'Finance (group)',
 }
 
 const personalAgent: Agent = {
@@ -65,23 +66,29 @@ const renderList = (props: Partial<Parameters<typeof AgentList>[0]> = {}) =>
       onOpenAgent={props.onOpenAgent ?? (() => {})}
       // Default: nothing newly granted (no DB). Individual tests override.
       useNewlyGrantedTeamAgents={props.useNewlyGrantedTeamAgents ?? (() => new Set<string>())}
+      // Icon overrides are DB-backed settings; stub them out so the list renders
+      // without a DatabaseProvider (matching the newly-granted injection above).
+      usePersonalAgentIcons={props.usePersonalAgentIcons ?? (() => ({ icons: {}, setIcon: async () => {} }))}
+      useThunderboltAgentIcon={props.useThunderboltAgentIcon ?? (() => 'zap')}
     />,
   )
 
 describe('AgentList — sections + provenance', () => {
   it('renders both labeled sections', () => {
     renderList()
-    expect(screen.getByText('FROM YOUR ORGANIZATION')).toBeInTheDocument()
-    expect(screen.getByText('YOURS')).toBeInTheDocument()
+    expect(screen.getByText('COMPANY AGENTS')).toBeInTheDocument()
+    expect(screen.getByText('YOUR AGENTS')).toBeInTheDocument()
     expect(screen.getByTestId('agent-section-org')).toBeInTheDocument()
     expect(screen.getByTestId('agent-section-yours')).toBeInTheDocument()
   })
 
   it('renders a STATIC secondary line per agent kind (no live connection status)', () => {
     renderList()
-    // Org agents show their category — the roster opens no connection (spec §0/§1).
-    expect(screen.getByTestId('agent-provenance-sales')).toHaveTextContent('Extensible')
-    expect(screen.getByTestId('agent-provenance-finance')).toHaveTextContent('Sealed')
+    // Org agents show how they were granted — never the category word (member-
+    // facing rule); the roster opens no connection (spec §0/§1).
+    expect(screen.getByTestId('agent-provenance-sales')).toHaveTextContent('Granted via Sales (group)')
+    expect(screen.getByTestId('agent-provenance-finance')).toHaveTextContent('Granted via Finance (group)')
+    expect(screen.queryByText(/extensible|sealed/i)).not.toBeInTheDocument()
     // The native row keeps its Library provenance.
     expect(screen.getByTestId(`agent-provenance-${builtInAgent.id}`)).toHaveTextContent(
       'Your agent · uses your Library',
@@ -119,6 +126,13 @@ describe('AgentList — policy variants (spec §5, absent never disabled)', () =
     expect(screen.getByTestId('agent-section-yours')).toBeInTheDocument()
     expect(screen.queryByTestId(`agent-row-${builtInAgent.id}`)).not.toBeInTheDocument()
     expect(screen.getByTestId('agent-row-custom-1')).toBeInTheDocument()
+  })
+
+  it('native_only keeps the Thunderbolt row but hides personal ACP rows', () => {
+    renderList({ policy: { ...allPolicy, personalAgentPolicy: 'native_only' } })
+    expect(screen.getByTestId('agent-section-yours')).toBeInTheDocument()
+    expect(screen.getByTestId(`agent-row-${builtInAgent.id}`)).toBeInTheDocument()
+    expect(screen.queryByTestId('agent-row-custom-1')).not.toBeInTheDocument()
   })
 
   it('company_only hides the entire YOURS section', () => {

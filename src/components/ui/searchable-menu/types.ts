@@ -63,6 +63,9 @@ export type SearchableMenuProps<T = unknown> = {
   side?: 'top' | 'bottom' | 'left' | 'right'
   /** Max height for the items list */
   maxHeight?: string | number
+  /** Tailwind gap class for the vertical spacing between items (default `gap-1.5`).
+   *  Pass e.g. `gap-0.5` to match the side-nav item spacing. */
+  itemGap?: string
 }
 
 /** Check if items are grouped */

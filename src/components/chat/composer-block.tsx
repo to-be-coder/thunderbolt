@@ -97,7 +97,7 @@ export const ComposerBlock = ({
     setTestResult(null)
     const result = await testAcpConnection({ url: agentUrl })
     setIsTesting(false)
-    setTestResult(result.success ? 'Connection restored — reopen the chat to continue.' : result.error)
+    setTestResult(result.success ? 'Connection restored. Reopen the chat to continue.' : result.error)
   }
 
   return (

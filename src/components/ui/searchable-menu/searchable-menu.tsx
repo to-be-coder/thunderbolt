@@ -61,35 +61,38 @@ type GroupSectionProps<T> = {
   onSelect: (id: string, item: SearchableMenuItem<T>) => void
   renderItem?: (item: SearchableMenuItem<T>, isSelected: boolean) => ReactNode
   hideLabel?: boolean
+  itemGap?: string
 }
 
-const GroupSection = memo(<T,>({ group, value, onSelect, renderItem, hideLabel }: GroupSectionProps<T>) => {
-  if (group.items.length === 0) {
-    return null
-  }
+const GroupSection = memo(
+  <T,>({ group, value, onSelect, renderItem, hideLabel, itemGap = 'gap-0.5' }: GroupSectionProps<T>) => {
+    if (group.items.length === 0) {
+      return null
+    }
 
-  return (
-    <div className="flex flex-col gap-1">
-      {!hideLabel && group.label && (
-        <div className="px-3 pt-2">
-          <h3 className="text-xs font-medium text-muted-foreground">{group.label}</h3>
-          {group.subtitle && <p className="text-xs text-muted-foreground/70 mt-0.5">{group.subtitle}</p>}
+    return (
+      <div className="flex flex-col gap-1">
+        {!hideLabel && group.label && (
+          <div className="px-3 pt-2">
+            <h3 className="text-xs font-medium text-muted-foreground">{group.label}</h3>
+            {group.subtitle && <p className="text-xs text-muted-foreground/70 mt-0.5">{group.subtitle}</p>}
+          </div>
+        )}
+        <div className={cn('flex flex-col', itemGap)}>
+          {group.items.map((item) => (
+            <ItemButton
+              key={item.id}
+              item={item}
+              isSelected={value === item.id}
+              onClick={() => onSelect(item.id, item)}
+              renderItem={renderItem}
+            />
+          ))}
         </div>
-      )}
-      <div className="flex flex-col gap-1.5">
-        {group.items.map((item) => (
-          <ItemButton
-            key={item.id}
-            item={item}
-            isSelected={value === item.id}
-            onClick={() => onSelect(item.id, item)}
-            renderItem={renderItem}
-          />
-        ))}
       </div>
-    </div>
-  )
-}) as <T>(props: GroupSectionProps<T>) => ReactNode
+    )
+  },
+) as <T>(props: GroupSectionProps<T>) => ReactNode
 ;(GroupSection as { displayName?: string }).displayName = 'GroupSection'
 
 const DefaultTrigger = <T,>({
@@ -132,6 +135,7 @@ export const SearchableMenu = <T,>({
   align = 'start',
   side,
   maxHeight = 300,
+  itemGap = 'gap-0.5',
 }: SearchableMenuProps<T>) => {
   const [internalOpen, setInternalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -252,10 +256,11 @@ export const SearchableMenu = <T,>({
                     onSelect={handleSelect}
                     renderItem={renderItem}
                     hideLabel={filteredItems.length === 1}
+                    itemGap={itemGap}
                   />
                 ))
               ) : (
-                <div className="flex flex-col gap-1.5">
+                <div className={cn('flex flex-col', itemGap)}>
                   {(filteredItems as SearchableMenuItem<T>[]).map((item) => (
                     <ItemButton
                       key={item.id}

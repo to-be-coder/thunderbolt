@@ -129,14 +129,14 @@ export const MembersPage = () => {
   }, [members, sort])
 
   return (
-    <div className="flex h-full w-full min-h-0">
-      <div className="min-w-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+    <div className="-my-6 flex h-[calc(100%_+_3rem)] w-full min-h-0">
+      <div className="min-w-0 flex-1 overflow-y-auto pr-6">
+        <div className="mx-auto flex w-full max-w-[728px] flex-col gap-6 py-6">
           <PageHeader title="Members">
             <Button
               variant="outline"
               size="icon"
-              className="rounded-lg"
+              className="rounded-lg bg-card hover:bg-accent"
               onClick={() => setDialogOpen(true)}
               aria-label="Invite a member"
             >
@@ -146,7 +146,7 @@ export const MembersPage = () => {
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogContent>
-              <DialogHeader>
+              <DialogHeader className="sm:text-center">
                 <DialogTitle>Invite a member</DialogTitle>
                 <DialogDescription>They'll join your org and activate on first sign-in.</DialogDescription>
               </DialogHeader>
@@ -188,8 +188,8 @@ export const MembersPage = () => {
             </DialogContent>
           </Dialog>
 
-          <div className="rounded-lg border border-border">
-            <Table>
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <Table className="[&_td:first-child]:pl-4 [&_th:first-child]:pl-4 [&_td:last-child]:pr-4 [&_th:last-child]:pr-4">
               <TableHeader>
                 <TableRow>
                   <SortableHead label="Name" sortKey="name" sort={sort} onSort={toggleSort} />
@@ -231,7 +231,7 @@ export const MembersPage = () => {
       </div>
 
       <SlideInPanel open={selectedMember !== null}>
-        <div className="h-full pl-6">
+        <div className="h-full border-l border-border pl-6">
           {selectedMember && (
             <MemberDetailPanel key={selectedMember.id} member={selectedMember} onClose={() => setSelectedId(null)} />
           )}
@@ -262,7 +262,7 @@ const MemberRow = ({
       aria-selected={selected}
       className={cn('cursor-pointer', selected ? 'bg-accent hover:bg-accent' : 'hover:bg-muted/50')}
     >
-      <TableCell className="font-medium">{member.name || <span className="text-muted-foreground">—</span>}</TableCell>
+      <TableCell className="font-medium">{member.name || <span className="text-muted-foreground">-</span>}</TableCell>
       <TableCell className="text-muted-foreground">{member.email}</TableCell>
       <TableCell className={member.isAdmin ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'}>
         {member.isAdmin ? 'Admin' : 'Member'}
@@ -374,9 +374,10 @@ const MemberDetailPanel = ({ member, onClose }: { member: Member; onClose: () =>
   }
 
   return (
-    <div className="flex h-full flex-col rounded-lg border border-border">
-      <div className="flex items-start justify-between gap-3 p-6 pb-4">
-        <h2 className="truncate text-xl font-semibold">{member.name || member.email}</h2>
+    <div className="relative flex h-full flex-col overflow-hidden bg-background pt-6">
+      <div className="flex h-[var(--touch-height-xl)] shrink-0 items-center justify-between gap-3">
+        <h2 className="min-w-0 flex-1 truncate text-xl font-semibold">{member.name || member.email}</h2>
+        {/* Actions on the right: the ⋯ menu sits next to the close (X). */}
         <div className="flex shrink-0 items-center gap-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -420,7 +421,7 @@ const MemberDetailPanel = ({ member, onClose }: { member: Member; onClose: () =>
         </AlertDialog>
       </div>
 
-      <section className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 pb-6">
+      <section className="flex flex-1 flex-col gap-4 overflow-y-auto pt-4 pb-6">
         <MemberField label="Email">
           <span className="text-sm break-all">{member.email}</span>
         </MemberField>
@@ -465,7 +466,7 @@ const MemberDetailPanel = ({ member, onClose }: { member: Member; onClose: () =>
       </section>
 
       {dirty && (
-        <div className="flex justify-end gap-2 border-t border-border p-4">
+        <div className="flex justify-end gap-2 border-t border-border py-4">
           <Button variant="ghost" size="sm" onClick={handleDiscard} disabled={busy}>
             Discard
           </Button>
@@ -537,7 +538,7 @@ const GroupMultiSelect = ({
                 type="button"
                 aria-label={`Remove from ${group.name}`}
                 onClick={() => onToggle(group.id)}
-                className="text-muted-foreground hover:text-foreground"
+                className="cursor-pointer text-muted-foreground hover:text-foreground"
               >
                 <X className="size-3" />
               </button>
@@ -550,7 +551,7 @@ const GroupMultiSelect = ({
 }
 
 const MemberField = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div className="flex flex-col gap-1">
+  <div className="flex flex-col gap-2">
     <p className="text-sm font-medium text-muted-foreground">{label}</p>
     {children}
   </div>

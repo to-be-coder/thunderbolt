@@ -5,6 +5,7 @@
 import '@testing-library/jest-dom'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, mock } from 'bun:test'
+import { MemoryRouter } from 'react-router'
 import type { Agent } from '@/types/acp'
 import { PersonalAgentDetail } from './personal-agent-detail'
 
@@ -28,21 +29,31 @@ const agent: Agent = {
 
 const reachableProbe = (async () => ({ success: true }) as const) as never
 
+const fakeUseEnabledSkills = (enabledCount: number) =>
+  (() => ({
+    isEnabled: () => true,
+    setEnabled: async () => {},
+    enabledCount,
+  })) as unknown as typeof import('@/skills/use-skills').useEnabledSkills
+
 const renderDetail = (overrides: { onRemove?: () => void; testAcpConnection?: never } = {}) =>
   render(
-    <PersonalAgentDetail
-      agent={agent}
-      onBack={() => {}}
-      onRemove={overrides.onRemove ?? (() => {})}
-      testAcpConnection={overrides.testAcpConnection ?? reachableProbe}
-    />,
+    <MemoryRouter>
+      <PersonalAgentDetail
+        agent={agent}
+        onBack={() => {}}
+        onRemove={overrides.onRemove ?? (() => {})}
+        testAcpConnection={overrides.testAcpConnection ?? reachableProbe}
+        useEnabledSkills={fakeUseEnabledSkills(4)}
+      />
+    </MemoryRouter>,
   )
 
 describe('PersonalAgentDetail', () => {
-  it('shows the endpoint and a Not-tested status on view (no probe on open — spec §0)', () => {
+  it('shows the endpoint and a Last-connected status on view (last-known from connect, no probe)', () => {
     renderDetail()
-    expect(screen.getByTestId('personal-endpoint')).toHaveTextContent('wss://home.example.dev/agent')
-    expect(screen.getByTestId('personal-status')).toHaveTextContent('Not tested')
+    expect(screen.getByTestId('personal-endpoint')).toHaveValue('wss://home.example.dev/agent')
+    expect(screen.getByTestId('personal-status')).toHaveTextContent('Last connected')
   })
 
   it('probes on demand when Test is clicked and shows the result', async () => {
@@ -52,7 +63,7 @@ describe('PersonalAgentDetail', () => {
       fireEvent.click(screen.getByTestId('personal-test'))
     })
     expect(probe).toHaveBeenCalledTimes(1)
-    expect(screen.getByTestId('personal-status')).toHaveTextContent('Reachable')
+    expect(screen.getByTestId('personal-status')).toHaveTextContent('Last connected')
   })
 
   it('mirrors the admin wiring fields (Models / MCP servers / Tools), no Category or tabs', () => {
@@ -65,10 +76,19 @@ describe('PersonalAgentDetail', () => {
     expect(screen.queryByText('Access')).not.toBeInTheDocument()
   })
 
-  it('is read-only apart from Test and Remove — no Start a chat', () => {
+  it('shows a Skills section — agent skills plus your Library skills', () => {
+    renderDetail()
+    // Demo env derives 3 skills from the endpoint; Library count comes from the hook.
+    expect(screen.getByTestId('agent-skills-count')).toHaveTextContent('Agent Skills (3)')
+    expect(screen.getByTestId('library-skills-line')).toHaveTextContent('Skills from your library (4)')
+  })
+
+  it('exposes editable name + endpoint inputs, and no Start a chat', () => {
     renderDetail()
     expect(screen.queryByTestId('agent-start-chat')).not.toBeInTheDocument()
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    // The member can edit their own agent's name and endpoint directly.
+    expect(screen.getByLabelText('Agent name')).toBeInTheDocument()
+    expect(screen.getByLabelText('ACP URL')).toBeInTheDocument()
   })
 
   it('removes the reference (nothing remote) after confirmation', () => {

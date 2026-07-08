@@ -30,22 +30,16 @@ describe('chatFiltersReducer', () => {
     expect(off.agentIds).toEqual([])
   })
 
-  it('sets the company/mine quick toggle', () => {
-    const next = chatFiltersReducer(initialChatFilters, { type: 'setCompanyMine', value: 'company' })
-    expect(next.companyMine).toBe('company')
-  })
-
   it('clears every filter in one action', () => {
-    const dirty: ChatFilters = { agentIds: ['a', 'b'], companyMine: 'mine' }
+    const dirty: ChatFilters = { agentIds: ['a', 'b'] }
     expect(chatFiltersReducer(dirty, { type: 'clear' })).toEqual(initialChatFilters)
   })
 })
 
 describe('hasActiveFilters', () => {
-  it('is false only for the initial (empty) filters', () => {
+  it('is active only when at least one agent is selected', () => {
     expect(hasActiveFilters(initialChatFilters)).toBe(false)
-    expect(hasActiveFilters({ agentIds: ['x'], companyMine: 'all' })).toBe(true)
-    expect(hasActiveFilters({ agentIds: [], companyMine: 'mine' })).toBe(true)
+    expect(hasActiveFilters({ agentIds: ['x'] })).toBe(true)
   })
 })
 
@@ -57,22 +51,15 @@ describe('passesChatFilters', () => {
   })
 
   it('narrows by agent id (built-in matches the built-in id)', () => {
-    const filters: ChatFilters = { agentIds: [builtInAgent.id], companyMine: 'all' }
+    const filters: ChatFilters = { agentIds: [builtInAgent.id] }
     expect(passesChatFilters(thunderbolt, filters)).toBe(true)
     expect(passesChatFilters(personal, filters)).toBe(false)
     expect(passesChatFilters(team, filters)).toBe(false)
   })
 
   it('narrows by a personal agent id', () => {
-    const filters: ChatFilters = { agentIds: ['personal-1'], companyMine: 'all' }
+    const filters: ChatFilters = { agentIds: ['personal-1'] }
     expect(passesChatFilters(personal, filters)).toBe(true)
     expect(passesChatFilters(thunderbolt, filters)).toBe(false)
-  })
-
-  it('company keeps only team threads; mine drops team threads', () => {
-    expect(passesChatFilters(team, { agentIds: [], companyMine: 'company' })).toBe(true)
-    expect(passesChatFilters(thunderbolt, { agentIds: [], companyMine: 'company' })).toBe(false)
-    expect(passesChatFilters(personal, { agentIds: [], companyMine: 'mine' })).toBe(true)
-    expect(passesChatFilters(team, { agentIds: [], companyMine: 'mine' })).toBe(false)
   })
 })

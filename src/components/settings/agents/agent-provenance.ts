@@ -12,10 +12,12 @@ import type { LibraryCounts } from '@/hooks/use-library-counts'
  * read them so the two never drift.
  */
 
-/** Company (team) agent row sub-label — just the category. The org name is
- *  omitted: a member belongs to exactly one org, so "From {org}" is redundant. */
-export const companyProvenanceLine = (card: Pick<AgentCard, 'category'>): string =>
-  card.category === 'extensible' ? 'Extensible' : 'Sealed'
+/** Company (team) agent row sub-label — how the member was granted the agent
+ *  (e.g. "Granted via Sales (group)"). The category word is NEVER shown member-
+ *  facing; the grant is the real provenance and matches the detail-header
+ *  subtitle so the row and header never drift. The org name is omitted: a member
+ *  belongs to exactly one org, so "From {org}" is redundant. */
+export const companyProvenanceLine = (card: Pick<AgentCard, 'grantedVia'>): string => `Granted via ${card.grantedVia}`
 
 /** The Thunderbolt (native) agent's provenance line. */
 export const nativeProvenanceLine = (): string => 'Your agent · uses your Library'

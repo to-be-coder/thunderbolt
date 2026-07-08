@@ -26,11 +26,13 @@ import { useWarmAcpCommands } from '@/chats/use-warm-acp-commands'
 import {
   useEnabledSkills as useEnabledSkills_default,
   useLibrarySkills as useLibrarySkills_default,
+  usePinnedSkills as usePinnedSkills_default,
 } from '@/skills/use-skills'
+import { NO_SKILLS_ENABLED_MESSAGE, SEALED_SKILLS_MESSAGE } from '@/lib/agent-copy'
 import { type Model } from '@/types'
 import { useChat as useChat_default } from '@ai-sdk/react'
 import { useDraftInput } from '@/hooks/use-draft-input'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { Info, Loader2, Lock, X } from 'lucide-react'
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { useLocation as useLocation_default, useNavigate as useNavigate_default } from 'react-router'
 import { ChatSkillsBar } from './chat-skills-bar'
@@ -42,29 +44,6 @@ import { ContextUsageIndicator } from '../context-usage-indicator'
 import { PromptInput } from '../ui/prompt-input'
 import { ChatModePicker } from './chat-mode-picker'
 import { ChatModelPicker } from './chat-model-picker'
-
-/**
- * Extract a human-readable display string from a connection error.
- * Handles JSON-RPC error messages (which have nested data.message),
- * plain strings, and generic Error objects.
- */
-const extractErrorDisplay = (error: Error | null | undefined): string => {
-  if (!error?.message) {
-    return 'Connection failed'
-  }
-
-  try {
-    const parsed = JSON.parse(error.message)
-    const message = parsed?.data?.message ?? parsed?.data?.details ?? parsed?.message
-    if (typeof message === 'string') {
-      return message
-    }
-  } catch {
-    // Not JSON — use the raw message
-  }
-
-  return error.message
-}
 
 export type ChatPromptInputRef = {
   focus: () => void
@@ -80,6 +59,7 @@ type ChatPromptInputProps = {
   useIsMobile?: typeof useIsMobile_default
   useLibrarySkills?: typeof useLibrarySkills_default
   useEnabledSkills?: typeof useEnabledSkills_default
+  usePinnedSkills?: typeof usePinnedSkills_default
   /** Inject for tests that need to drive the unavailable-agent fallback. */
   isAgentAvailable?: typeof isAgentAvailable_default
   /** Inject to drive per-agent-kind composer behavior (pickers / skills / block). */
@@ -87,6 +67,33 @@ type ChatPromptInputProps = {
   /** Inject for the offline (T5b) Test-connection affordance. */
   testAcpConnection?: typeof testAcpConnection_default
 }
+
+/** The sealed / no-skills notice as the prompt-input's header row (icon +
+ *  message + dismiss). Rendered INSIDE the composer's rounded card via the
+ *  `header` slot, so it never floats as a separate overlapping card. */
+const ComposerSkillsNotice = ({ kind, onDismiss }: { kind: 'sealed' | 'empty'; onDismiss: () => void }) => (
+  <div
+    data-testid={kind === 'sealed' ? 'skills-sealed' : 'skills-empty'}
+    className="flex items-center gap-1.5 px-2 pt-1 text-[length:var(--font-size-sm)] text-muted-foreground"
+  >
+    {kind === 'sealed' ? (
+      <Lock className="size-3.5 shrink-0" aria-hidden />
+    ) : (
+      <Info className="size-3.5 shrink-0" aria-hidden />
+    )}
+    <span className="min-w-0 flex-1 truncate">
+      {kind === 'sealed' ? SEALED_SKILLS_MESSAGE : NO_SKILLS_ENABLED_MESSAGE}
+    </span>
+    <button
+      type="button"
+      aria-label="Dismiss"
+      onClick={onDismiss}
+      className="shrink-0 cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+    >
+      <X className="size-3.5" />
+    </button>
+  </div>
+)
 
 export const ChatPromptInput = forwardRef<ChatPromptInputRef, ChatPromptInputProps>(
   (
@@ -99,6 +106,7 @@ export const ChatPromptInput = forwardRef<ChatPromptInputRef, ChatPromptInputPro
       useIsMobile = useIsMobile_default,
       useLibrarySkills = useLibrarySkills_default,
       useEnabledSkills = useEnabledSkills_default,
+      usePinnedSkills = usePinnedSkills_default,
       isAgentAvailable = isAgentAvailable_default,
       useAgentDescriptor = useAgentDescriptor_default,
       testAcpConnection = testAcpConnection_default,
@@ -137,6 +145,17 @@ export const ChatPromptInput = forwardRef<ChatPromptInputRef, ChatPromptInputPro
 
     const { skills: library } = useLibrarySkills()
     const { isEnabled } = useEnabledSkills()
+    const { pinned, pinnedSet } = usePinnedSkills()
+    // Sealed / no-skills notice — hoisted OUT of ChatSkillsBar and into the
+    // prompt-input header so it shares the composer's rounded card (one border,
+    // no overlapping-corner artifacts). Dismissible, and re-armed per agent.
+    const composerNoticeKind: 'sealed' | 'empty' | null = !showsSkillsBar(descriptor)
+      ? 'sealed'
+      : pinned.length === 0 && library.filter((s) => isEnabled(s.id) && !pinnedSet.has(s.id)).length === 0
+        ? 'empty'
+        : null
+    const [dismissedNoticeAgent, setDismissedNoticeAgent] = useState<string | null>(null)
+    const showComposerNotice = !hasMessages && composerNoticeKind !== null && dismissedNoticeAgent !== descriptor.id
     const trackSkillEvent = useSkillTelemetry()
     const skillBySlug = useMemo(() => new Map(library.map((s) => [s.name, s])), [library])
     const enabledSlugs = useMemo(
@@ -172,7 +191,6 @@ export const ChatPromptInput = forwardRef<ChatPromptInputRef, ChatPromptInputPro
 
     const isStreaming = status === 'streaming'
     const isConnecting = connectionStatus === 'connecting'
-    const isConnectionError = connectionStatus === 'error' && connectionError != null
 
     // isMobile = viewport is narrow (responsive breakpoint, e.g. desktop browser resized small)
     // isPlatformMobile() = native platform is iOS/Android (Tauri mobile app)
@@ -388,17 +406,10 @@ export const ChatPromptInput = forwardRef<ChatPromptInputRef, ChatPromptInputPro
             <Loader2 className="size-[var(--icon-size-default)] shrink-0 animate-spin" />
             <span>Connecting to {selectedAgent.name}...</span>
           </div>
-        ) : isConnectionError ? (
-          <div
-            role="alert"
-            className="flex items-center gap-2 px-3 h-[var(--touch-height-sm)] text-destructive text-[length:var(--font-size-body)]"
-          >
-            <AlertCircle className="size-[var(--icon-size-default)] shrink-0" />
-            <span className="truncate" title={extractErrorDisplay(connectionError)}>
-              Failed to connect to {selectedAgent.name}
-            </span>
-          </div>
         ) : (
+          // The connection failure is surfaced in the message stream
+          // (ConnectionFailureMessage), so the composer keeps its normal
+          // controls rather than repeating a "Failed to connect" line here.
           <>
             <ChatModePicker iconOnly={isMobile} />
             <ChatModelPicker />
@@ -456,59 +467,80 @@ export const ChatPromptInput = forwardRef<ChatPromptInputRef, ChatPromptInputPro
       )
     }
 
+    const promptInput = (
+      <PromptInput
+        ref={formRef}
+        value={input}
+        onChange={(value: string) => setInput(value)}
+        placeholder="Ask me anything..."
+        showSubmitButton
+        onSubmit={handleSubmit}
+        isLoading={isStreaming || isConnecting}
+        isStreaming={isStreaming}
+        onStop={stop}
+        autoFocus={!isMobile}
+        submitOnEnter={!isStreaming && !shouldInsertNewlineOnEnter}
+        className="flex flex-col w-full gap-0 rounded-2xl border bg-sidebar p-2"
+        footerStartElements={footerStartElements}
+        renderOverlay={(value) => renderHighlightedSkillTokens(value, classifySkill)}
+        popoverSlot={
+          popupOpen ? (
+            <SlashPopup
+              items={popupItems}
+              agentName={selectedAgent.name}
+              highlightedIdx={highlightedIdx}
+              onSelect={handleSelectFromSlashPopup}
+              onHover={setHighlightedIdx}
+            />
+          ) : null
+        }
+        onTextareaKeyDown={(e) => {
+          // First `/` in a sealed / personal-ACP thread raises the one-time
+          // educational note + fires the seal-hit demand signal (no-op for
+          // agents that have a skills surface).
+          if (e.key === '/') {
+            sealedHint.notifySlash()
+          }
+          handleSlashKeyDown(e)
+        }}
+        onTextareaSelect={(e) => setCursorPos(e.currentTarget.selectionStart)}
+      />
+    )
+
     return (
       <>
         <div className="flex w-full flex-col gap-3">
           {sealedHint.visible && <SealedSlashHint agentName={descriptor.name} onDismiss={sealedHint.dismiss} />}
-          {/* Skills bar renders ONLY for the Thunderbolt agent and EXTENSIBLE
-              company agents. For sealed company + personal ACP agents it is
-              absent (not rendered) — the first `/` educates instead. */}
-          {showsSkillsBar(descriptor) && (
+          {/* Skills chips for interactive (Library-using) agents. Sealed /
+              no-skills agents instead surface a dismissible notice INSIDE the
+              prompt-input header below (see `header`), so it shares the
+              composer's rounded card. `hidden` (ongoing thread) suppresses both.
+              Pinning is a "starting a new chat" affordance. */}
+          {composerNoticeKind === null && (
             <ChatSkillsBar
               onAddToChat={handleAddChipFromBar}
               onAddInstruction={insertInstructionText}
-              // Pinning is a "starting a new chat" affordance — once the thread
-              // has any message, hide the bar so chips don't compete for space.
+              sealed={false}
               hidden={hasMessages}
             />
           )}
-          <PromptInput
-            ref={formRef}
-            value={input}
-            onChange={(value: string) => setInput(value)}
-            placeholder="Ask me anything..."
-            showSubmitButton
-            onSubmit={handleSubmit}
-            isLoading={isStreaming || isConnecting}
-            isStreaming={isStreaming}
-            onStop={stop}
-            autoFocus={!isMobile}
-            submitOnEnter={!isStreaming && !shouldInsertNewlineOnEnter}
-            className="flex flex-col w-full gap-0 rounded-2xl border bg-card p-2 dark:border-input dark:bg-[oklch(0.182_0_0)]"
-            footerStartElements={footerStartElements}
-            renderOverlay={(value) => renderHighlightedSkillTokens(value, classifySkill)}
-            popoverSlot={
-              popupOpen ? (
-                <SlashPopup
-                  items={popupItems}
-                  agentName={selectedAgent.name}
-                  highlightedIdx={highlightedIdx}
-                  onSelect={handleSelectFromSlashPopup}
-                  onHover={setHighlightedIdx}
+          {/* Sealed / no-skills agents: the notice is a card that sits BEHIND
+              the prompt input — a tad narrower (horizontal inset), peeking out
+              above it, its lower edge tucked behind the composer via the
+              prompt input's negative top margin. Dismiss → normal composer. */}
+          {showComposerNotice && composerNoticeKind !== null ? (
+            <div className="relative flex flex-col">
+              <div className="mx-0.5 rounded-t-2xl border border-border bg-secondary pt-1 pb-6 dark:bg-sidebar-accent">
+                <ComposerSkillsNotice
+                  kind={composerNoticeKind}
+                  onDismiss={() => setDismissedNoticeAgent(descriptor.id)}
                 />
-              ) : null
-            }
-            onTextareaKeyDown={(e) => {
-              // First `/` in a sealed / personal-ACP thread raises the one-time
-              // educational note + fires the seal-hit demand signal (no-op for
-              // agents that have a skills surface).
-              if (e.key === '/') {
-                sealedHint.notifySlash()
-              }
-              handleSlashKeyDown(e)
-            }}
-            onTextareaSelect={(e) => setCursorPos(e.currentTarget.selectionStart)}
-          />
+              </div>
+              <div className="relative z-10 -mt-4">{promptInput}</div>
+            </div>
+          ) : (
+            promptInput
+          )}
         </div>
         <ContextOverflowModal
           isOpen={showOverflowModal}

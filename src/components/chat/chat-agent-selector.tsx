@@ -10,14 +10,17 @@ import { useTeamAgents as useTeamAgents_default } from '@/dal/use-team-agents'
 import { useNewlyGrantedTeamAgents as useNewlyGrantedTeamAgents_default } from '@/hooks/use-newly-granted-agents'
 import type { AgentRef } from '@/dal/chat-threads'
 import { NewGrantBadge } from '@/components/settings/agents/new-grant-badge'
+import { AgentGlyph } from '@/components/settings/agents/detail/agent-icon-picker'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { builtInAgent } from '@/defaults/agents'
 import { useHaptics } from '@/hooks/use-haptics'
+import { usePersonalAgentIcons } from '@/hooks/use-personal-agent-icons'
+import { useThunderboltAgentIcon } from '@/hooks/use-thunderbolt-agent-icon'
 import { cn } from '@/lib/utils'
 import type { AgentCard } from '@shared/agent-cards'
 import type { Agent } from '@/types/acp'
 import { Building2, ChevronDown, Globe, Zap, type LucideIcon } from 'lucide-react'
-import { useState, type ComponentType } from 'react'
+import { useState } from 'react'
 
 /** Item payload: an org card OR one of the user's own agents. */
 type AgentSelectItemData = { kind: 'card'; card: AgentCard } | { kind: 'agent'; agent: Agent }
@@ -32,27 +35,43 @@ type ChatAgentSelectorProps = {
   useNewlyGrantedTeamAgents?: typeof useNewlyGrantedTeamAgents_default
 }
 
-const IconForYours = (agent: Agent): ComponentType<{ className?: string }> => (agent.type === 'built-in' ? Zap : Globe)
+/** A menu-item icon slot that renders any stored icon value (Lucide KEY or an
+ *  uploaded/remote image) at a fixed 14px, so custom glyphs sit like the rest. */
+const ItemGlyph = ({ value }: { value: string }) => (
+  <span className="flex size-4 shrink-0 items-center justify-center overflow-hidden rounded">
+    <AgentGlyph value={value} className="size-3.5 text-muted-foreground" />
+  </span>
+)
 
 const cardItem = (card: AgentCard, isNewlyGranted: boolean): SearchableMenuItem<AgentSelectItemData> => ({
   id: card.id,
   label: card.name,
-  description: card.description,
-  icon: <Building2 className="size-3.5 text-muted-foreground" />,
+  icon: <ItemGlyph value={card.icon} />,
   ...(isNewlyGranted ? { badge: <NewGrantBadge /> } : {}),
   data: { kind: 'card', card },
 })
 
-const agentItem = (agent: Agent): SearchableMenuItem<AgentSelectItemData> => {
-  const Icon = IconForYours(agent)
-  return {
-    id: agent.id,
-    label: agent.name,
-    description: agent.description ?? undefined,
-    icon: <Icon className="size-3.5 text-muted-foreground" />,
-    data: { kind: 'agent', agent },
-  }
-}
+const agentItem = (agent: Agent, iconValue: string): SearchableMenuItem<AgentSelectItemData> => ({
+  id: agent.id,
+  label: agent.name,
+  icon: <ItemGlyph value={iconValue} />,
+  data: { kind: 'agent', agent },
+})
+
+/** Item renderer for the agent menu — mirrors the default row but pins the label
+ *  to 14px (`--font-size-body`) across the Company agents / Your agents groups. */
+const renderAgentItem = (item: SearchableMenuItem<AgentSelectItemData>, isSelected: boolean) => (
+  <div
+    className={cn(
+      'w-full flex items-center gap-2 px-3 h-[var(--touch-height-sm)] rounded-lg transition-colors text-left cursor-pointer text-[length:var(--font-size-body)]',
+      isSelected ? 'bg-accent' : 'hover:bg-accent/50',
+    )}
+  >
+    {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+    <span className="min-w-0 flex-1 truncate font-medium">{item.label}</span>
+    {item.badge && <span className="flex-shrink-0">{item.badge}</span>}
+  </div>
+)
 
 /**
  * Build the two member-chat sections: "From your organization" (team cards from
@@ -63,21 +82,29 @@ export const buildAgentSelectorGroups = (
   teamCards: AgentCard[],
   personalAgents: Agent[],
   newlyGranted: Set<string> = new Set(),
+  /** Member icon overrides (agentId → icon value) for personal agents. */
+  personalIcons: Record<string, string> = {},
+  /** The member's chosen glyph for the built-in Thunderbolt agent. */
+  thunderboltIcon: string = builtInAgent.icon ?? 'zap',
 ): SearchableMenuGroup<AgentSelectItemData>[] => {
   const groups: SearchableMenuGroup<AgentSelectItemData>[] = []
 
+  // No section headers inside the dropdown — the groups exist only to keep the
+  // company agents and the member's own agents visually separated (the gap
+  // between groups), not to label them.
   if (teamCards.length > 0) {
     groups.push({
       id: 'org',
-      label: 'From your organization',
       items: teamCards.map((card) => cardItem(card, newlyGranted.has(card.id))),
     })
   }
 
   groups.push({
     id: 'yours',
-    label: 'Yours',
-    items: [agentItem(builtInAgent), ...personalAgents.map(agentItem)],
+    items: [
+      agentItem(builtInAgent, thunderboltIcon),
+      ...personalAgents.map((agent) => agentItem(agent, personalIcons[agent.id] ?? 'globe')),
+    ],
   })
 
   return groups
@@ -119,13 +146,23 @@ export const ChatAgentSelector = ({
   const teamCards = useTeamAgents()
   const personalAgents = useAgents()
   const newlyGranted = useNewlyGrantedTeamAgents(useTeamAgents)
+  const { icons: personalIcons } = usePersonalAgentIcons()
+  const thunderboltIcon = useThunderboltAgentIcon()
   const { triggerSelection } = useHaptics()
   const [open, setOpen] = useState(false)
 
-  const groups = buildAgentSelectorGroups(teamCards, personalAgents, newlyGranted)
+  const groups = buildAgentSelectorGroups(teamCards, personalAgents, newlyGranted, personalIcons, thunderboltIcon)
 
   const triggerIcon: LucideIcon =
     descriptor.kind === 'team' ? Building2 : descriptor.kind === 'thunderbolt' ? Zap : Globe
+  // The selected agent's glyph honors the member's icon override, matching the menu.
+  // Team agents have no member override — their admin-set icon rides on the descriptor.
+  const triggerIconValue: string | null =
+    descriptor.kind === 'thunderbolt'
+      ? thunderboltIcon
+      : descriptor.kind === 'personal'
+        ? (personalIcons[descriptor.id] ?? 'globe')
+        : descriptor.icon
 
   const handleChange = (_id: string, item: SearchableMenuItem<AgentSelectItemData>) => {
     if (!item.data) {
@@ -145,7 +182,7 @@ export const ChatAgentSelector = ({
         readOnly ? 'cursor-default' : cn('cursor-pointer', isOpen ? 'bg-secondary' : 'hover:bg-secondary/50'),
       )}
     >
-      <TriggerIcon icon={triggerIcon} />
+      {triggerIconValue ? <ItemGlyph value={triggerIconValue} /> : <TriggerIcon icon={triggerIcon} />}
       <span className="font-medium truncate">{descriptor.name}</span>
       {!readOnly && (
         <ChevronDown
@@ -183,6 +220,8 @@ export const ChatAgentSelector = ({
       emptyMessage="No agents found"
       blurBackdrop
       trigger={(_selected, isOpen) => triggerInner(isOpen)}
+      renderItem={renderAgentItem}
+      itemGap="gap-0.5"
       width={320}
       maxHeight={340}
       open={open}

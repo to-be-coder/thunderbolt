@@ -5,12 +5,17 @@
 import { ChevronRight, type LucideIcon } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { AgentGlyph } from './detail/agent-icon-picker'
 import { NewGrantBadge } from './new-grant-badge'
 
 export type AgentRowProps = {
   /** Stable id used for the row test id and React key. */
   agentId: string
-  icon: LucideIcon
+  /** Static Lucide glyph. Used when `iconValue` is not supplied. */
+  icon?: LucideIcon
+  /** A stored icon value (Lucide KEY or uploaded/remote image URL). When set it
+   *  takes precedence over `icon`, so member-editable agents show their override. */
+  iconValue?: string
   name: string
   /** Secondary provenance line (agents-page-spec §1, exact copy). Static — the
    *  roster never opens a connection, so no live status is shown here (spec §0/§1). */
@@ -34,6 +39,7 @@ export type AgentRowProps = {
 export const AgentRow = ({
   agentId,
   icon: Icon,
+  iconValue,
   name,
   provenanceLine,
   isNewlyGranted,
@@ -47,20 +53,24 @@ export const AgentRow = ({
       aria-label={`Open ${name}`}
       aria-pressed={selected}
       className={cn(
-        'flex w-full items-center gap-3 rounded-[inherit] px-4 py-3 text-left transition-colors',
+        'flex w-full cursor-pointer items-center gap-3 rounded-[inherit] px-4 py-3 text-left transition-colors',
         selected ? 'bg-accent' : 'cursor-pointer hover:bg-secondary/50',
       )}
     >
-      <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-md bg-muted">
-        <Icon className="size-5 text-muted-foreground" aria-hidden="true" />
+      <div className="flex aspect-square size-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
+        {iconValue ? (
+          <AgentGlyph value={iconValue} className="size-5 text-muted-foreground" />
+        ) : (
+          Icon && <Icon className="size-5 text-muted-foreground" aria-hidden="true" />
+        )}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[length:var(--font-size-body)] font-medium truncate">{name}</span>
+          <span className="text-base font-medium truncate">{name}</span>
           {isNewlyGranted && <NewGrantBadge />}
         </div>
         <div
-          className="flex items-center gap-1.5 text-[length:var(--font-size-sm)] truncate text-muted-foreground"
+          className="flex items-center gap-1.5 text-sm truncate text-muted-foreground"
           data-testid={`agent-provenance-${agentId}`}
         >
           <span className="truncate">{provenanceLine}</span>

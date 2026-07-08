@@ -24,7 +24,8 @@ export const builtInAgent: Agent = {
   transport: 'in-process',
   url: null,
   description: 'Built-in AI assistant',
-  icon: 'zap',
+  // The Thunderbolt agent wears the app's own brand mark (rendered by AgentGlyph).
+  icon: 'thunderbolt',
   isSystem: 1,
   enabled: 1,
   deletedAt: null,

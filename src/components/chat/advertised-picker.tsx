@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { SearchableMenu, type SearchableMenuGroup, type SearchableMenuItem } from '@/components/ui/searchable-menu'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
@@ -18,8 +19,9 @@ type AdvertisedPickerProps = {
   icon?: ReactNode
 }
 
-const bordered =
-  'flex items-center gap-1.5 px-2 h-[var(--touch-height-control)] rounded-lg border border-border text-[length:var(--font-size-sm)]'
+const base =
+  'flex items-center gap-1.5 px-2 h-[var(--touch-height-control)] rounded-lg text-[length:var(--font-size-sm)]'
+const bordered = cn(base, 'border border-border')
 
 /**
  * Data-driven composer slot for what an agent CARD advertises (T2 — "the picker
@@ -47,6 +49,30 @@ export const AdvertisedPicker = ({ options, emptyLabel, ariaLabel, icon }: Adver
     )
   }
 
+  // Single option: not a real choice — a BORDERLESS label that, when opened,
+  // shows only an explanatory message (no lone selectable row).
+  if (options.length === 1) {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label={ariaLabel}
+            data-testid="advertised-single"
+            className={cn(bordered, 'cursor-pointer text-muted-foreground transition-colors hover:bg-accent/50')}
+          >
+            {icon}
+            <span className="font-medium truncate">{options[0]}</span>
+            <ChevronDown className="size-3.5 text-muted-foreground" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="start" side={isMobile ? 'top' : 'bottom'} className="w-auto max-w-64 p-3">
+          <p className="text-[length:var(--font-size-sm)] text-muted-foreground">No other options available.</p>
+        </PopoverContent>
+      </Popover>
+    )
+  }
+
   const groups: SearchableMenuGroup<{ value: string }>[] = [
     {
       id: 'advertised',
@@ -54,6 +80,17 @@ export const AdvertisedPicker = ({ options, emptyLabel, ariaLabel, icon }: Adver
       items: options.map((value) => ({ id: value, label: value, data: { value } })),
     },
   ]
+
+  const renderItem = (item: SearchableMenuItem<{ value: string }>, isSelected: boolean) => (
+    <div
+      className={cn(
+        'w-full flex items-center px-3 h-[var(--touch-height-sm)] rounded-lg transition-colors text-left cursor-pointer text-[length:var(--font-size-body)]',
+        isSelected ? 'bg-accent' : 'hover:bg-accent/50',
+      )}
+    >
+      <span className="font-medium truncate">{item.label}</span>
+    </div>
+  )
 
   const renderTrigger = (_item: SearchableMenuItem<{ value: string }> | undefined, isOpen: boolean) => (
     <div
@@ -76,13 +113,10 @@ export const AdvertisedPicker = ({ options, emptyLabel, ariaLabel, icon }: Adver
       side={isMobile ? 'top' : 'bottom'}
       align="start"
       trigger={renderTrigger}
+      renderItem={renderItem}
+      itemGap="gap-0.5"
       width={260}
       maxHeight={300}
-      footer={
-        options.length === 1 ? (
-          <p className="text-[length:var(--font-size-sm)] text-muted-foreground">No other model available</p>
-        ) : undefined
-      }
     />
   )
 }

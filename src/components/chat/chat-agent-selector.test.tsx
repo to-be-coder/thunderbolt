@@ -86,9 +86,8 @@ describe('ChatAgentSelector', () => {
       fireEvent.click(screen.getByTestId('chat-agent-selector-trigger'))
     })
 
-    expect(screen.getByText('From your organization')).toBeInTheDocument()
-    expect(screen.getByText('Yours')).toBeInTheDocument()
-    // Thunderbolt pinned first under "Yours", plus the personal agent + org cards.
+    // No section headers inside the dropdown — assert the items from both the
+    // company group and the member's own group are present.
     expect(screen.getAllByText('Thunderbolt').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('My Remote Agent')).toBeInTheDocument()
     expect(screen.getByText(sealedTeamAgent.name)).toBeInTheDocument()

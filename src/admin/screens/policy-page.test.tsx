@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import '@testing-library/jest-dom'
-import { cleanup, fireEvent, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'bun:test'
 import type { OrgPolicy } from '../api/types'
 import { createRecordingClient, flush, renderAdmin } from '../test-utils'
@@ -21,67 +21,71 @@ const serverPolicy: OrgPolicy = {
 describe('PolicyPage', () => {
   afterEach(cleanup)
 
-  it('save PUTs the edited policy to /v1/admin/policy', async () => {
-    const { client, calls } = createRecordingClient((call) => {
-      if (call.method === 'GET' && call.path === '/v1/admin/policy') {
-        return serverPolicy
-      }
-      return call.body
-    })
-    renderAdmin(<PolicyPage />, client)
-    await flush()
-
-    // Add an MCP allowlist entry, then save.
-    fireEvent.change(screen.getByLabelText('MCP server URL'), { target: { value: 'https://mcp.example.com' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Save policy' }))
-    await flush()
-
-    const put = calls.find((call) => call.method === 'PUT' && call.path === '/v1/admin/policy')
-    expect(put).toBeDefined()
-    expect(put?.body).toEqual({
-      personalAgentPolicy: 'all',
-      userModelsAllowed: true,
-      mcpPolicy: 'allowlist',
-      mcpAllowlist: ['https://mcp.example.com'],
-      blockedExtensions: [],
-      blockedIntegrations: [],
-    })
-  })
-
-  const renderAndSave = async (interact: () => void) => {
+  const setup = () => {
     const { client, calls } = createRecordingClient((call) =>
       call.method === 'GET' && call.path === '/v1/admin/policy' ? serverPolicy : call.body,
     )
     renderAdmin(<PolicyPage />, client)
+    return calls
+  }
+  type Calls = ReturnType<typeof setup>
+  // The last policy PUT — each toggle auto-persists, so a two-toggle test emits
+  // two PUTs and we assert on the final one.
+  const lastPolicyPut = (calls: Calls) =>
+    [...calls].reverse().find((call) => call.method === 'PUT' && call.path === '/v1/admin/policy')
+  // Toggle + flush so React re-renders between clicks (fresh draft closure).
+  const toggle = async (label: string) => {
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText(label))
+    })
     await flush()
-    interact()
-    fireEvent.click(screen.getByRole('button', { name: 'Save policy' }))
-    await flush()
-    return calls.find((call) => call.method === 'PUT' && call.path === '/v1/admin/policy')
   }
 
-  it('turning off "Allow personal agents" saves company_only', async () => {
-    const put = await renderAndSave(() => {
-      fireEvent.click(screen.getByLabelText('Allow personal agents'))
-    })
-    expect((put?.body as OrgPolicy).personalAgentPolicy).toBe('company_only')
-  })
-
-  it('turning off the built-in agent (personal still on) saves no_native', async () => {
-    const put = await renderAndSave(() => {
-      fireEvent.click(screen.getByLabelText('Allow the built-in Thunderbolt agent'))
-    })
-    expect((put?.body as OrgPolicy).personalAgentPolicy).toBe('no_native')
-  })
-
-  it('the built-in-agent switch is disabled once personal agents are off', async () => {
-    const { client } = createRecordingClient((call) =>
-      call.method === 'GET' && call.path === '/v1/admin/policy' ? serverPolicy : call.body,
-    )
-    renderAdmin(<PolicyPage />, client)
+  it('has NO Save button — toggling user models persists immediately', async () => {
+    const calls = setup()
     await flush()
-    fireEvent.click(screen.getByLabelText('Allow personal agents')) // → company_only
-    expect(screen.getByLabelText('Allow the built-in Thunderbolt agent')).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull()
+
+    await toggle('Allow user models')
+    expect(lastPolicyPut(calls)?.body).toEqual({
+      personalAgentPolicy: 'all',
+      userModelsAllowed: false,
+      mcpPolicy: 'allowlist',
+      mcpAllowlist: [],
+      blockedExtensions: [],
+      blockedIntegrations: [],
+    })
+    // The moved controls are no longer on this page.
+    expect(screen.queryByLabelText('MCP server URL')).not.toBeInTheDocument()
+  })
+
+  it('turning off "Allow personal agents" persists native_only (built-in stays on)', async () => {
+    const calls = setup()
+    await flush()
+    await toggle('Allow personal agents')
+    expect((lastPolicyPut(calls)?.body as OrgPolicy).personalAgentPolicy).toBe('native_only')
+  })
+
+  it('turning off the built-in agent (personal still on) persists no_native', async () => {
+    const calls = setup()
+    await flush()
+    await toggle('Allow the built-in Thunderbolt agent')
+    expect((lastPolicyPut(calls)?.body as OrgPolicy).personalAgentPolicy).toBe('no_native')
+  })
+
+  it('the built-in-agent switch stays enabled and toggleable once personal agents are off', async () => {
+    setup()
+    await flush()
+    await toggle('Allow personal agents') // → native_only
+    expect(screen.getByLabelText('Allow the built-in Thunderbolt agent')).not.toBeDisabled()
+    expect(screen.getByLabelText('Allow the built-in Thunderbolt agent')).toBeChecked()
+  })
+
+  it('turning BOTH off persists company_only', async () => {
+    const calls = setup()
+    await flush()
+    await toggle('Allow personal agents')
+    await toggle('Allow the built-in Thunderbolt agent')
+    expect((lastPolicyPut(calls)?.body as OrgPolicy).personalAgentPolicy).toBe('company_only')
   })
 })

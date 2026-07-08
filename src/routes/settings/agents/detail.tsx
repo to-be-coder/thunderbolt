@@ -7,7 +7,9 @@ import type { AgentCard } from '@shared/agent-cards'
 import { useDatabase } from '@/contexts'
 import { deleteAgent, updateSettings } from '@/dal'
 import { THUNDERBOLT_HIDDEN_SETTING_KEY } from '@/hooks/use-thunderbolt-agent-hidden'
-import { useAgents } from '@/dal/agents'
+import { THUNDERBOLT_ICON_SETTING_KEY, useThunderboltAgentIcon } from '@/hooks/use-thunderbolt-agent-icon'
+import { usePersonalAgentIcons } from '@/hooks/use-personal-agent-icons'
+import { updateAgent, useAgents } from '@/dal/agents'
 import { useTeamAgents } from '@/dal/use-team-agents'
 import { builtInAgent } from '@/defaults/agents'
 import type { Agent } from '@/types/acp'
@@ -56,6 +58,8 @@ export default function AgentDetailPage() {
   const db = useDatabase()
   const teamCards = useTeamAgents()
   const personalAgents = useAgents()
+  const thunderboltIcon = useThunderboltAgentIcon()
+  const { icons: personalIcons, setIcon: setPersonalIcon } = usePersonalAgentIcons()
 
   const target = resolveAgentDetailTarget(agentId, teamCards, personalAgents)
 
@@ -69,6 +73,8 @@ export default function AgentDetailPage() {
           await updateSettings(db, { [THUNDERBOLT_HIDDEN_SETTING_KEY]: 'true' })
           navigate('/settings/agents')
         }}
+        iconKey={thunderboltIcon}
+        onIconChange={(key) => updateSettings(db, { [THUNDERBOLT_ICON_SETTING_KEY]: key })}
       />
     )
   }
@@ -87,6 +93,10 @@ export default function AgentDetailPage() {
           await deleteAgent(db, personal.id)
           navigate('/settings/agents')
         }}
+        iconKey={personalIcons[personal.id]}
+        onIconChange={(key) => setPersonalIcon(personal.id, key)}
+        onEndpointChange={(url) => updateAgent(db, personal.id, { acpUrl: url })}
+        onNameChange={(name) => updateAgent(db, personal.id, { name })}
       />
     )
   }

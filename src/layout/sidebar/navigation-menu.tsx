@@ -56,7 +56,7 @@ export const NavigationMenu = ({
           </SidebarMenuButton>
         ) : (
           <SidebarMenuButton asChild tooltip="Settings" isActive={currentPath.startsWith('/settings')}>
-            <NavLink to="/settings/preferences">
+            <NavLink to="/settings/agents">
               <Settings className="size-[var(--icon-size-default)]" />
               <span>Settings</span>
             </NavLink>

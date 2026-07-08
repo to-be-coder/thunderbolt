@@ -15,18 +15,20 @@ describe('AdvertisedPicker', () => {
     expect(screen.getByTestId('advertised-static-chip')).toHaveTextContent('Set by your organization')
   })
 
-  it('renders a single advertised option as a picker that notes there is no other model', async () => {
+  it('renders a single advertised option as a bordered trigger that opens to a no-other-options note', async () => {
     render(<AdvertisedPicker options={['Company GPT-4o']} emptyLabel="fallback" ariaLabel="Advertised model" />)
 
-    // Not a static chip — an openable picker showing the single model.
+    // Not a static chip — a bordered trigger (same as multi-option) showing the single model.
     expect(screen.queryByTestId('advertised-static-chip')).toBeNull()
-    const trigger = screen.getByLabelText('Advertised model')
+    const trigger = screen.getByTestId('advertised-single')
     expect(trigger).toHaveTextContent('Company GPT-4o')
+    expect(trigger.className).toContain('border-border')
 
     await act(async () => {
       fireEvent.click(trigger)
     })
-    expect(await screen.findByText('No other model available')).toBeInTheDocument()
+    // The opened popover shows only the message, no lone selectable row.
+    expect(await screen.findByText('No other options available.')).toBeInTheDocument()
   })
 
   it('renders a bounded picker for two or more options and lets the user switch', async () => {

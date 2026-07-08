@@ -19,15 +19,24 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Link } from 'react-router'
 import { builtInAgent } from '@/defaults/agents'
 import { useLibraryCounts as useLibraryCounts_default } from '@/hooks/use-library-counts'
-import { AgentDetailLayout, DetailSection } from './agent-detail-layout'
+import { useEnabledSkills as useEnabledSkills_default } from '@/skills/use-skills'
+import { AgentDetailLayout, DetailSection, SubSection } from './agent-detail-layout'
+import { AgentSkillsLines } from './agent-skills-section'
+import { THUNDERBOLT_ICON_KEY } from './agent-icons'
 
 type ThunderboltAgentDetailProps = {
   onBack: () => void
   /** Hides the built-in agent from this member's lists (a user setting — the
    *  agent still exists in code as the chat fallback; nothing is truly deleted). */
   onRemove: () => void
+  /** Current icon KEY (member override or the built-in default). */
+  iconKey?: string
+  /** Persists a member-chosen icon KEY for the built-in agent. */
+  onIconChange?: (key: string) => void
   /** Injectable for tests — production reads live enabled-Library counts. */
   useLibraryCounts?: typeof useLibraryCounts_default
+  /** Injectable for tests — production reads member-side enabled skills. */
+  useEnabledSkills?: typeof useEnabledSkills_default
 }
 
 /**
@@ -40,7 +49,10 @@ type ThunderboltAgentDetailProps = {
 export const ThunderboltAgentDetail = ({
   onBack,
   onRemove,
+  iconKey,
+  onIconChange,
   useLibraryCounts = useLibraryCounts_default,
+  useEnabledSkills = useEnabledSkills_default,
 }: ThunderboltAgentDetailProps) => {
   const counts = useLibraryCounts()
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -54,6 +66,9 @@ export const ThunderboltAgentDetail = ({
     <>
       <AgentDetailLayout
         icon={Zap}
+        iconKey={iconKey ?? builtInAgent.icon ?? THUNDERBOLT_ICON_KEY}
+        iconDefaultKey={THUNDERBOLT_ICON_KEY}
+        onIconChange={onIconChange}
         name={builtInAgent.name}
         menu={
           <DropdownMenu>
@@ -77,36 +92,37 @@ export const ThunderboltAgentDetail = ({
           <>
             <DetailSection title="About">
               <p className="text-base">
-                Runs on your device where the model allows. One Thunderbolt agent per account in this version.
+                Thunderbolt is the agent built into the app, always here, no setup needed. It draws on everything you've
+                enabled in your Library (skills, integrations, and MCP servers) to help with whatever you're working on,
+                running right on your device wherever the model allows.
               </p>
             </DetailSection>
 
+            {/* Mirrors the company agent's "What it uses" (Integrations · MCP ·
+                Skills sub-sections), but the answers stay LINKS into the member's
+                Library — the built-in agent uses everything enabled there. */}
             <DetailSection title="What it uses">
-              <p className="text-base">Uses everything enabled in your Library:</p>
-              <p className="text-base font-medium" data-testid="library-summary">
-                {[
-                  { count: counts.skills, singular: 'skill', plural: 'skills', to: '/settings/skills' },
-                  {
-                    count: counts.mcpServers,
-                    singular: 'MCP server',
-                    plural: 'MCP servers',
-                    to: '/settings/mcp-servers',
-                  },
-                  {
-                    count: counts.extensions,
-                    singular: 'integration',
-                    plural: 'integrations',
-                    to: '/settings/integrations',
-                  },
-                ].map((link, index) => (
-                  <span key={link.to}>
-                    {index > 0 && <span className="text-muted-foreground"> · </span>}
-                    <Link to={link.to} className="underline underline-offset-4 hover:text-foreground">
-                      {link.count} {link.count === 1 ? link.singular : link.plural}
-                    </Link>
-                  </span>
-                ))}
-              </p>
+              <div className="flex flex-col gap-4">
+                <SubSection label="Integrations">
+                  <Link
+                    to="/settings/integrations"
+                    className="text-base text-primary underline underline-offset-4 transition-colors hover:text-foreground"
+                  >
+                    {counts.extensions} {counts.extensions === 1 ? 'integration' : 'integrations'}
+                  </Link>
+                </SubSection>
+                <SubSection label="MCP">
+                  <Link
+                    to="/settings/mcp-servers"
+                    className="text-base text-primary underline underline-offset-4 transition-colors hover:text-foreground"
+                  >
+                    {counts.mcpServers} {counts.mcpServers === 1 ? 'MCP server' : 'MCP servers'}
+                  </Link>
+                </SubSection>
+                <SubSection label="Skills">
+                  <AgentSkillsLines agentSkillCount={0} libraryAllowed useEnabledSkills={useEnabledSkills} />
+                </SubSection>
+              </div>
             </DetailSection>
           </>
         }

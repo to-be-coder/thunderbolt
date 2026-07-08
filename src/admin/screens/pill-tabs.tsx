@@ -13,9 +13,9 @@ export type PillTab<T extends string> = {
 }
 
 /**
- * Pill tab bar mirroring the skills-marketplace `CategoryTab`: an animated accent
- * pill slides under the active tab (framer-motion `layoutId`). Used for the agent
- * detail panel's Details / Access tabs.
+ * Modern underline tab bar: the tabs sit on a hairline rule and an accent
+ * indicator glides under the active tab (framer-motion `layoutId`). Used for the
+ * agent detail panel's Details / Access / Preview tabs.
  */
 export const PillTabs = <T extends string>({
   tabs,
@@ -28,7 +28,7 @@ export const PillTabs = <T extends string>({
   onChange: (id: T) => void
   layoutId?: string
 }) => (
-  <div role="tablist" className="flex items-center gap-1">
+  <div role="tablist" className="flex items-center gap-5 border-b border-border">
     {tabs.map((tab) => {
       const active = tab.id === value
       const Icon = tab.icon
@@ -40,19 +40,19 @@ export const PillTabs = <T extends string>({
           aria-selected={active}
           onClick={() => onChange(tab.id)}
           className={cn(
-            'relative isolate inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors',
-            active ? 'text-foreground' : 'text-muted-foreground hover:bg-accent/50',
+            'relative inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 text-sm font-medium transition-colors',
+            active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
           )}
         >
+          {Icon && <Icon className="size-4" />}
+          <span>{tab.label}</span>
           {active && (
             <motion.span
               layoutId={layoutId}
-              className="absolute inset-0 rounded-lg bg-accent"
+              className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-primary"
               transition={{ type: 'spring', damping: 35, stiffness: 400, mass: 0.8 }}
             />
           )}
-          {Icon && <Icon className="relative z-10 size-4" />}
-          <span className="relative z-10">{tab.label}</span>
         </button>
       )
     })}

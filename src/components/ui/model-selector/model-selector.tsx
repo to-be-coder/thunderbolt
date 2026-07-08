@@ -167,19 +167,14 @@ export const ModelSelector = ({
     const content = (
       <div
         className={cn(
-          'w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors text-left cursor-pointer',
+          'w-full flex items-center gap-2 px-3 h-[var(--touch-height-sm)] rounded-lg transition-colors text-left cursor-pointer text-[length:var(--font-size-body)]',
           'hover:bg-accent/50',
           isSelected && 'bg-accent',
           item.disabled && 'opacity-50 cursor-not-allowed',
         )}
       >
-        <div className="flex flex-col gap-0.5 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-medium truncate">{item.label}</span>
-            {showMissingKeyHint ? <AlertTriangle className="size-3.5 text-amber-500 flex-shrink-0" /> : item.icon}
-          </div>
-          <span className="text-sm text-muted-foreground truncate">{item.description}</span>
-        </div>
+        <span className="font-medium truncate">{item.label}</span>
+        {showMissingKeyHint ? <AlertTriangle className="size-3.5 text-amber-500 flex-shrink-0" /> : item.icon}
       </div>
     )
 
@@ -224,6 +219,7 @@ export const ModelSelector = ({
       blurBackdrop
       trigger={renderTrigger}
       renderItem={renderItem}
+      itemGap="gap-0.5"
       footer={footer}
       width={320}
       maxHeight={340}

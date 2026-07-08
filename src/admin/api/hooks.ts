@@ -10,10 +10,11 @@
  * trail (S6) reflects it.
  */
 
-import { useHttpClient } from '@/contexts'
+import { useHttpClient, useOptionalDatabase } from '@/contexts'
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { isDemoMode } from '@/lib/demo-mode'
+import { patchTeamAgentCacheCard } from '@/dal/team-agents-cache'
 import { createAdminApi, type AdminApi } from './admin-client'
 import { createDemoAdminApi } from './demo-admin-api'
 import type { AgentInput, AgentPatch, GrantInput, OrgPolicy } from './types'
@@ -27,6 +28,7 @@ export const getDemoAdminApi = (): AdminApi => (demoApi ??= createDemoAdminApi()
 export const adminKeys = {
   me: ['admin', 'me'] as const,
   members: ['admin', 'members'] as const,
+  companySkills: ['admin', 'skills'] as const,
   groups: ['admin', 'groups'] as const,
   groupMembers: (groupId: string) => ['admin', 'groups', groupId, 'members'] as const,
   memberGroups: (memberId: string) => ['admin', 'members', memberId, 'groups'] as const,
@@ -113,6 +115,31 @@ export const useMemberAgents = (memberId: string | null) => {
     queryKey: adminKeys.memberAgents(memberId ?? ''),
     queryFn: () => api.listMemberAgents(memberId ?? ''),
     enabled: memberId !== null,
+  })
+}
+
+// ── Company skills ────────────────────────────────────────────────────────────
+
+export const useCompanySkills = () => {
+  const api = useAdminApi()
+  return useQuery({ queryKey: adminKeys.companySkills, queryFn: api.listCompanySkills })
+}
+
+export const useCreateCompanySkill = () => {
+  const api = useAdminApi()
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (input: { name: string; description?: string }) => api.createCompanySkill(input),
+    onSuccess: () => invalidate([adminKeys.companySkills]),
+  })
+}
+
+export const useDeleteCompanySkill = () => {
+  const api = useAdminApi()
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (id: string) => api.deleteCompanySkill(id),
+    onSuccess: () => invalidate([adminKeys.companySkills]),
   })
 }
 
@@ -243,9 +270,23 @@ export const useCreateAgent = () => {
 export const useUpdateAgent = () => {
   const api = useAdminApi()
   const invalidate = useInvalidate()
+  const db = useOptionalDatabase()
   return useMutation({
     mutationFn: ({ id, patch }: { id: string; patch: AgentPatch }) => api.updateAgent(id, patch),
-    onSuccess: () => invalidate([adminKeys.agents]),
+    onSuccess: async (agent) => {
+      // Demo bridge: the admin store and the member team-cache are separate here,
+      // so mirror the admin's member-visible edits (name/icon/description/category)
+      // onto the cached card. In production the org discovery sync does this.
+      if (isDemoMode() && db) {
+        await patchTeamAgentCacheCard(db, agent.id, {
+          name: agent.name,
+          icon: agent.icon,
+          description: agent.description,
+          category: agent.category,
+        })
+      }
+      await invalidate([adminKeys.agents])
+    },
   })
 }
 

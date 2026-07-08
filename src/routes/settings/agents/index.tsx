@@ -80,12 +80,12 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
     <div className="flex h-full w-full min-h-0">
       <div className="min-w-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6 p-4">
-          <PageHeader title="Agents" titleClassName="text-[32px]">
+          <PageHeader title="Agents">
             {canConnect && (
               <Button
                 variant="outline"
                 size="icon"
-                className="rounded-lg"
+                className="rounded-lg bg-card hover:bg-accent"
                 onClick={() => setDialogOpen(true)}
                 data-testid="connect-an-agent"
                 aria-label="Connect an agent"
@@ -107,7 +107,7 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
       </div>
 
       <SlideInPanel open={detailOpen}>
-        <div className="h-full py-4 pr-4 pl-6">
+        <div className="h-full border-l border-border pr-6 pl-6">
           <Outlet />
         </div>
       </SlideInPanel>

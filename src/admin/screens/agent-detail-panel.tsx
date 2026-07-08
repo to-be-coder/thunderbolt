@@ -17,12 +17,16 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { AlertTriangle, Building2, Check, Info, KeyRound, MoreHorizontal, Pencil, X } from 'lucide-react'
+import { AnimatePresence, m } from 'framer-motion'
+import { AlertTriangle, Eye, Info, KeyRound, MoreHorizontal, X } from 'lucide-react'
 import type { AgentCard } from '@shared/agent-cards'
 import { CompanyCardBody } from '@/components/settings/agents/detail/company-agent-detail'
+import { agentIconFor } from '@/components/settings/agents/detail/agent-icons'
+import { AgentGlyph, AgentIconPicker } from '@/components/settings/agents/detail/agent-icon-picker'
 import type { ReactNode } from 'react'
-import { useReducer, useState } from 'react'
+import { useEffect, useReducer, useState } from 'react'
 import {
   useAgentEndpointDetail,
   useConnectionFailures,
@@ -36,6 +40,7 @@ import { PillTabs } from './pill-tabs'
 
 type EditorState = {
   name: string
+  icon: string
   category: AgentCategory
   acpUrl: string
   description: string
@@ -45,6 +50,7 @@ type EditorState = {
 
 const initEditor = (agent: TeamAgentWithCapabilities): EditorState => ({
   name: agent.name,
+  icon: agent.icon,
   category: agent.category,
   acpUrl: agent.acpUrl,
   description: agent.description,
@@ -54,6 +60,7 @@ const initEditor = (agent: TeamAgentWithCapabilities): EditorState => ({
 
 type EditorAction =
   | { type: 'SET_NAME'; value: string }
+  | { type: 'SET_ICON'; value: string }
   | { type: 'SET_CATEGORY'; value: AgentCategory }
   | { type: 'SET_ACP'; value: string }
   | { type: 'SET_DESCRIPTION'; value: string }
@@ -66,6 +73,8 @@ const editorReducer = (state: EditorState, action: EditorAction): EditorState =>
   switch (action.type) {
     case 'SET_NAME':
       return { ...state, name: action.value }
+    case 'SET_ICON':
+      return { ...state, icon: action.value }
     case 'SET_CATEGORY':
       return { ...state, category: action.value }
     case 'SET_ACP':
@@ -98,11 +107,10 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
   const deleteAgent = useDeleteAgent()
   const [state, dispatch] = useReducer(editorReducer, agent, initEditor)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [tab, setTab] = useState<'details' | 'access'>('details')
-  const [previewOpen, setPreviewOpen] = useState(false)
-
+  const [tab, setTab] = useState<'details' | 'access' | 'preview'>('details')
   const dirty =
     state.name.trim() !== agent.name ||
+    state.icon !== agent.icon ||
     state.category !== agent.category ||
     state.acpUrl.trim() !== agent.acpUrl ||
     state.description.trim() !== agent.description
@@ -114,6 +122,7 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
       id: agent.id,
       patch: {
         name: state.name.trim(),
+        icon: state.icon,
         category: state.category,
         acpUrl: state.acpUrl.trim(),
         description: state.description.trim(),
@@ -128,178 +137,216 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
   }
 
   return (
-    <div className="flex h-full flex-col gap-5 overflow-y-auto rounded-lg border border-border p-6">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-1 items-center gap-1">
-          {state.editingName ? (
-            <input
-              autoFocus
-              aria-label="Agent name"
-              value={state.name}
-              onChange={(event) => dispatch({ type: 'SET_NAME', value: event.target.value })}
-              onBlur={() => dispatch({ type: 'EDIT_NAME', value: false })}
-              onKeyDown={(event) => event.key === 'Enter' && dispatch({ type: 'EDIT_NAME', value: false })}
-              className="w-full border-b border-border bg-transparent text-xl font-semibold outline-none focus:border-primary"
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={() => dispatch({ type: 'EDIT_NAME', value: true })}
-              className="min-w-0 truncate text-left text-xl font-semibold hover:underline"
-              title="Click to rename"
-            >
-              {state.name}
-            </button>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Agent actions">
-                <MoreHorizontal className="size-4" />
+    <div className="relative flex h-full flex-col overflow-hidden bg-background">
+      {/* Floating Save row — a FULL-BLEED overlay pinned to the top of the panel:
+          it spans the whole column width (edge to edge) and is tall enough to
+          cover the header (incl. the X) behind it, without reflowing the content.
+          Its own `px-6` keeps the message/buttons aligned with the content below.
+          AnimatePresence slides it down on appear and UP on Discard/Save. */}
+      <AnimatePresence>
+        {dirty && (
+          <m.div
+            key="save-banner"
+            initial={{ opacity: 0, y: '-100%' }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: '-100%' }}
+            transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+            className="absolute inset-x-0 top-0 z-20 flex h-[calc(var(--touch-height-xl)_+_1.5rem)] items-center justify-between gap-2 border-b border-yellow-300 bg-yellow-100 px-6 shadow-sm dark:border-yellow-800 dark:bg-yellow-900"
+          >
+            <span className="text-sm font-medium text-yellow-900 dark:text-yellow-100">Unsaved changes</span>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => dispatch({ type: 'RESET', agent })} disabled={saving}>
+                Discard
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        <Button variant="ghost" size="icon-sm" aria-label="Close details" onClick={onClose}>
-          <X className="size-4" />
-        </Button>
-      </div>
+              <Button size="sm" onClick={handleSave} disabled={!canSave || saving}>
+                {saving ? 'Saving…' : 'Save'}
+              </Button>
+            </div>
+          </m.div>
+        )}
+      </AnimatePresence>
 
-      {dirty && (
-        <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted/40 px-3 py-2">
-          <span className="text-sm text-muted-foreground">Unsaved changes</span>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => dispatch({ type: 'RESET', agent })} disabled={saving}>
-              Discard
-            </Button>
-            <Button size="sm" onClick={handleSave} disabled={!canSave || saving}>
-              {saving ? 'Saving…' : 'Save'}
+      {/* Padded content column — the banner above bleeds full-width while the
+          header / tabs / body keep their horizontal inset. */}
+      <div className="flex min-h-0 flex-1 flex-col px-6 pt-6">
+        {/* Fixed header — the title + close stay pinned while the body scrolls.
+          A `min-h-touch-height-xl` centered row so it lines up with the page
+          header (the list column's PageHeader uses the same). */}
+        <div className="flex h-[var(--touch-height-xl)] shrink-0 items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            {/* Display-only glyph — the icon is EDITED in the Configuration section below. */}
+            <div className="flex aspect-square size-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
+              <AgentGlyph value={state.icon} className="size-5 text-muted-foreground" />
+            </div>
+            {/* Display-only — the name is edited in the Configuration section below. */}
+            <span className="min-w-0 truncate text-xl font-semibold">{state.name}</span>
+          </div>
+          {/* Actions on the right: the ⋯ menu sits next to the close (X). */}
+          <div className="flex shrink-0 items-center gap-1">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon-sm" aria-label="Agent actions">
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button variant="ghost" size="icon-sm" aria-label="Close details" onClick={onClose}>
+              <X className="size-4" />
             </Button>
           </div>
         </div>
-      )}
 
-      <div className="border-b border-border">
-        <PillTabs
-          tabs={[
-            { id: 'details', label: 'Details', icon: Info },
-            { id: 'access', label: 'Access', icon: KeyRound },
-          ]}
-          value={tab}
-          onChange={setTab}
-        />
-      </div>
+        {/* Pinned tabs — fixed below the header, not scrolling with the body. */}
+        <div className="mt-3">
+          <PillTabs
+            tabs={[
+              { id: 'details', label: 'Details', icon: Info },
+              { id: 'access', label: 'Access', icon: KeyRound },
+              { id: 'preview', label: 'Preview', icon: Eye },
+            ]}
+            value={tab}
+            onChange={setTab}
+          />
+        </div>
 
-      {tab === 'access' && <AgentAccessTab agentId={agent.id} />}
+        {/* Scrolling body — the tab content. */}
+        <div className="flex flex-1 flex-col gap-5 overflow-y-auto pt-4 pb-6">
+          {tab === 'access' && <AgentAccessTab agentId={agent.id} />}
 
-      {tab === 'details' && (
-        <section className="flex flex-col gap-3">
-          {/* (a) Controls — what the admin SETS (Job 2). */}
-          <div className="flex flex-col gap-4 rounded-xl bg-secondary p-4 dark:bg-sidebar">
-            <Field label="Category">
-              <Select
-                value={state.category}
-                onValueChange={(value) => dispatch({ type: 'SET_CATEGORY', value: value as AgentCategory })}
-              >
-                <SelectTrigger className="w-fit" aria-label="Category">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sealed">Sealed</SelectItem>
-                  <SelectItem value="extensible">Extensible</SelectItem>
-                </SelectContent>
-              </Select>
-              {/* Inline consequence, not a tooltip (spec §5.2a / D62). */}
-              <p className="text-sm text-muted-foreground">{categoryConsequence(state.category)}</p>
-            </Field>
+          {tab === 'details' && (
+            <section className="flex flex-col gap-5">
+              {/* What the admin SETS — endpoint, category, and the About prose the
+              members read — grouped in one card, plus the member-card preview. */}
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-medium text-muted-foreground">Configuration</p>
+                <div className="flex flex-col gap-5 rounded-xl bg-secondary p-4 dark:bg-sidebar">
+                  <Field label="Icon">
+                    <AgentIconPicker
+                      value={state.icon}
+                      onChange={(key) => dispatch({ type: 'SET_ICON', value: key })}
+                    />
+                  </Field>
 
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-medium text-muted-foreground">Endpoint</p>
-                <button
-                  type="button"
-                  aria-label="Edit endpoint"
-                  onClick={() => dispatch({ type: 'EDIT_ENDPOINT', value: !state.editingEndpoint })}
-                  className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <Pencil className="size-3.5" />
-                </button>
+                  <Field label="Name">
+                    <Input
+                      aria-label="Agent name"
+                      value={state.name}
+                      onChange={(event) => dispatch({ type: 'SET_NAME', value: event.target.value })}
+                      className="text-base"
+                    />
+                  </Field>
+
+                  <Field label="Endpoint">
+                    <Input
+                      aria-label="ACP URL"
+                      value={state.acpUrl}
+                      onChange={(event) => dispatch({ type: 'SET_ACP', value: event.target.value })}
+                      className="text-base"
+                    />
+                  </Field>
+
+                  <Field label="Category">
+                    <Select
+                      value={state.category}
+                      onValueChange={(value) => dispatch({ type: 'SET_CATEGORY', value: value as AgentCategory })}
+                    >
+                      <SelectTrigger className="w-full text-base" aria-label="Category">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="w-(--radix-select-trigger-width)">
+                        <SelectItem
+                          value="sealed"
+                          description="Runs only what it came with. The member's Library skills don't reach it."
+                        >
+                          Sealed
+                        </SelectItem>
+                        <SelectItem
+                          value="extensible"
+                          description="The member's enabled Library skills & integrations are available to this agent."
+                        >
+                          Extensible
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <label htmlFor="agent-purpose" className="text-sm font-medium text-muted-foreground">
+                        About
+                      </label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label="What is the About field?"
+                            className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+                          >
+                            <Info className="size-3.5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs text-sm">
+                          This is what members read to learn what the agent does.
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Textarea
+                      id="agent-purpose"
+                      rows={2}
+                      value={state.description}
+                      placeholder="This is to tell your members what the agent is for."
+                      onChange={(event) => dispatch({ type: 'SET_DESCRIPTION', value: event.target.value })}
+                      className="text-base"
+                    />
+                  </div>
+                </div>
               </div>
-              {state.editingEndpoint ? (
-                <Input
-                  autoFocus
-                  aria-label="ACP URL"
-                  value={state.acpUrl}
-                  onChange={(event) => dispatch({ type: 'SET_ACP', value: event.target.value })}
-                />
-              ) : (
-                <code className="text-sm break-all">{state.acpUrl}</code>
-              )}
-            </div>
-          </div>
 
-          {/* (b) Authoring zone — the one prose field the admin owns + a preview (Job 3). */}
-          <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
-            <p className="text-sm font-medium text-muted-foreground">What members see</p>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="agent-purpose" className="text-sm text-muted-foreground">
-                Purpose — one honest sentence about what this agent is for.
-              </label>
-              <Textarea
-                id="agent-purpose"
-                rows={2}
-                value={state.description}
-                placeholder="e.g. Reviews pull requests and proposes fixes."
-                onChange={(event) => dispatch({ type: 'SET_DESCRIPTION', value: event.target.value })}
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => setPreviewOpen((open) => !open)}
-              className="w-fit cursor-pointer text-sm font-medium text-primary hover:underline"
-            >
-              {previewOpen ? 'Hide member-card preview' : 'Preview member card'}
-            </button>
-            {previewOpen && (
-              <MemberCardPreview
-                agent={agent}
-                name={state.name}
-                description={state.description}
-                category={state.category}
-              />
-            )}
-          </div>
+              {/* (c) Reference — read-only, from the agent's server (Job 4). Label
+              sits outside the card, matching the top section. */}
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-medium text-muted-foreground">From ACP server</p>
+                <div className="flex flex-col gap-4 rounded-xl bg-secondary p-4 dark:bg-sidebar">
+                  <AgentHealth agentId={agent.id} acpUrl={agent.acpUrl} />
+                  <AdminWiring acpUrl={agent.acpUrl} />
+                </div>
+              </div>
+            </section>
+          )}
 
-          {/* (c) Reference — from the agent's server, read-only verification material (Job 4). */}
-          <div className="flex flex-col gap-4 rounded-xl bg-secondary p-4 dark:bg-sidebar">
-            <p className="text-sm font-medium text-muted-foreground">From the agent's server — read-only</p>
-            <MatchSignal description={state.description} acpUrl={agent.acpUrl} />
-            <AgentHealth agentId={agent.id} acpUrl={agent.acpUrl} />
-            <AdminWiring acpUrl={agent.acpUrl} />
-          </div>
-        </section>
-      )}
+          {tab === 'preview' && (
+            <MemberCardPreview
+              agent={agent}
+              name={state.name}
+              icon={state.icon}
+              description={state.description}
+              category={state.category}
+            />
+          )}
 
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {agent.name}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This removes the agent and all grants to it. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-white hover:bg-destructive/90">
-              Delete agent
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {agent.name}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This removes the agent and all grants to it. This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-destructive text-white hover:bg-destructive/90">
+                  Delete agent
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </div>
     </div>
   )
 }
@@ -316,90 +363,75 @@ const formatSince = (iso: string): string => {
 
 /**
  * The Status line (spec §2/§3/§4): an on-demand reachability **Test** (never a
- * live poll) whose last result reads Not tested → testing… → Reachable /
- * Unreachable, plus the passive, deduped **failure count** the admin reads.
+ * live poll) whose last result reads Not tested → Testing… → Last connected /
+ * Lost connection (with the test's timestamp), plus the passive, deduped
+ * **failure count** the admin reads.
  */
 const AgentHealth = ({ agentId, acpUrl }: { agentId: string; acpUrl: string }) => {
   const test = useTestConnection()
   const failures = useConnectionFailures(agentId)
   const result = test.data
 
+  const count = failures.data?.count ?? 0
+  const since = failures.data?.since
+
+  // The test's submit time IS the connection moment: a reachable result means the
+  // endpoint answered just then. For a drop, prefer when the failures began (the
+  // meaningful "since"), falling back to the test time.
+  const at = test.submittedAt ? new Date(test.submittedAt).toISOString() : null
+  const lostSince = since ?? at
   const label = test.isPending
-    ? 'testing…'
+    ? 'Testing…'
     : result === undefined
       ? 'Not tested'
       : result.reachable
-        ? 'Reachable'
-        : `Unreachable (${result.error})`
+        ? `Last connected ${at ? formatSince(at) : 'just now'}`
+        : lostSince
+          ? `Lost connection since ${formatSince(lostSince)}`
+          : 'Lost connection'
   const tone =
     result === undefined || test.isPending
       ? 'text-muted-foreground'
       : result.reachable
         ? 'text-green-600 dark:text-green-400'
         : 'text-destructive'
-  const count = failures.data?.count ?? 0
-  const since = failures.data?.since
+
+  // Auto-test on open — the endpoint was verified when the agent connected, so
+  // the Status reflects that reachability rather than sitting at "Not tested".
+  const testMutate = test.mutate
+  useEffect(() => {
+    testMutate(acpUrl)
+  }, [acpUrl, testMutate])
 
   return (
     <Field label="Status">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
-          <span className={cn('text-sm font-medium', tone)} data-testid="agent-health-status">
+          <span className={cn('text-base font-medium', tone)} data-testid="agent-health-status">
             {label}
           </span>
           <Button
             size="sm"
-            variant="outline"
+            variant="secondary"
             onClick={() => test.mutate(acpUrl)}
             disabled={test.isPending}
             data-testid="agent-test-connection"
+            className="h-9 border border-border bg-card hover:bg-accent"
           >
             Test connection
           </Button>
         </div>
-        {count > 0 && since && (
-          <p className="inline-flex items-center gap-1.5 text-sm text-destructive" data-testid="agent-health-failures">
+        {count > 0 && (
+          <p
+            className="inline-flex items-center gap-1.5 text-base text-destructive"
+            data-testid="agent-health-failures"
+          >
             <AlertTriangle className="size-3.5 shrink-0" />
-            {count} user failure{count === 1 ? '' : 's'} since {formatSince(since)}
+            {count} user failure{count === 1 ? '' : 's'}
           </p>
         )}
       </div>
     </Field>
-  )
-}
-
-/** Plain-language consequence of the category — shown inline for the admin too
- *  (spec §5.2a): the sentence, not a tooltip. */
-const categoryConsequence = (category: AgentCategory): string =>
-  category === 'extensible'
-    ? "Extensible — members' enabled skills & integrations are available to this agent."
-    : 'Sealed — runs only what it came with.'
-
-/**
- * The authored-vs-live consistency signal (spec §5.3) — the reason this page
- * beats unverified self-declaration. Soft v1: confirm the card is backed by a
- * live, reachable endpoint and surface a rough capability count.
- */
-const MatchSignal = ({ description, acpUrl }: { description: string; acpUrl: string }) => {
-  const detailQuery = useAgentEndpointDetail(acpUrl)
-  if (detailQuery.isPending) {
-    return null
-  }
-  if (detailQuery.isError || !detailQuery.data) {
-    return (
-      <p className="inline-flex items-center gap-1.5 text-sm text-destructive">
-        <AlertTriangle className="size-3.5 shrink-0" />
-        Couldn’t verify — the endpoint is unreachable.
-      </p>
-    )
-  }
-  const toolCount = detailQuery.data.tools.length
-  return (
-    <p className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-      <Check className="size-3.5 shrink-0 text-green-600 dark:text-green-500" />
-      {description.trim() ? 'Card verified against the live endpoint' : 'Add a purpose sentence to publish'} · the agent
-      advertises {toolCount} tool{toolCount === 1 ? '' : 's'}.
-    </p>
   )
 }
 
@@ -413,72 +445,82 @@ const MatchSignal = ({ description, acpUrl }: { description: string; acpUrl: str
 const MemberCardPreview = ({
   agent,
   name,
+  icon,
   description,
   category,
 }: {
   agent: TeamAgentWithCapabilities
   name: string
+  icon: string
   description: string
   category: AgentCategory
 }) => {
+  const Icon = agentIconFor(icon)
   const card: AgentCard = {
     id: agent.id,
     name,
-    icon: agent.icon,
+    icon,
     description,
     category,
     capabilities: [],
     advertisedModels: agent.advertisedModels,
     integrations: agent.integrations,
+    mcpKinds: agent.mcpKinds,
     toolKinds: agent.toolKinds,
     accepts: agent.accepts,
     modes: agent.modes,
+    agentSkillCount: agent.agentSkillCount,
     managedBy: agent.managedBy,
     grantedVia: '',
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3" data-testid="member-preview">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Member preview</p>
-      <div className="flex items-center gap-2">
-        <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-md bg-muted">
-          <Building2 className="size-5 text-muted-foreground" aria-hidden />
+    <div className="flex flex-col gap-2">
+      <p className="text-sm font-medium text-muted-foreground">
+        This is how the agent appears to your members in the Thunderbolt app
+      </p>
+      <div
+        className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3"
+        data-testid="member-preview"
+      >
+        <div className="flex items-center gap-2">
+          <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+            <Icon className="size-5 text-muted-foreground" aria-hidden />
+          </div>
+          <p className="text-base font-medium">{name}</p>
         </div>
-        <p className="text-base font-medium">{name}</p>
+        <CompanyCardBody card={card} />
       </div>
-      <CompanyCardBody card={card} />
     </div>
   )
 }
 
-/** Live, admin-only endpoint wiring for the SAVED endpoint. */
+/** Live, admin-only endpoint wiring for the SAVED endpoint. Stays silent until
+ *  real wiring arrives — no loading or error state to flash in and out; a failing
+ *  endpoint is signalled once, by the failure count in {@link AgentHealth}. */
 const AdminWiring = ({ acpUrl }: { acpUrl: string }) => {
-  const detailQuery = useAgentEndpointDetail(acpUrl)
-  const detail = detailQuery.data
+  const detail = useAgentEndpointDetail(acpUrl).data
+  if (!detail) {
+    return null
+  }
 
   return (
     <>
-      {detailQuery.isPending && <p className="text-sm text-muted-foreground">Connecting to the endpoint…</p>}
-      {detailQuery.isError && <p className="text-sm text-destructive">Could not reach the endpoint.</p>}
-      {detail && (
-        <>
-          <Field label="Models">
-            <TagList items={detail.models} />
-          </Field>
-          <Field label="MCP servers">
-            <TagList items={detail.mcpServers} />
-          </Field>
-          <Field label="Tools">
-            <TagList items={detail.tools} />
-          </Field>
-        </>
-      )}
+      <Field label="Models">
+        <TagList items={detail.models} />
+      </Field>
+      <Field label="MCP servers">
+        <TagList items={detail.mcpServers} />
+      </Field>
+      <Field label="Tools">
+        <TagList items={detail.tools} />
+      </Field>
     </>
   )
 }
 
 const Field = ({ label, labelExtra, children }: { label: string; labelExtra?: ReactNode; children: ReactNode }) => (
-  <div className="flex flex-col gap-1">
+  <div className="flex flex-col gap-2">
     <div className="flex items-center gap-1.5">
       <p className="text-sm font-medium text-muted-foreground">{label}</p>
       {labelExtra}
@@ -489,11 +531,11 @@ const Field = ({ label, labelExtra, children }: { label: string; labelExtra?: Re
 
 const TagList = ({ items }: { items: string[] }) =>
   items.length === 0 ? (
-    <span className="text-sm text-muted-foreground">None</span>
+    <span className="text-base text-muted-foreground">None</span>
   ) : (
     <div className="flex flex-wrap gap-1.5">
       {items.map((item) => (
-        <span key={item} className="rounded-md bg-muted px-2 py-0.5 text-sm">
+        <span key={item} className="rounded-md bg-muted px-2 py-0.5 text-base">
           {item}
         </span>
       ))}

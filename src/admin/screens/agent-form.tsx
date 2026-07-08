@@ -5,11 +5,11 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { useReducer } from 'react'
 import { useAdminApi, useCreateAgent, useUpdateAgent } from '../api/hooks'
 import type { AgentCategory, AgentInput, TeamAgentWithCapabilities } from '../api/types'
-import { CategoryInfoTooltip } from './category-info'
 
 /**
  * v1 admin agent form (PRD Rev 3.2). Company agents are ACP endpoints that
@@ -30,17 +30,20 @@ const DEFAULT_MANAGED_BY = 'Your organization'
 type FormState = {
   name: string
   acpUrl: string
+  description: string
   category: AgentCategory
 }
 
 type FormAction =
-  | { type: 'SET'; field: 'name' | 'acpUrl'; value: string }
+  | { type: 'SET'; field: 'name' | 'acpUrl' | 'description'; value: string }
   | { type: 'SET_CATEGORY'; value: AgentCategory }
 
-const emptyState: FormState = { name: '', acpUrl: '', category: 'sealed' }
+const emptyState: FormState = { name: '', acpUrl: '', description: '', category: 'sealed' }
 
 const initFromAgent = (agent: TeamAgentWithCapabilities | null): FormState =>
-  agent === null ? emptyState : { name: agent.name, acpUrl: agent.acpUrl, category: agent.category }
+  agent === null
+    ? emptyState
+    : { name: agent.name, acpUrl: agent.acpUrl, description: agent.description, category: agent.category }
 
 const formReducer = (state: FormState, action: FormAction): FormState => {
   switch (action.type) {
@@ -79,12 +82,14 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
       // Patch only the admin-set fields; the card's own fields are left as-is.
       await updateAgent.mutateAsync({
         id: agent.id,
-        patch: { name: state.name.trim(), acpUrl, category: state.category },
+        patch: { name: state.name.trim(), acpUrl, description: state.description.trim(), category: state.category },
       })
     } else {
       const input: AgentInput = {
         name: await resolveName(acpUrl),
         acpUrl,
+        // Admin-authored member-facing copy; empty lets the card's own supply it.
+        description: state.description.trim() || undefined,
         category: state.category,
         // Non-authored card fields: defaults until a live card fetch populates them.
         icon: DEFAULT_ICON,
@@ -103,7 +108,7 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-sm font-semibold">{agent ? 'Edit agent' : 'Register agent'}</h2>
+      <h2 className="text-lg font-semibold text-center">{agent ? 'Edit agent' : 'Register agent'}</h2>
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="agent-acp-url">ACP URL</Label>
@@ -126,24 +131,41 @@ export const AgentForm = ({ agent, onDone }: { agent: TeamAgentWithCapabilities 
       </div>
 
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-1.5">
-          <Label>Category</Label>
-          <CategoryInfoTooltip />
-        </div>
-        <ToggleGroup
-          type="single"
-          variant="outline"
+        <Label htmlFor="agent-description">Description</Label>
+        <Textarea
+          id="agent-description"
+          rows={3}
+          placeholder="This is how members learn what this agent does"
+          value={state.description}
+          onChange={(event) => dispatch({ type: 'SET', field: 'description', value: event.target.value })}
+          className="text-base"
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label>Category</Label>
+        <Select
           value={state.category}
-          onValueChange={(value) => value && dispatch({ type: 'SET_CATEGORY', value: value as AgentCategory })}
-          className="w-full"
+          onValueChange={(value) => dispatch({ type: 'SET_CATEGORY', value: value as AgentCategory })}
         >
-          <ToggleGroupItem value="sealed" className="flex-1 px-4">
-            Sealed
-          </ToggleGroupItem>
-          <ToggleGroupItem value="extensible" className="flex-1 px-4">
-            Extensible
-          </ToggleGroupItem>
-        </ToggleGroup>
+          <SelectTrigger className="w-full text-base" aria-label="Category">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="w-(--radix-select-trigger-width)">
+            <SelectItem
+              value="sealed"
+              description="Runs only what it came with. The member's Library skills don't reach it."
+            >
+              Sealed
+            </SelectItem>
+            <SelectItem
+              value="extensible"
+              description="The member's enabled Library skills & integrations are available to this agent."
+            >
+              Extensible
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex items-center justify-end gap-3">

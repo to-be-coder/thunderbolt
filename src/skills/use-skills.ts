@@ -143,6 +143,10 @@ export const useEnabledSkills = () => {
     return map
   }, [skills])
 
+  /** Count of the member's own enabled Library skills — the set that actually
+   *  reaches extensible agents. Surfaced on the member agent card as a count only. */
+  const enabledCount = useMemo(() => skills.filter((skill) => skill.enabled === 1).length, [skills])
+
   const set = useMutation({
     mutationFn: ({ id, next }: { id: string; next: boolean }) => setSkillEnabled(db, id, next),
     onSuccess: invalidate,
@@ -151,5 +155,5 @@ export const useEnabledSkills = () => {
   const isEnabled = (id: string) => enabledById.get(id) ?? true
   const setEnabled = (id: string, next: boolean) => set.mutateAsync({ id, next })
 
-  return { isEnabled, setEnabled }
+  return { isEnabled, setEnabled, enabledCount }
 }

@@ -2,14 +2,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Plus } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Info, Lock, Plus } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router'
 
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { maxPinnedSkills } from '@/dal'
+import { NO_SKILLS_ENABLED_MESSAGE, SEALED_SKILLS_MESSAGE } from '@/lib/agent-copy'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { ReorderPanel } from '@/skills/reorder-panel'
 import { SuggestionChip } from '@/skills/suggestion-chip'
@@ -28,9 +28,17 @@ type ChatSkillsBarProps = {
   /**
    * When `true`, render nothing. The composer toggles this on once any
    * message has been sent so the chips don't compete for space in an
-   * ongoing thread — pinning is a "starting a new chat" affordance.
+   * ongoing thread — pinning is a "starting a new chat" affordance. This is a
+   * NON-skills reason (same for every agent) — it must never be what produces
+   * the sealed / empty states, which are explicit static renders.
    */
   hidden?: boolean
+  /**
+   * The agent doesn't use the member's Library (a sealed company agent). The
+   * slot still renders — as a static, non-interactive status line — so the
+   * control never appears for some agents and vanishes for others.
+   */
+  sealed?: boolean
   // Dependency injection for tests / Storybook.
   usePinnedSkills?: typeof usePinnedSkills_default
   useLibrarySkills?: typeof useLibrarySkills_default
@@ -38,19 +46,24 @@ type ChatSkillsBarProps = {
 }
 
 /**
- * Pinned-skills bar shown above the chat input: a horizontal scroll of
- * pinned chips plus a `+` button that opens a popover listing enabled
- * skills the user hasn't pinned yet — clicking one pins it on the spot
- * (no navigation). This is the canonical "add a pinned skill" entry point;
- * the `/settings/skills` route doesn't expose pin controls.
+ * The composer's skills area — a PERSISTENT slot (stable footprint) whose
+ * contents change by state, so the control never appears for some agents and
+ * vanishes for others (the ambiguity that reads as a bug):
+ *  1. extensible agent with something to pin → the interactive bar (pinned chips
+ *     + `+` popover). The canonical "add a pinned skill" entry point.
+ *  2. extensible agent, nothing enabled/pinnable → static "No skills enabled yet".
+ *  3. sealed agent (`sealed`) → static, non-interactive "Uses only its
+ *     organization's tools" with a lock glyph — same weight as the button, but
+ *     unmistakably not a control (no hover/press, default cursor).
  *
- * Returns `null` when the user has no pinned skills *and* the popover is
- * closed — once they pin one the bar reappears.
+ * `hidden` (ongoing thread) still suppresses the whole slot, uniformly for every
+ * agent — that's a non-skills reason and never produces states 2/3.
  */
 export const ChatSkillsBar = ({
   onAddToChat,
   onAddInstruction,
   hidden,
+  sealed,
   usePinnedSkills = usePinnedSkills_default,
   useLibrarySkills = useLibrarySkills_default,
   useEnabledSkills = useEnabledSkills_default,
@@ -61,12 +74,25 @@ export const ChatSkillsBar = ({
   const { isMobile } = useIsMobile()
   const trackSkillEvent = useSkillTelemetry()
 
+  const navigate = useNavigate()
   const [openChipId, setOpenChipId] = useState<string | null>(null)
   const [reorderMode, setReorderMode] = useState(false)
-  const [addOpen, setAddOpen] = useState(false)
 
   if (hidden) {
     return null
+  }
+
+  // State 3 — sealed agent: a static status line, never a control. Rendered
+  // before any skills lookup; the string is fixed (INVARIANT 2 — never reads
+  // agent-carried skill data) and shared with the detail card. (In the member
+  // composer this state is hoisted into the prompt-input header instead — see
+  // `useComposerSkillsNotice` — so this render only serves tests/other callers.)
+  if (sealed) {
+    return (
+      <StaticSkillsSlot testid="skills-sealed" icon={<Lock className="size-3.5" aria-hidden />}>
+        {SEALED_SKILLS_MESSAGE}
+      </StaticSkillsSlot>
+    )
   }
 
   const showOverlay = isMobile && (openChipId !== null || reorderMode)
@@ -99,28 +125,18 @@ export const ChatSkillsBar = ({
     )
   }
 
-  // Pinnable = enabled and not already pinned. The popover only ever lists
-  // pin candidates, never a dual "pin / unpin" surface — unpin lives on the
-  // chip's own dropdown.
+  // Enabled-but-unpinned skills — used only to decide the empty state below. The
+  // "+" no longer pins from here; it routes to the Library skills page.
   const pinnable = library.filter((s) => isEnabled(s.id) && !pinnedSet.has(s.id))
-  const pinCapReached = pinnedSet.size >= maxPinnedSkills
-  // Disable the trigger when there's nothing to pin OR when adding one more
-  // would exceed the cap — the DAL throws PinLimitExceededError on the 11th
-  // pin and the catch below would swallow it silently; better to block the
-  // click upstream with explicit copy.
-  const addDisabled = pinnable.length === 0 || pinCapReached
-  const addTooltip = pinCapReached
-    ? `Pin limit reached (${maxPinnedSkills}). Unpin one first.`
-    : pinnable.length === 0
-      ? 'No more skills to pin'
-      : 'Pin a skill'
 
-  // Hide the whole bar when there's nothing to display *and* nothing the user
-  // can act on. Zero pins + unpinned candidates still warrants the `+` button;
-  // otherwise both the chips row and the trigger are empty and the strip would
-  // render as a thin blank line above the composer.
+  // State 2 — extensible agent with nothing enabled to pin (and nothing pinned):
+  // a static "No skills enabled yet" in the SAME slot, not an absent control.
   if (pinned.length === 0 && pinnable.length === 0) {
-    return null
+    return (
+      <StaticSkillsSlot testid="skills-empty" icon={<Info className="size-3.5" aria-hidden />}>
+        {NO_SKILLS_ENABLED_MESSAGE}
+      </StaticSkillsSlot>
+    )
   }
 
   return (
@@ -149,81 +165,44 @@ export const ChatSkillsBar = ({
             }}
           />
         ))}
-        <Popover open={addOpen} onOpenChange={setAddOpen}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  aria-label="Pin a skill"
-                  disabled={addDisabled}
-                  className={`shrink-0 cursor-pointer rounded-full bg-card transition-opacity disabled:cursor-not-allowed disabled:opacity-40 ${
-                    openChipId ? 'opacity-40' : ''
-                  }`}
-                >
-                  <Plus />
-                </Button>
-              </PopoverTrigger>
-            </TooltipTrigger>
-            <TooltipContent>{addTooltip}</TooltipContent>
-          </Tooltip>
-          {/*
-            `collisionPadding={16}` keeps the popover 16px off the viewport
-            edges. On mobile the content is sized to `calc(100vw-2rem)` (32px
-            narrower than the viewport), so collision avoidance pins it to a
-            16px-both-sides margin — i.e. full-width and centered on the chat
-            input — mirroring the chip dropdown. On desktop the fixed `w-72`
-            leaves room, so the padding never shifts the `align="start"`
-            anchor off the `+` button.
-          */}
-          <PopoverContent
-            side="top"
-            align="start"
-            sideOffset={6}
-            collisionPadding={16}
-            className={isMobile ? 'w-[calc(100vw-2rem)] p-1' : 'w-72 max-w-[calc(100vw-2rem)] p-1'}
-          >
-            <ul className="max-h-64 overflow-y-auto">
-              {pinnable.map((skill) => (
-                <li key={skill.id}>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      // Close the popover synchronously so it doesn't sit open
-                      // while the mutation lands. Telemetry fires after the
-                      // mutation settles so we never report a phantom pin if
-                      // togglePin races past the cap guard.
-                      setAddOpen(false)
-                      try {
-                        await togglePin(skill.id)
-                        trackSkillEvent('skill_pinned', skill.id, {})
-                      } catch (error) {
-                        console.warn('togglePin failed:', error)
-                      }
-                    }}
-                    // `rounded-xl` (not `rounded-md`) so the hover highlight
-                    // sits concentrically inside the `rounded-2xl` container's
-                    // `p-1` padding — outer radius minus 4px padding. Matches
-                    // the slash autocomplete popover.
-                    className="flex w-full cursor-pointer flex-col gap-0.5 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-accent"
-                  >
-                    <span className="truncate text-[length:var(--font-size-body)] text-foreground">/{skill.name}</span>
-                    {skill.description && (
-                      <span className="line-clamp-1 text-[length:var(--font-size-sm)] text-muted-foreground">
-                        {skill.description}
-                      </span>
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </PopoverContent>
-        </Popover>
+        {/* The "+" is a persistent, always-enabled entry to the Library skills
+            page — pinning now happens there, not from a composer popover. */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              aria-label="Add skill"
+              onClick={() => navigate('/settings/skills')}
+              className={`shrink-0 cursor-pointer rounded-full bg-card transition-opacity ${
+                openChipId ? 'opacity-40' : ''
+              }`}
+            >
+              <Plus />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Add skill</TooltipContent>
+        </Tooltip>
       </div>
     </>
   )
 }
+
+/**
+ * A static, non-interactive skills-slot render (states 2 & 3). Same footprint as
+ * the interactive bar (`min-h-8`, same row rhythm) so nothing shifts when
+ * switching agents — but unmistakably NOT a control: muted, a status glyph, no
+ * hover/press, default cursor, unselectable.
+ */
+const StaticSkillsSlot = ({ icon, children, testid }: { icon: ReactNode; children: ReactNode; testid: string }) => (
+  <div
+    data-testid={testid}
+    className="-mx-1 flex min-h-8 cursor-default select-none items-center gap-1.5 px-1 text-[length:var(--font-size-sm)] text-muted-foreground"
+  >
+    {icon}
+    <span>{children}</span>
+  </div>
+)
 
 /**
  * Backdrop shown behind an open chip menu / the reorder panel on mobile.

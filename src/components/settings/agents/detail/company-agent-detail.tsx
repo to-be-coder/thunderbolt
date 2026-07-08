@@ -2,30 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Building2, Info } from 'lucide-react'
+import { Info } from 'lucide-react'
 import type { AgentCard } from '@shared/agent-cards'
-import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { AgentDetailLayout, DetailSection } from './agent-detail-layout'
-
-/** Tool KINDS shown destructive-first — the scariest-sounding facts are the
- *  safest to show because they name no target, and they're the trust question
- *  (spec §4). Order: delete, execute, then edit, fetch, read. */
-const KIND_ORDER = ['delete', 'execute', 'edit', 'fetch', 'read']
-const KIND_LABEL: Record<string, string> = {
-  delete: 'Delete',
-  execute: 'Execute',
-  edit: 'Edit',
-  fetch: 'Fetch',
-  read: 'Read',
-}
-const orderedKinds = (kinds: string[]): string[] =>
-  [...kinds].sort((a, b) => {
-    const ia = KIND_ORDER.indexOf(a)
-    const ib = KIND_ORDER.indexOf(b)
-    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
-  })
-const isDestructiveKind = (kind: string): boolean => kind === 'delete' || kind === 'execute'
+import { useEnabledSkills as useEnabledSkills_default } from '@/skills/use-skills'
+import { AgentDetailLayout, DetailSection, SubSection } from './agent-detail-layout'
+import { AgentSkillsLines } from './agent-skills-section'
+import { agentIconFor } from './agent-icons'
 
 /** "Accepts images, audio · Remembers context across a session" from the flags. */
 const acceptsLine = (accepts: string[]): string => {
@@ -40,48 +23,6 @@ const acceptsLine = (accepts: string[]): string => {
   return parts.join(' · ')
 }
 
-/** The Category section names the card's category (Extensible / Sealed). The
- *  explanation lives in a tooltip on the word itself (agents-page-spec §3). */
-const CategorySection = ({ card }: { card: AgentCard }) => {
-  const extensible = card.category === 'extensible'
-  const explanation = extensible
-    ? 'Your enabled Library items (skills, MCP servers) are available to this agent.'
-    : 'This agent uses only what your organization built into it.'
-  return (
-    <DetailSection title="Category">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span
-            className="w-fit cursor-help text-base font-medium underline decoration-dotted underline-offset-4 decoration-muted-foreground"
-            data-testid={`category-${card.category}`}
-          >
-            {extensible ? 'Extensible' : 'Sealed'}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-xs text-sm">{explanation}</TooltipContent>
-      </Tooltip>
-    </DetailSection>
-  )
-}
-
-/** Info tooltip next to the Integrations section — the abstraction is the point. */
-const IntegrationsInfoTooltip = () => (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <button
-        type="button"
-        aria-label="What are these?"
-        className="text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <Info className="size-3.5" />
-      </button>
-    </TooltipTrigger>
-    <TooltipContent className="max-w-xs text-sm">
-      The kinds of systems this agent connects to — never the specific instance, endpoint, scope, or credentials.
-    </TooltipContent>
-  </Tooltip>
-)
-
 /** Info tooltip next to the Models section — the member can't change these. */
 const ModelsInfoTooltip = () => (
   <Tooltip>
@@ -95,14 +36,33 @@ const ModelsInfoTooltip = () => (
       </button>
     </TooltipTrigger>
     <TooltipContent className="max-w-xs text-sm">
-      Models are supplied by your organization — you can’t change them for this agent.
+      Models are supplied by your organization. You can’t change them for this agent.
     </TooltipContent>
   </Tooltip>
 )
 
+/** A wrap of abstracted-kind chips, or an explicit muted "None" when the agent
+ *  uses none — so the member always sees the answer, never a missing section. */
+const UsesChips = ({ items, testid }: { items: string[] | undefined; testid: string }) =>
+  items && items.length > 0 ? (
+    <div className="flex flex-wrap gap-1.5" data-testid={testid}>
+      {items.map((item) => (
+        <span key={item} className="rounded-md bg-muted px-2 py-0.5 text-base text-primary">
+          {item}
+        </span>
+      ))}
+    </div>
+  ) : (
+    <p className="text-base text-primary" data-testid={testid}>
+      None
+    </p>
+  )
+
 type CompanyAgentDetailProps = {
   card: AgentCard
   onBack: () => void
+  /** Injectable for tests; production uses the real member-side skills hook. */
+  useEnabledSkills?: typeof useEnabledSkills_default
 }
 
 /**
@@ -112,94 +72,103 @@ type CompanyAgentDetailProps = {
  * Accepts is input plumbing; Available modes is the RANGE the agent supports.
  * Members configure nothing here.
  */
-export const CompanyAgentDetail = ({ card, onBack }: CompanyAgentDetailProps) => (
+export const CompanyAgentDetail = ({
+  card,
+  onBack,
+  useEnabledSkills = useEnabledSkills_default,
+}: CompanyAgentDetailProps) => (
   <AgentDetailLayout
-    icon={Building2}
+    icon={agentIconFor(card.icon)}
     name={card.name}
     subtitle={`Granted via ${card.grantedVia}`}
-    body={<CompanyCardBody card={card} />}
+    body={<CompanyCardBody card={card} useEnabledSkills={useEnabledSkills} />}
     onBack={onBack}
   />
 )
 
-/** The member card's SECTIONED BODY (About → Category → What it can do →
- *  Integrations → Accepts → Available modes → Models), split out so the admin's
- *  "Preview member card" (spec §5.2b) renders the EXACT same thing a member sees. */
-export const CompanyCardBody = ({ card }: { card: AgentCard }) => (
-  <>
-    {card.description && (
-      <DetailSection title="About">
-        <p className="text-base">{card.description}</p>
-      </DetailSection>
-    )}
-
-    <CategorySection card={card} />
-
-    {card.toolKinds && card.toolKinds.length > 0 && (
-      <DetailSection title="What it can do">
-        <div className="flex flex-wrap gap-1.5" data-testid="tool-kinds">
-          {orderedKinds(card.toolKinds).map((kind) => (
-            <span
-              key={kind}
-              className={cn(
-                'rounded-md px-2 py-0.5 text-base',
-                isDestructiveKind(kind) ? 'bg-destructive/10 font-medium text-destructive' : 'bg-muted text-foreground',
-              )}
-            >
-              {KIND_LABEL[kind] ?? kind}
-            </span>
-          ))}
-        </div>
-      </DetailSection>
-    )}
-
-    {card.integrations && card.integrations.length > 0 && (
-      <DetailSection title="Integrations" titleExtra={<IntegrationsInfoTooltip />}>
-        <div className="flex flex-wrap gap-1.5" data-testid="company-integrations">
-          {card.integrations.map((integration) => (
-            <span key={integration} className="rounded-md bg-muted px-2 py-0.5 text-base">
-              {integration}
-            </span>
-          ))}
-        </div>
-      </DetailSection>
-    )}
-
-    {card.accepts && card.accepts.length > 0 && (
-      <DetailSection title="Accepts">
-        <p className="text-base" data-testid="accepts-line">
-          {acceptsLine(card.accepts)}
-        </p>
-      </DetailSection>
-    )}
-
-    {card.modes && card.modes.length > 0 && (
-      <DetailSection title="Available modes">
-        <div className="flex flex-wrap gap-1.5" data-testid="available-modes">
-          {card.modes.map((mode) => (
-            <span key={mode} className="rounded-md bg-muted px-2 py-0.5 text-base">
-              {mode}
-            </span>
-          ))}
-        </div>
-        <p className="text-sm text-muted-foreground">The range this agent supports — you pick one per chat.</p>
-      </DetailSection>
-    )}
-
-    <DetailSection title="Models" titleExtra={<ModelsInfoTooltip />}>
-      {card.advertisedModels.length === 0 ? (
-        <span className="text-sm text-muted-foreground" data-testid="company-model-line">
-          Set by your organization
-        </span>
-      ) : (
-        <div className="flex flex-wrap gap-1.5" data-testid="company-model-line">
-          {card.advertisedModels.map((model) => (
-            <span key={model} className="rounded-md bg-muted px-2 py-0.5 text-base">
-              {model}
-            </span>
-          ))}
-        </div>
+/** The member card's SECTIONED BODY (About → What it uses [Integrations · MCP ·
+ *  Skills] → Accepts → Available modes → Models), split out so the admin's
+ *  "Preview member card" renders the EXACT same thing a member sees. "What it
+ *  uses" groups the agent's plumbing in one card; MCP is abstracted KINDS only,
+ *  never wiring (INVARIANT 2). There is deliberately NO "What it can do" section:
+ *  capability lives in the admin-authored `description` (About)
+ *  — Thunderbolt must never synthesize member-facing capability text from tool
+ *  names/wiring (INVARIANT 2). The Skills section shows on EVERY agent; the
+ *  category is never shown as a word — it only decides whether the member's
+ *  Library skills reach the agent (extensible) or are blocked (sealed).
+ *  `useEnabledSkills` is injectable for tests (the display-only card otherwise
+ *  reads member-side skills directly). */
+export const CompanyCardBody = ({
+  card,
+  useEnabledSkills = useEnabledSkills_default,
+}: {
+  card: AgentCard
+  useEnabledSkills?: typeof useEnabledSkills_default
+}) => {
+  const extensible = card.category === 'extensible'
+  return (
+    <>
+      {card.description && (
+        <DetailSection title="About">
+          <p className="text-base">{card.description}</p>
+        </DetailSection>
       )}
-    </DetailSection>
-  </>
-)
+
+      {/* One "What it uses" card grouping the agent's plumbing — Integrations
+          (abstracted kinds), MCP (abstracted tool-server kinds), and Skills. */}
+      <DetailSection title="What it uses">
+        <div className="flex flex-col gap-4">
+          {/* Integrations and MCP always render — an agent that uses none says
+              so explicitly ("None") rather than hiding the sub-section. */}
+          <SubSection label="Integrations">
+            <UsesChips items={card.integrations} testid="company-integrations" />
+          </SubSection>
+
+          <SubSection label="MCP">
+            <UsesChips items={card.mcpKinds} testid="company-mcp" />
+          </SubSection>
+
+          <SubSection label="Skills">
+            <AgentSkillsLines
+              agentSkillCount={card.agentSkillCount ?? 0}
+              libraryAllowed={extensible}
+              useEnabledSkills={useEnabledSkills}
+            />
+          </SubSection>
+        </div>
+      </DetailSection>
+
+      {card.accepts && card.accepts.length > 0 && (
+        <DetailSection title="Accepts">
+          <p className="text-base" data-testid="accepts-line">
+            {acceptsLine(card.accepts)}
+          </p>
+        </DetailSection>
+      )}
+
+      {card.modes && card.modes.length > 0 && (
+        <DetailSection title="Available modes">
+          <div className="flex flex-wrap gap-1.5" data-testid="available-modes">
+            {card.modes.map((mode) => (
+              <span key={mode} className="rounded-md bg-muted px-2 py-0.5 text-base">
+                {mode}
+              </span>
+            ))}
+          </div>
+        </DetailSection>
+      )}
+
+      {card.advertisedModels.length > 0 && (
+        <DetailSection title="Models" titleExtra={<ModelsInfoTooltip />}>
+          <div className="flex flex-wrap gap-1.5" data-testid="company-model-line">
+            {card.advertisedModels.map((model) => (
+              <span key={model} className="rounded-md bg-muted px-2 py-0.5 text-base">
+                {model}
+              </span>
+            ))}
+          </div>
+        </DetailSection>
+      )}
+    </>
+  )
+}

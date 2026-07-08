@@ -51,6 +51,13 @@ type PromptInputProps = {
    * input.
    */
   popoverSlot?: ReactNode
+  /**
+   * Optional header rendered INSIDE the input's container, above the textarea,
+   * with a divider — so a notice (e.g. a sealed-skills banner) shares the same
+   * rounded card as the composer instead of floating as a separate card. Absent
+   * → no header (the composer looks normal).
+   */
+  header?: ReactNode
   /** Receives every keydown so callers can intercept ↑↓/Enter/Esc for autocomplete. */
   onTextareaKeyDown?: (e: KeyboardEvent<HTMLTextAreaElement>) => void
   /** Fires on selection change so callers can track the caret position. */
@@ -85,6 +92,7 @@ export const PromptInput = forwardRef<HTMLFormElement, PromptInputProps>(
       onModelChange,
       renderOverlay,
       popoverSlot,
+      header,
       onTextareaKeyDown,
       onTextareaSelect,
       onTextareaScroll,
@@ -148,6 +156,7 @@ export const PromptInput = forwardRef<HTMLFormElement, PromptInputProps>(
 
     const content = (
       <>
+        {header && <div className="-mx-2 -mt-2 mb-2 border-b border-border px-3 py-2">{header}</div>}
         <div className="relative w-full">
           {popoverSlot}
           {renderOverlay && (

@@ -50,6 +50,11 @@ export type AgentCard = {
    *  ("code host", "CRM") or one rung more specific ("GitHub"), never the
    *  instance, endpoint, scope, or credential (INVARIANT 2). Optional. */
   integrations?: string[]
+  /** Abstracted MCP tool-server KINDS the agent runs ("knowledge base", "code
+   *  search") — the class of server, NEVER the specific server, endpoint, or
+   *  credential (INVARIANT 2). The member sees what kind of tooling an agent
+   *  brings without seeing its wiring. Optional. */
+  mcpKinds?: string[]
   /** Tool KINDS the agent can perform, as classes of action ("read" / "edit" /
    *  "delete" / "execute" / "fetch") — the class, never the target (handshake-
    *  derived). Rendered destructive-first. Optional. */
@@ -62,6 +67,11 @@ export type AgentCard = {
    *  — the RANGE it supports, not the active choice (ACP permission modes).
    *  Optional. */
   modes?: string[]
+  /** COUNT of the agent's own bundled skills — a number ONLY, never the skill
+   *  names. A deliberate, count-only relaxation of INVARIANT 2: the member may
+   *  see how many skills the agent brings ("Agent Skills (5)"), but the recipe
+   *  (the skill definitions/instructions) is never transported. Optional. */
+  agentSkillCount?: number
   /** Display name of the org/team that manages the agent. */
   managedBy: string
   /** Display name of the grant that made this card visible to the user. */
@@ -71,7 +81,10 @@ export type AgentCard = {
 /** Org-wide policy delivered alongside the cards in the discovery envelope.
  *  Cached device-locally; `defaultOrgPolicy` applies in consumer/no-org mode. */
 export type OrgPolicy = {
-  personalAgentPolicy: 'all' | 'no_native' | 'company_only'
+  /** Which non-company agents a member may use. Own ACP agents and the built-in
+   *  Thunderbolt agent are independent toggles: `all` (both), `no_native` (ACP
+   *  only), `native_only` (built-in only), `company_only` (neither). */
+  personalAgentPolicy: 'all' | 'no_native' | 'native_only' | 'company_only'
   userModelsAllowed: boolean
   /** Org policy for user-added MCP servers (and extensions when addable), per
    *  P0-8: `allow` (unrestricted), `allowlist` (only `mcpAllowlist` entries —

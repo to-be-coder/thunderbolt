@@ -11,14 +11,12 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
   useSidebar,
 } from '@/components/ui/sidebar'
 import { useAuth } from '@/contexts'
 import { useAgentsSettingsHidden } from '@/hooks/use-agents-settings-hidden'
-import { ArrowLeft, Bot, Cpu, Plug, Server, SlidersHorizontal, Smartphone, Zap } from 'lucide-react'
+import { ArrowLeft, Bot, Cpu, PanelLeft, Plug, Server, SlidersHorizontal, Smartphone, Zap } from 'lucide-react'
 import { useLocation } from 'react-router'
-import { SidebarHeader } from './sidebar-header'
 
 type SettingsSidebarContentProps = {
   onBackClick: () => void
@@ -46,37 +44,45 @@ export const SettingsSidebarContent = ({
 
   return (
     <SidebarContent className="flex flex-col h-full">
-      <SidebarHeader onToggle={toggleSidebar} />
-
-      <SidebarGroup>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton onClick={onBackClick} tooltip="Back to Chat" className="cursor-pointer">
-                <ArrowLeft className="size-4" />
-                <span>Back</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
-
-      <SidebarSeparator className="m-0" />
+      {/* In settings, the top slot (where the chat brand logo sits) IS the
+          Back-to-chat control; the collapse toggle stays on the right. */}
+      <div className="flex h-[var(--touch-height-xl)] shrink-0 items-center gap-1 px-2">
+        <SidebarMenu className="flex-1">
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={onBackClick}
+              tooltip="Back to Chat"
+              className="cursor-pointer bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
+            >
+              <ArrowLeft className="size-4" />
+              <span>Back</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        <SidebarMenuButton
+          onClick={toggleSidebar}
+          tooltip="Toggle Sidebar"
+          className="size-8 w-auto shrink-0 cursor-pointer justify-center"
+        >
+          <PanelLeft className="size-[var(--icon-size-default)]" />
+          <span className="sr-only">Toggle Sidebar</span>
+        </SidebarMenuButton>
+      </div>
 
       {!agentsHidden && (
         <SidebarGroup>
-          <SidebarGroupLabel>Copilots</SidebarGroupLabel>
+          <SidebarGroupLabel>Agents</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => onSettingsNavigate('/settings/agents')}
-                  tooltip="Agents"
+                  tooltip="All agents"
                   className="cursor-pointer"
                   isActive={subPath === '/settings/agents'}
                 >
                   <Bot className="size-4" />
-                  <span>Agents</span>
+                  <span>All agents</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -85,7 +91,7 @@ export const SettingsSidebarContent = ({
       )}
 
       <SidebarGroup>
-        <SidebarGroupLabel>Library</SidebarGroupLabel>
+        <SidebarGroupLabel>What agents use</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
             <SidebarMenuItem>

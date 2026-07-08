@@ -22,6 +22,7 @@ import type {
   AgentInput,
   AgentPatch,
   AuditEvent,
+  CompanySkill,
   Grant,
   GrantInput,
   Group,
@@ -41,6 +42,7 @@ type ConnectionFailure = { agentId: string; memberId: string; ts: string; errorK
 
 type DemoStore = {
   members: Member[]
+  companySkills: CompanySkill[]
   groups: Group[]
   groupMembers: { groupId: string; memberId: string }[]
   agents: TeamAgentWithCapabilities[]
@@ -128,9 +130,11 @@ const seedStore = (): DemoStore => {
       managedBy: def.managedBy,
       advertisedModels: def.advertisedModels,
       integrations: def.integrations,
+      mcpKinds: def.mcpKinds,
       toolKinds: def.toolKinds,
       accepts: def.accepts,
       modes: def.modes,
+      agentSkillCount: def.agentSkillCount,
       createdAt: now(),
       deletedAt: null,
       capabilities: def.capabilities.map((cap, i) => ({
@@ -147,6 +151,22 @@ const seedStore = (): DemoStore => {
 
   return {
     members: [admin, rae, jordan, ...extraMembers],
+    companySkills: [
+      {
+        id: id(),
+        name: 'Brand voice',
+        description: 'Company tone-of-voice guide agents apply when drafting copy.',
+        createdAt: now(),
+        deletedAt: null,
+      },
+      {
+        id: id(),
+        name: 'Expense policy',
+        description: 'Rules for approving and categorizing expenses.',
+        createdAt: now(),
+        deletedAt: null,
+      },
+    ],
     groups: [salesGroup, financeGroup],
     groupMembers: [
       { groupId: salesGroup.id, memberId: rae.id },
@@ -284,6 +304,28 @@ export const createDemoAdminApi = (): AdminApi => {
         .map((agent) => ({ id: agent.id, name: agent.name }))
     },
 
+    listCompanySkills: async () => live(store.companySkills),
+    createCompanySkill: async (input) => {
+      const skill: CompanySkill = {
+        id: id(),
+        name: input.name,
+        description: input.description ?? '',
+        createdAt: now(),
+        deletedAt: null,
+      }
+      store.companySkills.push(skill)
+      writeAudit('skill.create', input.name)
+      return skill
+    },
+    deleteCompanySkill: async (skillId) => {
+      const skill = store.companySkills.find((s) => s.id === skillId)
+      if (skill) {
+        skill.deletedAt = now()
+        writeAudit('skill.delete', skill.name)
+      }
+      return { success: true } as const
+    },
+
     listGroups: async () => live(store.groups),
     createGroup: async (name) => {
       const group: Group = { id: id(), name, createdAt: now(), deletedAt: null }
@@ -352,6 +394,7 @@ export const createDemoAdminApi = (): AdminApi => {
       }
       Object.assign(agent, {
         name: patch.name ?? agent.name,
+        icon: patch.icon ?? agent.icon,
         description: patch.description ?? agent.description,
         acpUrl: patch.acpUrl ?? agent.acpUrl,
         category: patch.category ?? agent.category,

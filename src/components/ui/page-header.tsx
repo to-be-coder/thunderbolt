@@ -18,15 +18,15 @@ type PageHeaderProps = {
  * @example
  * ```tsx
  * <PageHeader title="Models">
- *   <Button size="icon" className="rounded-lg">
+ *   <Button size="icon" className="rounded-lg bg-card hover:bg-accent">
  *     <Plus />
  *   </Button>
  * </PageHeader>
  * ```
  */
 export const PageHeader = ({ title, children, titleClassName }: PageHeaderProps) => (
-  <div className="flex items-center justify-between mt-4">
-    <h1 className={cn('text-4xl font-bold tracking-tight text-primary', titleClassName)}>{title}</h1>
+  <div className="flex min-h-[var(--touch-height-xl)] items-center justify-between">
+    <h1 className={cn('text-[24px] leading-[32px] font-bold tracking-tight text-primary', titleClassName)}>{title}</h1>
     <div className="flex items-center gap-2">{children}</div>
   </div>
 )

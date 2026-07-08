@@ -24,3 +24,9 @@ export const useDatabase = () => {
   }
   return context.db
 }
+
+/** Like {@link useDatabase} but returns null outside a provider instead of
+ *  throwing — for optional, demo-only paths (e.g. the admin console mirroring an
+ *  edit into the member cache) that must stay renderable without the DB context,
+ *  such as in unit tests. */
+export const useOptionalDatabase = (): AnyDrizzleDatabase | null => useContext(DatabaseContext)?.db ?? null

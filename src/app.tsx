@@ -80,7 +80,6 @@ const loadMotionFeatures = () => import('@/lib/motion-features').then((mod) => m
 // static so route navigation only swaps the inner content. ChatLayout and
 // ChatDetailPage stay in the entry bundle so the landing page is instant.
 const TasksPage = lazy(() => import('@/tasks'))
-const Settings = lazy(() => import('@/settings/index'))
 const PreferencesSettingsPage = lazy(() => import('@/settings/preferences'))
 const ModelsPage = lazy(() => import('@/settings/models'))
 const DevicesSettingsPage = lazy(() => import('@/settings/devices'))
@@ -132,7 +131,7 @@ const renderMainRoutes = ({ experimentalFeatureTasks }: { experimentalFeatureTas
 
     {/* Settings routes with SettingsLayout */}
     <Route path="settings" element={<SettingsLayout />}>
-      <Route index element={<Settings />} />
+      <Route index element={<Navigate to="agents" replace relative="route" />} />
       <Route path="preferences" element={<PreferencesSettingsPage />} />
       <Route path="models" element={<ModelsPage />} />
       <Route path="devices" element={<DevicesSettingsPage />} />

@@ -230,13 +230,26 @@ export const AddCustomAgentDialog = ({
       <ResponsiveModalContentComposable className="sm:max-w-[500px]">
         <ResponsiveModalHeader>
           <ResponsiveModalTitle>{isEditing ? 'Edit Custom Agent' : 'Add Custom Agent'}</ResponsiveModalTitle>
-          <ResponsiveModalDescription>
-            {isEditing
-              ? 'Update the connection details for this remote agent.'
-              : 'Connect a remote agent that speaks the Agent Client Protocol.'}
-          </ResponsiveModalDescription>
+          {isEditing && (
+            <ResponsiveModalDescription>
+              Update the connection details for this remote agent.
+            </ResponsiveModalDescription>
+          )}
         </ResponsiveModalHeader>
         <div className="grid gap-4 pt-4 pb-2">
+          <div className="grid gap-2">
+            <Label htmlFor="agent-url">ACP URL</Label>
+            <Input
+              id="agent-url"
+              placeholder="wss://example.com/ws"
+              value={state.url}
+              onChange={(e) => dispatch({ type: 'SET_URL', value: e.target.value })}
+              autoComplete="off"
+            />
+            <p className="text-[length:var(--font-size-xs)] text-muted-foreground">
+              Only WebSocket endpoints are supported (wss:// or ws://)
+            </p>
+          </div>
           <div className="grid gap-2">
             <Label htmlFor="agent-name">Name</Label>
             <Input
@@ -246,19 +259,6 @@ export const AddCustomAgentDialog = ({
               onChange={(e) => dispatch({ type: 'SET_NAME', value: e.target.value })}
               autoComplete="off"
             />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="agent-url">URL</Label>
-            <Input
-              id="agent-url"
-              placeholder="wss://example.com/ws"
-              value={state.url}
-              onChange={(e) => dispatch({ type: 'SET_URL', value: e.target.value })}
-              autoComplete="off"
-            />
-            <p className="text-[length:var(--font-size-xs)] text-muted-foreground">
-              WebSocket endpoint for the remote ACP agent
-            </p>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="agent-description">Description</Label>

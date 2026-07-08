@@ -37,6 +37,18 @@ export type Group = {
   deletedAt: string | null
 }
 
+/** A company-scoped skill the admin provides org-wide (distinct from a member's
+ *  personal Library skill). Display metadata only in v1 — name + description. */
+export type CompanySkill = {
+  id: string
+  name: string
+  description: string
+  createdAt: string
+  deletedAt: string | null
+}
+
+export type CompanySkillInput = { name: string; description?: string }
+
 export type AgentCategory = 'sealed' | 'extensible'
 export type AgentStatus = 'draft' | 'published'
 export type CredentialMode = 'as_you' | 'service_account'
@@ -64,9 +76,13 @@ export type TeamAgent = {
   /** Member-card fields (handshake-derived) the admin carries so its preview can
    *  render the EXACT member card. Abstracted kinds only — see `@shared/agent-cards`. */
   integrations?: string[]
+  /** Abstracted MCP tool-server kinds (never endpoints). */
+  mcpKinds?: string[]
   toolKinds?: string[]
   accepts?: string[]
   modes?: string[]
+  /** Count of the agent's own bundled skills (count only — never names). */
+  agentSkillCount?: number
   createdAt: string
   deletedAt: string | null
 }
@@ -140,7 +156,14 @@ export type GrantInput = {
   targetId?: string
 }
 
-export type PersonalAgentPolicy = 'all' | 'no_native' | 'company_only'
+/** Which non-company agents a member may use. The built-in Thunderbolt agent and
+ *  a member's own ACP agents are INDEPENDENT toggles, so all four combinations
+ *  are representable:
+ *   - `all`          — own ACP agents ✓, built-in Thunderbolt ✓
+ *   - `no_native`    — own ACP agents ✓, built-in Thunderbolt ✗
+ *   - `native_only`  — own ACP agents ✗, built-in Thunderbolt ✓
+ *   - `company_only` — own ACP agents ✗, built-in Thunderbolt ✗ (company agents only) */
+export type PersonalAgentPolicy = 'all' | 'no_native' | 'native_only' | 'company_only'
 
 export type McpPolicyMode = 'allow' | 'allowlist' | 'block'
 

@@ -23,7 +23,7 @@ export const CategoryInfoTooltip = () => (
     <TooltipContent className="max-w-xs text-sm">
       <p className="font-medium">Sealed</p>
       <p className="mb-2">
-        Runs exactly as your organization configured it — members can’t add skills or change its model.
+        Runs exactly as your organization configured it. Members can’t add skills or change its model.
       </p>
       <p className="font-medium">Extensible</p>
       <p>Members’ enabled skills and models can extend it, where org policy allows.</p>

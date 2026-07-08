@@ -902,7 +902,13 @@ export default function ModelsPage() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
-                  <Button variant="outline" size="icon" className="rounded-lg" disabled data-testid="add-model-blocked">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-lg bg-card hover:bg-accent"
+                    disabled
+                    data-testid="add-model-blocked"
+                  >
                     <Plus />
                   </Button>
                 </span>
@@ -915,7 +921,7 @@ export default function ModelsPage() {
         ) : (
           <Dialog open={isAddDialogOpen} onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="icon" className="rounded-lg">
+              <Button variant="outline" size="icon" className="rounded-lg bg-card hover:bg-accent">
                 <Plus />
               </Button>
             </DialogTrigger>

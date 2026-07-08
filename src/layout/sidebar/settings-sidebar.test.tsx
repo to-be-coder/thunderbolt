@@ -82,21 +82,21 @@ describe('SettingsSidebarContent — Agents entry visibility', () => {
     const authClient = createMockAuthClient({ session: anonSession })
     renderSidebar(authClient, onTauri)
 
-    expect(screen.getByText('Agents')).toBeInTheDocument()
+    expect(screen.getByText('All agents')).toBeInTheDocument()
   })
 
   it('shows the Agents entry for authenticated users behind the proxy (web)', () => {
     const authClient = createMockAuthClient({ session: authedSession })
     renderSidebar(authClient, offTauri)
 
-    expect(screen.getByText('Agents')).toBeInTheDocument()
+    expect(screen.getByText('All agents')).toBeInTheDocument()
   })
 
   it('shows the Agents entry for authenticated users on Tauri Standalone (proxy off)', () => {
     const authClient = createMockAuthClient({ session: authedSession })
     renderSidebar(authClient, onTauri)
 
-    expect(screen.getByText('Agents')).toBeInTheDocument()
+    expect(screen.getByText('All agents')).toBeInTheDocument()
   })
 })
 

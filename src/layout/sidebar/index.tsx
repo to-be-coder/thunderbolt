@@ -171,7 +171,7 @@ export default function Sidebar() {
 
   const showSettingsMenu = () => {
     if (!isSettingsRoute) {
-      navigate('/settings/preferences')
+      navigate('/settings/agents')
     }
   }
 

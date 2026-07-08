@@ -242,7 +242,7 @@ describe('ChatPromptInput', () => {
       expect(screen.getByRole('status').textContent ?? '').toMatch(/Connecting to /)
     })
 
-    it('shows error indicator when the connection failed', () => {
+    it('does NOT show a "Failed to connect" line in the composer (surfaced in the message stream instead)', () => {
       const { mockUseChat } = setupStore()
       useChatStore.getState().updateSession('thread-1', {
         connectionStatus: 'error',
@@ -253,23 +253,9 @@ describe('ChatPromptInput', () => {
         wrapper: TestWrapper,
       })
 
-      const alert = screen.getByRole('alert')
-      expect(alert.textContent ?? '').toMatch(/Failed to connect to /)
-      expect(alert.querySelector('span[title]')?.getAttribute('title')).toBe('boom')
-    })
-
-    it('extracts JSON-RPC error message into the connection-error tooltip', () => {
-      const { mockUseChat } = setupStore()
-      useChatStore.getState().updateSession('thread-1', {
-        connectionStatus: 'error',
-        connectionError: new Error(JSON.stringify({ data: { message: 'agent offline' } })),
-      })
-
-      render(<ChatPromptInput useChat={mockUseChat} useIsMobile={createMockUseIsMobile()} />, {
-        wrapper: TestWrapper,
-      })
-
-      expect(screen.getByRole('alert').querySelector('span[title]')?.getAttribute('title')).toBe('agent offline')
+      // No composer-level error line; the connection failure lives in the message stream.
+      expect(screen.queryByRole('alert')).toBeNull()
+      expect(screen.queryByText(/Failed to connect to /)).toBeNull()
     })
 
     it('falls back to default selector when connectionStatus is idle', () => {

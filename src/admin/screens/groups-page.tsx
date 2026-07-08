@@ -70,14 +70,14 @@ export const GroupsPage = () => {
   }
 
   return (
-    <div className="flex h-full w-full min-h-0">
-      <div className="min-w-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+    <div className="-my-6 flex h-[calc(100%_+_3rem)] w-full min-h-0">
+      <div className="min-w-0 flex-1 overflow-y-auto pr-6">
+        <div className="mx-auto flex w-full max-w-[728px] flex-col gap-6 py-6">
           <PageHeader title="Groups">
             <Button
               variant="outline"
               size="icon"
-              className="rounded-lg"
+              className="rounded-lg bg-card hover:bg-accent"
               onClick={() => setDialogOpen(true)}
               aria-label="Create a group"
             >
@@ -87,7 +87,7 @@ export const GroupsPage = () => {
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogContent>
-              <DialogHeader>
+              <DialogHeader className="sm:text-center">
                 <DialogTitle>Create a group</DialogTitle>
               </DialogHeader>
               <div className="flex flex-col gap-4">
@@ -125,7 +125,7 @@ export const GroupsPage = () => {
       </div>
 
       <SlideInPanel open={open}>
-        <div className="h-full pl-6">
+        <div className="h-full border-l border-border pl-6">
           {panelGroup && (
             <GroupDetailPanel
               key={panelGroup.id}
@@ -152,7 +152,7 @@ const GroupCard = ({ group, selected, onSelect }: { group: Group; selected: bool
       aria-label={`Open ${group.name}`}
       aria-pressed={selected}
       className={cn(
-        'flex items-center gap-3 rounded-lg border border-border px-4 py-3 text-left transition-colors',
+        'flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors',
         selected ? 'bg-accent' : 'hover:bg-secondary/50',
       )}
     >
@@ -185,26 +185,27 @@ const GroupDetailPanel = ({
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   return (
-    <div className="flex h-full flex-col rounded-lg border border-border">
-      <div className="flex items-center justify-between gap-3 p-6 pb-4">
-        <div className="flex min-w-0 items-center gap-1">
-          <h2 className="truncate text-xl font-semibold">{group.name}</h2>
+    <div className="relative flex h-full flex-col overflow-hidden bg-background pt-6">
+      <div className="flex h-[var(--touch-height-xl)] shrink-0 items-center justify-between gap-3">
+        <h2 className="min-w-0 flex-1 truncate text-xl font-semibold">{group.name}</h2>
+        {/* Actions on the right: the ⋯ menu sits next to the close (X). */}
+        <div className="flex shrink-0 items-center gap-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" className="shrink-0" aria-label="Group actions">
+              <Button variant="ghost" size="icon-sm" aria-label="Group actions">
                 <MoreHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
+            <DropdownMenuContent align="end">
               <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <Button variant="ghost" size="icon-sm" aria-label="Close details" onClick={onClose}>
+            <X className="size-4" />
+          </Button>
         </div>
-        <Button variant="ghost" size="icon-sm" className="shrink-0" aria-label="Close details" onClick={onClose}>
-          <X className="size-4" />
-        </Button>
 
         <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
           <AlertDialogContent>
@@ -231,7 +232,7 @@ const GroupDetailPanel = ({
         </AlertDialog>
       </div>
 
-      <section className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 pb-6">
+      <section className="flex flex-1 flex-col gap-4 overflow-y-auto pt-4 pb-6">
         <GroupMembership group={group} />
       </section>
     </div>

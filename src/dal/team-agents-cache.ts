@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { asc } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
 import type { AnyDrizzleDatabase } from '../db/database-interface'
 import { teamAgentsCacheTable } from '../db/tables'
 import { HttpError } from '@/lib/http'
@@ -29,9 +29,11 @@ export const rowToCard = (row: TeamAgentsCacheRow): AgentCard => ({
   capabilities: row.capabilities,
   advertisedModels: row.advertisedModels,
   integrations: row.integrations ?? undefined,
+  mcpKinds: row.mcpKinds ?? undefined,
   toolKinds: row.toolKinds ?? undefined,
   accepts: row.accepts ?? undefined,
   modes: row.modes ?? undefined,
+  agentSkillCount: row.agentSkillCount ?? undefined,
   managedBy: row.managedBy,
   grantedVia: row.grantedVia,
 })
@@ -47,6 +49,20 @@ export const replaceTeamAgentsCache = async (db: AnyDrizzleDatabase, cards: Agen
       await tx.insert(teamAgentsCacheTable).values({ ...card, fetchedAt })
     }
   })
+}
+
+/** Mirror an admin agent edit onto the member's cached card, so the member's
+ *  Agents page + composer reflect it immediately. In production the org
+ *  discovery sync carries this; in demo mode the admin console calls it directly
+ *  (the admin store and this cache are otherwise separate). Patches only the
+ *  member-visible card fields — the grant-derived `grantedVia` stays intact — and
+ *  no-ops when the id isn't cached. */
+export const patchTeamAgentCacheCard = async (
+  db: AnyDrizzleDatabase,
+  id: string,
+  fields: Partial<Pick<AgentCard, 'name' | 'icon' | 'description' | 'category'>>,
+): Promise<void> => {
+  await db.update(teamAgentsCacheTable).set(fields).where(eq(teamAgentsCacheTable.id, id))
 }
 
 /** Drizzle select for all cached team agent cards, alpha by name. Shared by the

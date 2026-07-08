@@ -12,6 +12,13 @@ afterEach(() => {
   cleanup()
 })
 
+const fakeUseEnabledSkills = (enabledCount: number) =>
+  (() => ({
+    isEnabled: () => true,
+    setEnabled: async () => {},
+    enabledCount,
+  })) as unknown as typeof import('@/skills/use-skills').useEnabledSkills
+
 const renderDetail = (overrides: { onRemove?: () => void; onBack?: () => void } = {}) =>
   render(
     <MemoryRouter>
@@ -19,6 +26,7 @@ const renderDetail = (overrides: { onRemove?: () => void; onBack?: () => void } 
         onBack={overrides.onBack ?? (() => {})}
         onRemove={overrides.onRemove ?? (() => {})}
         useLibraryCounts={() => ({ skills: 4, mcpServers: 2, extensions: 1 })}
+        useEnabledSkills={fakeUseEnabledSkills(4)}
       />
     </MemoryRouter>,
   )
@@ -29,9 +37,19 @@ describe('ThunderboltAgentDetail', () => {
     expect(screen.queryByText('Your agent · uses your Library')).not.toBeInTheDocument()
   })
 
-  it('shows the live Library counts in the "What it uses" summary', () => {
+  it('shows the live Library counts as links in the "What it uses" sub-sections', () => {
     renderDetail()
-    expect(screen.getByTestId('library-summary')).toHaveTextContent('4 skills · 2 MCP servers · 1 integration')
+    expect(screen.getByRole('link', { name: '1 integration' })).toHaveAttribute('href', '/settings/integrations')
+    expect(screen.getByRole('link', { name: '2 MCP servers' })).toHaveAttribute('href', '/settings/mcp-servers')
+    // The skills count surfaces through the Library skills line (asserted below).
+  })
+
+  it('shows a Skills section — no built-in skills line, just a link to your Library skills', () => {
+    renderDetail()
+    // The native agent has no bundled skills, so the "Agent Skills (0)" line is omitted.
+    expect(screen.queryByTestId('agent-skills-count')).not.toBeInTheDocument()
+    expect(screen.getByTestId('library-skills-line')).toHaveTextContent('Skills from your library (4)')
+    expect(screen.getByTestId('library-skills-link')).toHaveAttribute('href', '/settings/skills')
   })
 
   it('has no Manage in Library link', () => {

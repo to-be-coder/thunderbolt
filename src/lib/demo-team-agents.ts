@@ -23,9 +23,13 @@ export type DemoTeamAgentDef = {
   grantedVia: string
   advertisedModels: string[]
   integrations: string[]
+  /** Abstracted MCP tool-server kinds (never endpoints). */
+  mcpKinds: string[]
   toolKinds: string[]
   accepts: string[]
   modes: string[]
+  /** Count of the agent's OWN bundled skills (count only — never names). */
+  agentSkillCount: number
   capabilities: AgentCardCapability[]
 }
 
@@ -45,9 +49,11 @@ export const demoTeamAgentDefs: DemoTeamAgentDef[] = [
     grantedVia: 'Sales (group)',
     advertisedModels: ['claude-opus-4-8', 'claude-haiku-4-5'],
     integrations: ['Salesforce', 'Web search'],
+    mcpKinds: ['Sales knowledge base'],
     toolKinds: ['read', 'edit', 'fetch'],
     accepts: ['images', 'context'],
     modes: ['Ask', 'Auto-edit', 'Autonomous'],
+    agentSkillCount: 5,
     capabilities: [
       { label: 'Searches the web' },
       { label: 'Reads the Sales knowledge base', credentialMode: 'service_account' },
@@ -65,9 +71,11 @@ export const demoTeamAgentDefs: DemoTeamAgentDef[] = [
     grantedVia: 'Finance (group)',
     advertisedModels: ['claude-opus-4-8'],
     integrations: ['Finance data warehouse'],
+    mcpKinds: ['Finance knowledge base'],
     toolKinds: ['read'],
     accepts: [],
     modes: ['Ask'],
+    agentSkillCount: 3,
     capabilities: [{ label: 'Reads the Finance knowledge base', credentialMode: 'service_account' }],
   },
   {
@@ -79,11 +87,13 @@ export const demoTeamAgentDefs: DemoTeamAgentDef[] = [
     category: 'sealed',
     managedBy: 'Demo IT',
     grantedVia: 'Everyone',
-    advertisedModels: [],
+    advertisedModels: ['claude-haiku-4-5'],
     integrations: [],
+    mcpKinds: [],
     toolKinds: [],
     accepts: [],
     modes: [],
+    agentSkillCount: 0,
     capabilities: [],
   },
 ]
@@ -99,9 +109,11 @@ export const toAgentCard = (def: DemoTeamAgentDef): AgentCard => ({
   capabilities: def.capabilities,
   advertisedModels: def.advertisedModels,
   integrations: def.integrations,
+  mcpKinds: def.mcpKinds,
   toolKinds: def.toolKinds,
   accepts: def.accepts,
   modes: def.modes,
+  agentSkillCount: def.agentSkillCount,
   managedBy: def.managedBy,
   grantedVia: def.grantedVia,
 })

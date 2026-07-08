@@ -6,7 +6,7 @@ import { maxRetries } from '@/chats/chat-instance'
 import { reportAgentConnectionFailure } from '@/chats/report-agent-failure'
 import type { AgentKind } from '@/dal/chat-threads'
 import { isRateLimitError } from '@/lib/error-utils'
-import { Loader2, WifiOff } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { memo, useEffect, useRef } from 'react'
 
 type ErrorMessageProps = {
@@ -98,9 +98,7 @@ export const ConnectionFailureMessage = memo(
 
     const message = isMemberOffline
       ? "Couldn't connect. Check your connection and try again."
-      : agentKind === 'team'
-        ? `Couldn't connect to ${agentName}. This has been reported to your admin.`
-        : `Couldn't connect to ${agentName}. Try again.`
+      : `Couldn't connect to ${agentName}. Try again.`
 
     return (
       <div className="px-4 py-3 rounded-2xl bg-destructive/10 border border-destructive/20 mr-auto w-full mt-2">
@@ -109,7 +107,6 @@ export const ConnectionFailureMessage = memo(
             className="flex items-center gap-2 text-destructive/80 text-[length:var(--font-size-body)]"
             role="alert"
           >
-            <WifiOff className="size-[var(--icon-size-sm)] shrink-0" />
             {message}
           </span>
           {onRetry && (

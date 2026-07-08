@@ -27,20 +27,50 @@ const kindIcon = (kind: AgentFilterOption['kind']) => {
   return <Globe className="size-3.5 text-muted-foreground" />
 }
 
-const quickToggles: ReadonlyArray<{ value: ChatFilters['companyMine']; label: string }> = [
-  { value: 'all', label: 'All' },
-  { value: 'company', label: 'Company' },
-  { value: 'mine', label: 'Mine' },
-]
+/** One labeled group of agent checkboxes (Company / Personal) — mirrors the
+ *  settings-nav group sections: a muted caption over its rows. */
+const AgentGroup = ({
+  label,
+  options,
+  filters,
+  dispatch,
+}: {
+  label: string
+  options: AgentFilterOption[]
+  filters: ChatFilters
+  dispatch: Dispatch<ChatFilterAction>
+}) => (
+  <div className="flex flex-col gap-1.5">
+    <span className="px-1 text-[length:var(--font-size-xs)] font-medium text-muted-foreground">{label}</span>
+    <ul className="flex flex-col gap-0.5">
+      {options.map((option) => (
+        <li key={option.id}>
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'toggleAgent', id: option.id })}
+            className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-accent/50"
+          >
+            <Checkbox checked={filters.agentIds.includes(option.id)} className="pointer-events-none" />
+            {kindIcon(option.kind)}
+            <span className="truncate text-[length:var(--font-size-sm)]">{option.label}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  </div>
+)
 
 /**
  * Search-adjacent filter control for the chat history (T4). A single filter
- * button opens a popover with a Company/Mine quick toggle and a by-agent
- * multi-select (icons). Filters are in-memory views — one-tap clear-all, no
+ * button opens a popover listing agents split into Company and Personal groups
+ * (labeled like the settings nav) — pick any to narrow the history. No
+ * company/mine tabs. Filters are in-memory views — one-tap clear-all, no
  * cross-session persistence.
  */
 export const ChatFilterBar = ({ options, filters, dispatch }: ChatFilterBarProps) => {
   const active = hasActiveFilters(filters)
+  const companyOptions = options.filter((option) => option.kind === 'team')
+  const personalOptions = options.filter((option) => option.kind !== 'team')
 
   return (
     <div className="flex items-center gap-1">
@@ -58,43 +88,18 @@ export const ChatFilterBar = ({ options, filters, dispatch }: ChatFilterBarProps
         </PopoverTrigger>
         <PopoverContent side="bottom" align="start" className="w-64 p-2">
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1.5">
-              <span className="px-1 text-[length:var(--font-size-xs)] font-medium text-muted-foreground">Show</span>
-              <div className="flex gap-1">
-                {quickToggles.map((toggle) => (
-                  <Button
-                    key={toggle.value}
-                    variant={filters.companyMine === toggle.value ? 'default' : 'outline'}
-                    size="xs"
-                    className="flex-1 cursor-pointer"
-                    onClick={() => dispatch({ type: 'setCompanyMine', value: toggle.value })}
-                  >
-                    {toggle.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {options.length > 0 && (
-              <div className="flex flex-col gap-1.5">
-                <span className="px-1 text-[length:var(--font-size-xs)] font-medium text-muted-foreground">
-                  By agent
-                </span>
-                <ul className="flex max-h-56 flex-col gap-0.5 overflow-y-auto">
-                  {options.map((option) => (
-                    <li key={option.id}>
-                      <button
-                        type="button"
-                        onClick={() => dispatch({ type: 'toggleAgent', id: option.id })}
-                        className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-accent/50"
-                      >
-                        <Checkbox checked={filters.agentIds.includes(option.id)} className="pointer-events-none" />
-                        {kindIcon(option.kind)}
-                        <span className="truncate text-[length:var(--font-size-sm)]">{option.label}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+            {options.length === 0 ? (
+              <span className="px-1 py-1 text-[length:var(--font-size-sm)] text-muted-foreground">
+                No agents to filter.
+              </span>
+            ) : (
+              <div className="flex max-h-72 flex-col gap-3 overflow-y-auto">
+                {companyOptions.length > 0 && (
+                  <AgentGroup label="Company" options={companyOptions} filters={filters} dispatch={dispatch} />
+                )}
+                {personalOptions.length > 0 && (
+                  <AgentGroup label="Personal" options={personalOptions} filters={filters} dispatch={dispatch} />
+                )}
               </div>
             )}
 

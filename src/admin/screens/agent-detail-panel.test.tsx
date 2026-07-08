@@ -69,14 +69,13 @@ describe('AgentDetailPanel', () => {
     fireEvent.pointerUp(trigger, { button: 0, pointerType: 'mouse' })
   }
 
-  it('renaming the title reveals Save and PATCHes the name', async () => {
+  it('editing the name in Configuration reveals Save and PATCHes the name', async () => {
     const calls = renderPanel()
     await flush()
 
     // No Save bar until something changes.
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sales Agent' }))
     fireEvent.change(screen.getByLabelText('Agent name'), { target: { value: 'Sales Bot' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await flush()

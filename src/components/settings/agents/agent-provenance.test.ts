@@ -12,12 +12,9 @@ import {
 } from './agent-provenance'
 
 describe('companyProvenanceLine', () => {
-  it('shows the category name for extensible agents (no org prefix)', () => {
-    expect(companyProvenanceLine({ category: 'extensible' })).toBe('Extensible')
-  })
-
-  it('shows the category name for sealed agents (no org prefix)', () => {
-    expect(companyProvenanceLine({ category: 'sealed' })).toBe('Sealed')
+  it('shows how the member was granted the agent, never the category word', () => {
+    expect(companyProvenanceLine({ grantedVia: 'Sales (group)' })).toBe('Granted via Sales (group)')
+    expect(companyProvenanceLine({ grantedVia: 'Everyone' })).toBe('Granted via Everyone')
   })
 })
 

@@ -29,7 +29,7 @@ export const SidebarHeader = ({ onToggle }: SidebarHeaderProps) => {
   const isExpanded = isMobile || state === 'expanded'
 
   return (
-    <div className="h-[var(--touch-height-xl)] border-b border-border flex items-center px-2 flex-shrink-0">
+    <div className="h-[var(--touch-height-xl)] flex items-center px-2 flex-shrink-0">
       <div
         className="flex items-center h-8 relative flex-1 min-w-0"
         onMouseEnter={() => !isMobile && !isExpanded && setShowExpandButton(true)}
@@ -51,9 +51,7 @@ export const SidebarHeader = ({ onToggle }: SidebarHeaderProps) => {
         ) : (
           <div className="flex items-center gap-2 px-2 min-w-0">
             <AppLogo size={20} />
-            {isExpanded && (
-              <span className="truncate font-medium text-[length:var(--font-size-body)]">Thunderbolt</span>
-            )}
+            {isExpanded && <span className="truncate font-medium text-[18px]">Thunderbolt</span>}
           </div>
         )}
       </div>

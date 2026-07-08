@@ -36,21 +36,26 @@ describe('ChatFilterBar', () => {
     expect(dispatch).toHaveBeenCalledWith({ type: 'toggleAgent', id: 'team-1' })
   })
 
-  it('dispatches the Company quick toggle', async () => {
+  it('groups agents into labeled Company and Personal sections (no company/mine tabs)', async () => {
     const dispatch = mock(() => {})
     render(<ChatFilterBar options={options} filters={initialChatFilters} dispatch={dispatch} />)
 
     await openPopover()
-    await act(async () => {
-      fireEvent.click(screen.getByText('Company'))
-    })
 
-    expect(dispatch).toHaveBeenCalledWith({ type: 'setCompanyMine', value: 'company' })
+    // Group labels, not tabs.
+    expect(screen.getByText('Company')).toBeInTheDocument()
+    expect(screen.getByText('Personal')).toBeInTheDocument()
+    // The team agent sits under Company; the built-in under Personal.
+    expect(screen.getByText('Support Copilot')).toBeInTheDocument()
+    expect(screen.getByText('Thunderbolt')).toBeInTheDocument()
+    // The old company/mine quick toggles are gone.
+    expect(screen.queryByText('Show')).toBeNull()
+    expect(screen.queryByText('Mine')).toBeNull()
   })
 
   it('clears all filters from the popover Clear all when a filter is active', async () => {
     const dispatch = mock(() => {})
-    const active: ChatFilters = { agentIds: ['team-1'], companyMine: 'all' }
+    const active: ChatFilters = { agentIds: ['team-1'] }
     render(<ChatFilterBar options={options} filters={active} dispatch={dispatch} />)
 
     // No external clear button; the reset lives inside the popover.
@@ -67,7 +72,7 @@ describe('ChatFilterBar', () => {
 
   it('just highlights the filter button when active (no external clear affordance)', () => {
     const dispatch = mock(() => {})
-    const active: ChatFilters = { agentIds: ['team-1'], companyMine: 'all' }
+    const active: ChatFilters = { agentIds: ['team-1'] }
     render(<ChatFilterBar options={options} filters={active} dispatch={dispatch} />)
     expect(screen.queryByLabelText('Clear filters')).toBeNull()
     expect(screen.getByLabelText('Filter chats')).toHaveAttribute('aria-pressed', 'true')

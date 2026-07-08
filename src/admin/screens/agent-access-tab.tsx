@@ -137,7 +137,7 @@ export const AgentAccessTab = ({ agentId }: { agentId: string }) => {
             />
           </div>
           {restrictedGrants.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No one yet — add a group or individual with ＋.</p>
+            <p className="text-sm text-muted-foreground">No one yet. Add a group or individual with ＋.</p>
           ) : (
             <ul className="flex flex-col gap-1.5">
               {restrictedGrants.map((grant) => (

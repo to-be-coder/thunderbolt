@@ -22,7 +22,7 @@ import { useRevokeDevice } from '@/hooks/use-revoke-device'
 
 const formatLastSeen = (ts: string | null): string => {
   if (ts == null) {
-    return '—'
+    return '-'
   }
   const date = dayjs(ts)
   const now = dayjs()
