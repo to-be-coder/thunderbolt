@@ -1261,10 +1261,10 @@ export const ModelsManager = () => {
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      className="text-muted-foreground"
+                      className="size-5 rounded-sm text-muted-foreground"
                       aria-label={`${getProviderDisplay(group.provider)} actions`}
                     >
-                      <MoreHorizontal className="size-4" />
+                      <MoreHorizontal className="size-3.5" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
