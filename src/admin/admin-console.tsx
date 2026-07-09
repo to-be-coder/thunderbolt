@@ -8,9 +8,7 @@ import { GroupsPage } from './screens/groups-page'
 import { McpPage } from './screens/mcp-page'
 import { MembersPage } from './screens/members-page'
 import { ModelsPage } from './screens/models-page'
-import { PolicyPage } from './screens/policy-page'
 import { RegistryPage } from './screens/registry-page'
-import { SkillsPage } from './screens/skills-page'
 
 /**
  * Lazy entry for the admin console (loaded off the chat critical path). Owns the
@@ -25,10 +23,8 @@ const AdminConsole = () => (
       <Route index element={<RegistryPage />} />
       <Route path="members" element={<MembersPage />} />
       <Route path="groups" element={<GroupsPage />} />
-      <Route path="skills" element={<SkillsPage />} />
       <Route path="mcp" element={<McpPage />} />
       <Route path="models" element={<ModelsPage />} />
-      <Route path="policy" element={<PolicyPage />} />
       <Route path="*" element={<Navigate to="/admin" replace />} />
     </Routes>
   </AdminConsoleLayout>

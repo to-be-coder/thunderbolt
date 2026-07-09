@@ -5,19 +5,7 @@
 import { LogoutModal } from '@/components/logout-modal'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import {
-  Bot,
-  Boxes,
-  ChevronsUpDown,
-  Cpu,
-  LogOut,
-  PanelLeft,
-  Server,
-  ShieldCheck,
-  UserRound,
-  Users,
-  Zap,
-} from 'lucide-react'
+import { Bot, Boxes, ChevronsUpDown, Cpu, LogOut, PanelLeft, Server, UserRound, Users, Zap } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { NavLink } from 'react-router'
 import { useAdminIdentity } from './api/hooks'
@@ -37,14 +25,9 @@ const navGroups: AdminNavGroup[] = [
   {
     label: 'Company',
     items: [
-      { to: '/admin/skills', label: 'Skills', icon: <Zap /> },
       { to: '/admin/mcp', label: 'MCP Servers', icon: <Server /> },
       { to: '/admin/models', label: 'Models', icon: <Cpu /> },
     ],
-  },
-  {
-    label: 'Governance',
-    items: [{ to: '/admin/policy', label: 'Policy', icon: <ShieldCheck /> }],
   },
 ]
 
