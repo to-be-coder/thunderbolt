@@ -120,7 +120,7 @@ export const SuggestionChip = ({
           // share/copy callout pops) while our long-press timer is waiting
           // to open the action menu. Leaving `touch-action` at its default
           // so the chip strip's horizontal scroll on mobile still works.
-          className={`h-[var(--touch-height-sm)] shrink-0 cursor-pointer select-none rounded-full border-border bg-card px-3 text-sm font-normal transition-opacity dark:border-border dark:bg-card [-webkit-touch-callout:none] ${
+          className={`h-[var(--touch-height-sm)] shrink-0 cursor-pointer select-none rounded-full border-border bg-sidebar px-3 text-sm font-normal transition-opacity dark:border-border dark:bg-sidebar [-webkit-touch-callout:none] ${
             dimmed ? 'opacity-40' : ''
           }`}
           aria-label={`Pinned skill /${label}`}

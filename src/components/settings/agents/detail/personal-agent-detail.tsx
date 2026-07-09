@@ -191,25 +191,25 @@ export const PersonalAgentDetail = ({
             <div className="flex flex-col gap-2">
               <p className="text-sm font-medium text-muted-foreground">Configuration</p>
               <div className="flex flex-col gap-4 rounded-xl bg-secondary p-4 dark:bg-sidebar">
-                {onIconChange && (
-                  <Field label="Icon">
-                    <AgentIconPicker
-                      value={iconKey ?? agent.icon ?? 'globe'}
-                      onChange={onIconChange}
-                      defaultKey={agent.icon ?? 'globe'}
-                    />
-                  </Field>
-                )}
-                <Field label="Name">
+                <Field label="Identity">
                   <div className="flex flex-col gap-2">
-                    <Input
-                      aria-label="Agent name"
-                      value={draftName}
-                      onChange={(event) => setDraftName(event.target.value)}
-                      onKeyDown={(event) => event.key === 'Enter' && nameDirty && saveName()}
-                      className="text-base"
-                      data-testid="personal-name"
-                    />
+                    <div className="flex items-center gap-2">
+                      {onIconChange && (
+                        <AgentIconPicker
+                          value={iconKey ?? agent.icon ?? 'globe'}
+                          onChange={onIconChange}
+                          defaultKey={agent.icon ?? 'globe'}
+                        />
+                      )}
+                      <Input
+                        aria-label="Agent name"
+                        value={draftName}
+                        onChange={(event) => setDraftName(event.target.value)}
+                        onKeyDown={(event) => event.key === 'Enter' && nameDirty && saveName()}
+                        className="flex-1 text-base"
+                        data-testid="personal-name"
+                      />
+                    </div>
                     {nameDirty && (
                       <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="sm" onClick={discardName}>

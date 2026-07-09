@@ -83,7 +83,7 @@ export const AdminConsoleLayout = ({ children }: { children: ReactNode }) => {
     <div className="flex h-full w-full overflow-hidden bg-background text-foreground">
       <div
         className={cn(
-          'flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200',
+          'flex shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-[width] duration-200',
           collapsed ? 'w-16' : 'w-64',
         )}
       >

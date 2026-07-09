@@ -50,7 +50,10 @@ const AgentGroup = ({
             onClick={() => dispatch({ type: 'toggleAgent', id: option.id })}
             className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-accent/50"
           >
-            <Checkbox checked={filters.agentIds.includes(option.id)} className="pointer-events-none" />
+            <Checkbox
+              checked={filters.agentIds.includes(option.id)}
+              className="pointer-events-none border-muted-foreground/40"
+            />
             {kindIcon(option.kind)}
             <span className="truncate text-[length:var(--font-size-sm)]">{option.label}</span>
           </button>
@@ -84,7 +87,7 @@ export const ChatFilterBar = ({ options, filters, dispatch }: ChatFilterBarProps
             className={cn(
               'cursor-pointer',
               active &&
-                'bg-blue-500/15 text-blue-600 hover:bg-blue-500/25 hover:text-blue-600 dark:bg-yellow-400/15 dark:text-yellow-300 dark:hover:bg-yellow-400/25 dark:hover:text-yellow-300',
+                'bg-[#5865f0]/15 text-[#5865f0] hover:bg-[#5865f0]/25 hover:text-[#5865f0] dark:text-[#8b95d6] dark:hover:text-[#8b95d6]',
             )}
           >
             <ListFilter className="size-[var(--icon-size-default)]" />

@@ -137,7 +137,7 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
   }
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden bg-background">
+    <div className="relative flex h-full flex-col overflow-hidden">
       {/* Floating Save row — a FULL-BLEED overlay pinned to the top of the panel:
           it spans the whole column width (edge to edge) and is tall enough to
           cover the header (incl. the X) behind it, without reflowing the content.
@@ -225,20 +225,19 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
               <div className="flex flex-col gap-2">
                 <p className="text-sm font-medium text-muted-foreground">Configuration</p>
                 <div className="flex flex-col gap-5 rounded-xl bg-secondary p-4 dark:bg-sidebar">
-                  <Field label="Icon">
-                    <AgentIconPicker
-                      value={state.icon}
-                      onChange={(key) => dispatch({ type: 'SET_ICON', value: key })}
-                    />
-                  </Field>
-
-                  <Field label="Name">
-                    <Input
-                      aria-label="Agent name"
-                      value={state.name}
-                      onChange={(event) => dispatch({ type: 'SET_NAME', value: event.target.value })}
-                      className="text-base"
-                    />
+                  <Field label="Identity">
+                    <div className="flex items-center gap-2">
+                      <AgentIconPicker
+                        value={state.icon}
+                        onChange={(key) => dispatch({ type: 'SET_ICON', value: key })}
+                      />
+                      <Input
+                        aria-label="Agent name"
+                        value={state.name}
+                        onChange={(event) => dispatch({ type: 'SET_NAME', value: event.target.value })}
+                        className="flex-1 text-base"
+                      />
+                    </div>
                   </Field>
 
                   <Field label="Endpoint">

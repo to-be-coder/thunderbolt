@@ -125,7 +125,7 @@ export const GroupsPage = () => {
       </div>
 
       <SlideInPanel open={open}>
-        <div className="h-full border-l border-border pl-6">
+        <div className="h-full border-l border-border/30 pl-6">
           {panelGroup && (
             <GroupDetailPanel
               key={panelGroup.id}
@@ -185,7 +185,7 @@ const GroupDetailPanel = ({
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden bg-background pt-6">
+    <div className="relative flex h-full flex-col overflow-hidden pt-6">
       <div className="flex h-[var(--touch-height-xl)] shrink-0 items-center justify-between gap-3">
         <h2 className="min-w-0 flex-1 truncate text-xl font-semibold">{group.name}</h2>
         {/* Actions on the right: the ⋯ menu sits next to the close (X). */}

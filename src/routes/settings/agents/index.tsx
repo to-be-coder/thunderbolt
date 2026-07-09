@@ -110,7 +110,7 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
       </div>
 
       <SlideInPanel open={detailOpen}>
-        <div className="h-full border-l border-border pr-6 pl-6">
+        <div className="h-full border-l border-border/30 pr-6 pl-6">
           <Outlet />
         </div>
       </SlideInPanel>

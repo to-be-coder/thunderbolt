@@ -36,10 +36,9 @@ const Switch = ({ className, onCheckedChange, ...props }: ComponentProps<typeof 
         'peer inline-flex h-[var(--switch-track-height)] w-[var(--switch-track-width)] shrink-0 cursor-pointer items-center rounded-full border p-[2px] shadow-xs transition-colors outline-none',
         // OFF (default): filled track + visible outline.
         'border-border bg-input dark:bg-input/80',
-        // ON — light-blue track + blue border (thumb goes blue) in light mode;
-        // dark olive track + soft gold border (thumb goes gold) in dark mode.
-        'data-[state=checked]:border-blue-300 data-[state=checked]:bg-blue-100',
-        'dark:data-[state=checked]:border-[#524524] dark:data-[state=checked]:bg-[#423414]',
+        // ON — bright indigo (#5865f0) accent in both modes: a light tint track with
+        // a matching soft border; the thumb goes solid indigo below.
+        'data-[state=checked]:border-[#5865f0]/40 data-[state=checked]:bg-[#5865f0]/15',
         // Focus + disabled (disabled keeps its outline).
         'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
         'disabled:cursor-not-allowed disabled:border-border disabled:opacity-50',
@@ -52,8 +51,8 @@ const Switch = ({ className, onCheckedChange, ...props }: ComponentProps<typeof 
         className={cn(
           'pointer-events-none block size-[var(--switch-thumb-size)] rounded-full bg-background shadow-sm ring-0 transition-transform',
           'data-[state=unchecked]:translate-x-0 data-[state=checked]:translate-x-[var(--switch-thumb-translate)]',
-          'data-[state=checked]:bg-blue-500',
-          'dark:data-[state=unchecked]:bg-foreground dark:data-[state=checked]:bg-[#fbd500]',
+          'data-[state=checked]:bg-[#5865f0]',
+          'dark:data-[state=unchecked]:bg-foreground',
         )}
       />
     </SwitchPrimitive.Root>

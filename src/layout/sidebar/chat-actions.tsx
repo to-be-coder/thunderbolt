@@ -32,10 +32,10 @@ export const ChatActions = ({
         className={cn(
           'w-fit pr-0 pl-0 aspect-square items-center justify-center cursor-pointer',
           searchActive &&
-            'bg-blue-500/15 text-blue-600 hover:bg-blue-500/25 hover:text-blue-600 dark:bg-yellow-400/15 dark:text-yellow-300 dark:hover:bg-yellow-400/25 dark:hover:text-yellow-300',
+            'bg-[#5865f0]/15 text-[#5865f0] hover:bg-[#5865f0]/25 hover:text-[#5865f0] dark:text-[#8b95d6] dark:hover:text-[#8b95d6]',
         )}
       >
-        <Search className={cn('size-4', searchActive && 'text-blue-600 dark:text-yellow-300')} />
+        <Search className={cn('size-4', searchActive && 'text-[#5865f0] dark:text-[#8b95d6]')} />
       </SidebarMenuButton>
       {middleSlot}
       <Tooltip>

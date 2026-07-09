@@ -152,7 +152,7 @@ export const RegistryPage = () => {
       </div>
 
       <SlideInPanel open={open}>
-        <div className="h-full border-l border-border">
+        <div className="h-full border-l border-border/30">
           {panelAgent && (
             <AgentDetailPanel key={panelAgent.id} agent={panelAgent} onClose={() => setSelectedId(null)} />
           )}

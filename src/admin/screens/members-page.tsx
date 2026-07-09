@@ -231,7 +231,7 @@ export const MembersPage = () => {
       </div>
 
       <SlideInPanel open={selectedMember !== null}>
-        <div className="h-full border-l border-border pl-6">
+        <div className="h-full border-l border-border/30 pl-6">
           {selectedMember && (
             <MemberDetailPanel key={selectedMember.id} member={selectedMember} onClose={() => setSelectedId(null)} />
           )}
@@ -374,7 +374,7 @@ const MemberDetailPanel = ({ member, onClose }: { member: Member; onClose: () =>
   }
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden bg-background pt-6">
+    <div className="relative flex h-full flex-col overflow-hidden pt-6">
       <div className="flex h-[var(--touch-height-xl)] shrink-0 items-center justify-between gap-3">
         <h2 className="min-w-0 flex-1 truncate text-xl font-semibold">{member.name || member.email}</h2>
         {/* Actions on the right: the ⋯ menu sits next to the close (X). */}

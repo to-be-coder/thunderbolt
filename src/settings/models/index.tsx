@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { createModel, getTinfoilClient } from '@/ai/fetch'
-import { ModificationIndicator } from '@/components/modification-indicator'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +16,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Combobox, type ComboboxItem } from '@/components/ui/combobox'
-import { needsApiKey } from '@/components/ui/model-selector/model-selector'
 import { Dialog, DialogTrigger } from '@/components/ui/dialog'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
@@ -33,10 +31,8 @@ import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useDatabase } from '@/contexts'
 import { useActiveUserId } from '@/stores/trust-domain-registry'
-import { createModel as createModelDAL, deleteModel, getAllModels, resetModelToDefault, updateModel } from '@/dal'
+import { createModel as createModelDAL, deleteModel, getAllModels, updateModel } from '@/dal'
 import { useOrgPolicy } from '@/dal/use-org-policy'
-import { defaultModels } from '@/defaults/models'
-import { isModelModified } from '@/defaults/utils'
 import { fetch } from '@/lib/fetch'
 import { useProxyFetchGetter } from '@/lib/proxy-fetch-context'
 import type { Model } from '@/types'
@@ -46,7 +42,8 @@ import { useQuery } from '@powersync/tanstack-react-query'
 import { toCompilableQuery } from '@powersync/drizzle-driver'
 import { generateText } from 'ai'
 import { http } from '@/lib/http'
-import { AlertTriangle, Check, Cpu, Loader2, Lock, Plus, X } from 'lucide-react'
+import { Check, Cpu, Loader2, Lock, MoreHorizontal, Plus, X } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent } from 'react'
 import { useForm } from 'react-hook-form'
 import { v7 as uuidv7 } from 'uuid'
@@ -448,6 +445,15 @@ export const ModelsManager = () => {
     },
   })
 
+  // Remove every model under a provider (the ⋯ menu on the provider header).
+  const removeProviderMutation = useMutation({
+    mutationFn: async (provider: string) => {
+      for (const model of models.filter((m) => m.provider === provider)) {
+        await deleteModel(db, model.id)
+      }
+    },
+  })
+
   const editModelMutation = useMutation({
     mutationFn: async (values: z.infer<typeof editFormSchema> & { id: string }) => {
       const { id, ...fields } = values
@@ -461,20 +467,6 @@ export const ModelsManager = () => {
       setEditingModel(null)
     },
   })
-
-  const resetModelMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const defaultModel = defaultModels.find((m) => m.id === id)
-      if (!defaultModel) {
-        throw new Error('Model is not a default model')
-      }
-      await resetModelToDefault(db, id, defaultModel)
-    },
-  })
-
-  const handleResetModel = (id: string) => {
-    resetModelMutation.mutate(id)
-  }
 
   type FormData = z.infer<typeof formSchema>
 
@@ -949,7 +941,11 @@ export const ModelsManager = () => {
     }
     return [...byProvider.entries()]
       .sort(([a], [b]) => rank(a) - rank(b))
-      .map(([provider, groupModels]) => ({ provider, models: groupModels }))
+      .map(([provider, groupModels]) => ({
+        // Always alphabetical by name, so toggling a model never reorders the list.
+        provider,
+        models: [...groupModels].sort((a, b) => a.name.localeCompare(b.name)),
+      }))
   }, [models, tinfoilCatalog])
 
   const addModelControl = !byoModelsAllowed ? (
@@ -1258,7 +1254,29 @@ export const ModelsManager = () => {
         <div className="flex flex-col gap-5">
           {modelGroups.map((group) => (
             <div key={group.provider} className="flex flex-col gap-3">
-              <h3 className="text-sm font-medium text-muted-foreground">{getProviderDisplay(group.provider)}</h3>
+              <div className="flex items-center gap-1">
+                <h3 className="text-sm font-medium text-muted-foreground">{getProviderDisplay(group.provider)}</h3>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-muted-foreground"
+                      aria-label={`${getProviderDisplay(group.provider)} actions`}
+                    >
+                      <MoreHorizontal className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => removeProviderMutation.mutate(group.provider)}
+                    >
+                      Remove
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
               <div className="flex flex-col gap-3">
                 {group.models.map((model) => {
                   const isEnabled = model.enabled === 1
@@ -1280,27 +1298,7 @@ export const ModelsManager = () => {
                                 </Tooltip>
                               </TooltipProvider>
                             )}
-                            {needsApiKey(model) && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <AlertTriangle className="size-3.5 text-amber-500" />
-                                  </TooltipTrigger>
-                                  <TooltipContent side="bottom">
-                                    <p>API key not configured</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                            <ModificationIndicator
-                              hasModifications={isModelModified(model)}
-                              onReset={() => handleResetModel(model.id)}
-                              customMessage="You've customized this model."
-                              ariaLabel="Modified model"
-                              requireConfirmation={false}
-                            >
-                              {model.name}
-                            </ModificationIndicator>
+                            <span className="truncate">{model.name}</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-3 flex-shrink-0">
