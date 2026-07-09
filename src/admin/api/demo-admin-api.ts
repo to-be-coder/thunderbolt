@@ -55,6 +55,9 @@ type DemoStore = {
 const seedStore = (): DemoStore => {
   const salesGroup: Group = { id: id(), name: 'Sales', createdAt: now(), deletedAt: null }
   const financeGroup: Group = { id: id(), name: 'Finance', createdAt: now(), deletedAt: null }
+  const engineeringGroup: Group = { id: id(), name: 'Engineering', createdAt: now(), deletedAt: null }
+  const marketingGroup: Group = { id: id(), name: 'Marketing', createdAt: now(), deletedAt: null }
+  const supportGroup: Group = { id: id(), name: 'Support', createdAt: now(), deletedAt: null }
   const admin: Member = {
     id: id(),
     name: 'Demo Admin',
@@ -115,10 +118,10 @@ const seedStore = (): DemoStore => {
     deletedAt: null,
   }))
 
-  // The three demo team agents, projected from the ONE canonical source so the
-  // admin registry entry and the member card are the same object (stable ids +
-  // identical card fields). Order matches demoTeamAgentDefs: sales, finance, flaky.
-  const [salesAgent, financeAgent, flakyAgent] = demoTeamAgentDefs.map(
+  // Every demo team agent, projected from the ONE canonical source so the admin
+  // registry entry and the member card are the same object (stable ids +
+  // identical card fields). Order matches demoTeamAgentDefs.
+  const agents = demoTeamAgentDefs.map(
     (def): TeamAgentWithCapabilities => ({
       id: def.id,
       name: def.name,
@@ -148,6 +151,15 @@ const seedStore = (): DemoStore => {
       })),
     }),
   )
+  const agentById = (agentId: string) => agents.find((a) => a.id === agentId)!
+  const grant = (agentId: string, targetType: Grant['targetType'], targetId: string | null): Grant => ({
+    id: id(),
+    agentId,
+    targetType,
+    targetId,
+    createdAt: now(),
+    deletedAt: null,
+  })
 
   return {
     members: [admin, rae, jordan, ...extraMembers],
@@ -167,7 +179,7 @@ const seedStore = (): DemoStore => {
         deletedAt: null,
       },
     ],
-    groups: [salesGroup, financeGroup],
+    groups: [salesGroup, financeGroup, engineeringGroup, marketingGroup, supportGroup],
     groupMembers: [
       { groupId: salesGroup.id, memberId: rae.id },
       { groupId: salesGroup.id, memberId: extraMembers[0].id },
@@ -175,35 +187,40 @@ const seedStore = (): DemoStore => {
       { groupId: salesGroup.id, memberId: extraMembers[1].id },
       { groupId: financeGroup.id, memberId: extraMembers[2].id },
       { groupId: financeGroup.id, memberId: extraMembers[8].id },
+      { groupId: engineeringGroup.id, memberId: extraMembers[3].id },
+      { groupId: engineeringGroup.id, memberId: extraMembers[5].id },
+      { groupId: engineeringGroup.id, memberId: extraMembers[9].id },
+      { groupId: marketingGroup.id, memberId: extraMembers[4].id },
+      { groupId: marketingGroup.id, memberId: extraMembers[6].id },
+      { groupId: supportGroup.id, memberId: extraMembers[7].id },
+      { groupId: supportGroup.id, memberId: extraMembers[10].id },
+      { groupId: supportGroup.id, memberId: rae.id },
     ],
-    agents: [salesAgent, financeAgent, flakyAgent],
+    agents,
+    // Each agent is granted to the matching group; the two org-wide helpers and
+    // the flaky test agent go to Everyone so any member can reach them.
     grants: [
-      {
-        id: id(),
-        agentId: salesAgent.id,
-        targetType: 'group',
-        targetId: salesGroup.id,
-        createdAt: now(),
-        deletedAt: null,
-      },
-      {
-        id: id(),
-        agentId: financeAgent.id,
-        targetType: 'group',
-        targetId: financeGroup.id,
-        createdAt: now(),
-        deletedAt: null,
-      },
-      // Flaky agent granted to everyone so any member can reproduce the failure.
-      { id: id(), agentId: flakyAgent.id, targetType: 'everyone', targetId: null, createdAt: now(), deletedAt: null },
+      grant('demo-sales-agent', 'group', salesGroup.id),
+      grant('demo-finance-kb', 'group', financeGroup.id),
+      grant('demo-support-agent', 'group', supportGroup.id),
+      grant('demo-marketing-agent', 'group', marketingGroup.id),
+      grant('demo-code-review', 'group', engineeringGroup.id),
+      grant('demo-data-analyst', 'everyone', null),
+      grant('demo-people-ops', 'everyone', null),
+      grant('demo-flaky-agent', 'everyone', null),
     ],
     // Pre-seeded agent-side failures from three DIFFERENT members at staggered
     // times so the admin Health line reads "3 user failures since {earliest}"
     // without anyone clicking (spec §3/§6).
     connectionFailures: [
-      { agentId: flakyAgent.id, memberId: rae.id, ts: minutesAgo(128), errorKind: 'unreachable' },
-      { agentId: flakyAgent.id, memberId: jordan.id, ts: minutesAgo(74), errorKind: 'unreachable' },
-      { agentId: flakyAgent.id, memberId: extraMembers[0].id, ts: minutesAgo(19), errorKind: 'unreachable' },
+      { agentId: agentById('demo-flaky-agent').id, memberId: rae.id, ts: minutesAgo(128), errorKind: 'unreachable' },
+      { agentId: agentById('demo-flaky-agent').id, memberId: jordan.id, ts: minutesAgo(74), errorKind: 'unreachable' },
+      {
+        agentId: agentById('demo-flaky-agent').id,
+        memberId: extraMembers[0].id,
+        ts: minutesAgo(19),
+        errorKind: 'unreachable',
+      },
     ],
     policy: {
       personalAgentPolicy: 'all',
