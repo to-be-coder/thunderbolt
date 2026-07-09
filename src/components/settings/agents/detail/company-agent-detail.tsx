@@ -2,9 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Info } from 'lucide-react'
 import type { AgentCard } from '@shared/agent-cards'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useEnabledSkills as useEnabledSkills_default } from '@/skills/use-skills'
 import { AgentDetailLayout, DetailSection, SubSection } from './agent-detail-layout'
 import { AgentSkillsLines } from './agent-skills-section'
@@ -22,24 +20,6 @@ const acceptsLine = (accepts: string[]): string => {
   }
   return parts.join(' · ')
 }
-
-/** Info tooltip next to the Models section — the member can't change these. */
-const ModelsInfoTooltip = () => (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <button
-        type="button"
-        aria-label="Where do these models come from?"
-        className="text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <Info className="size-3.5" />
-      </button>
-    </TooltipTrigger>
-    <TooltipContent className="max-w-xs text-sm">
-      Models are supplied by your organization. You can’t change them for this agent.
-    </TooltipContent>
-  </Tooltip>
-)
 
 /** A wrap of abstracted-kind chips, or an explicit muted "None" when the agent
  *  uses none — so the member always sees the answer, never a missing section. */
@@ -159,7 +139,7 @@ export const CompanyCardBody = ({
       )}
 
       {card.advertisedModels.length > 0 && (
-        <DetailSection title="Models" titleExtra={<ModelsInfoTooltip />}>
+        <DetailSection title="Models">
           <div className="flex flex-wrap gap-1.5" data-testid="company-model-line">
             {card.advertisedModels.map((model) => (
               <span key={model} className="rounded-md bg-muted px-2 py-0.5 text-base">

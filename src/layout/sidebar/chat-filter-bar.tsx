@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import { Building2, Globe, ListFilter, X, Zap } from 'lucide-react'
+import { Building2, Globe, ListFilter, Zap } from 'lucide-react'
 import type { Dispatch } from 'react'
 import type { AgentFilterOption, ChatFilterAction, ChatFilters } from './chat-filters'
 import { hasActiveFilters } from './chat-filters'
@@ -81,13 +81,34 @@ export const ChatFilterBar = ({ options, filters, dispatch }: ChatFilterBarProps
             size="icon-sm"
             aria-label="Filter chats"
             aria-pressed={active}
-            className={cn('cursor-pointer', active && 'text-blue-500')}
+            className={cn(
+              'cursor-pointer',
+              active &&
+                'bg-blue-500/15 text-blue-600 hover:bg-blue-500/25 hover:text-blue-600 dark:bg-yellow-400/15 dark:text-yellow-300 dark:hover:bg-yellow-400/25 dark:hover:text-yellow-300',
+            )}
           >
             <ListFilter className="size-[var(--icon-size-default)]" />
           </Button>
         </PopoverTrigger>
         <PopoverContent side="bottom" align="start" className="w-64 p-2">
           <div className="flex flex-col gap-3">
+            {/* Header — Clear all sits up here so it's always one tap away even
+                when the agent list below scrolls. */}
+            <div className="flex items-center justify-between gap-2 px-1">
+              <span className="text-[length:var(--font-size-xs)] font-medium text-muted-foreground">
+                Filter by agent
+              </span>
+              {active && (
+                <button
+                  type="button"
+                  onClick={() => dispatch({ type: 'clear' })}
+                  className="cursor-pointer rounded-md bg-secondary px-2 py-1 text-[length:var(--font-size-xs)] font-medium text-foreground transition-colors hover:bg-accent"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+
             {options.length === 0 ? (
               <span className="px-1 py-1 text-[length:var(--font-size-sm)] text-muted-foreground">
                 No agents to filter.
@@ -101,18 +122,6 @@ export const ChatFilterBar = ({ options, filters, dispatch }: ChatFilterBarProps
                   <AgentGroup label="Personal" options={personalOptions} filters={filters} dispatch={dispatch} />
                 )}
               </div>
-            )}
-
-            {active && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full cursor-pointer justify-start gap-2 text-muted-foreground"
-                onClick={() => dispatch({ type: 'clear' })}
-              >
-                <X className="size-3.5" />
-                Clear all
-              </Button>
             )}
           </div>
         </PopoverContent>

@@ -16,9 +16,9 @@ import '@testing-library/jest-dom'
 import { act, cleanup, screen } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { v7 as uuidv7 } from 'uuid'
-import ModelsPage from './index'
+import { ModelsManager } from './index'
 
-describe('ModelsPage reactivity', () => {
+describe('ModelsManager reactivity', () => {
   beforeAll(async () => {
     await setupTestDatabase()
   })
@@ -49,7 +49,7 @@ describe('ModelsPage reactivity', () => {
       enabled: 1,
     })
 
-    const { triggerChange } = renderWithReactivity(<ModelsPage />, {
+    const { triggerChange } = renderWithReactivity(<ModelsManager />, {
       tables: ['models'],
     })
 
@@ -75,7 +75,7 @@ describe('ModelsPage reactivity', () => {
   })
 })
 
-describe('ModelsPage — permission gating', () => {
+describe('ModelsManager — permission gating', () => {
   beforeAll(async () => {
     await setupTestDatabase()
   })
@@ -94,15 +94,14 @@ describe('ModelsPage — permission gating', () => {
     cleanup()
   })
 
-  it('renders the header Add button', async () => {
-    renderWithReactivity(<ModelsPage />, {
+  it('renders the empty-state Add Model button', async () => {
+    renderWithReactivity(<ModelsManager />, {
       tables: ['models'],
     })
 
-    await waitForElement(() => screen.queryByRole('heading', { name: 'Models' }))
-    // Empty-state CTA ("Add Model") fires here since no models seeded. The
-    // header `+` button has no accessible name; covering it requires the empty
-    // state's labelled button instead.
+    // No models seeded → the empty-state CTA renders. The header `+` button has
+    // no accessible name, so the labelled empty-state button is what we assert.
+    await waitForElement(() => screen.queryByRole('button', { name: 'Add Model' }))
     expect(screen.getByRole('button', { name: 'Add Model' })).toBeInTheDocument()
   })
 })

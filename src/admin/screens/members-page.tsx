@@ -188,7 +188,7 @@ export const MembersPage = () => {
             </DialogContent>
           </Dialog>
 
-          <div className="overflow-hidden rounded-lg border border-border bg-card">
+          <div className="overflow-hidden rounded-xl border border-border bg-card">
             <Table className="[&_td:first-child]:pl-4 [&_th:first-child]:pl-4 [&_td:last-child]:pr-4 [&_th:last-child]:pr-4">
               <TableHeader>
                 <TableRow>
@@ -264,7 +264,7 @@ const MemberRow = ({
     >
       <TableCell className="font-medium">{member.name || <span className="text-muted-foreground">-</span>}</TableCell>
       <TableCell className="text-muted-foreground">{member.email}</TableCell>
-      <TableCell className={member.isAdmin ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'}>
+      <TableCell className={member.isAdmin ? 'font-medium text-foreground' : 'text-muted-foreground'}>
         {member.isAdmin ? 'Admin' : 'Member'}
       </TableCell>
       <TableCell>

@@ -55,46 +55,56 @@ export const AgentDetailLayout = ({
   iconDefaultKey,
   onBack,
 }: AgentDetailLayoutProps) => (
-  <div className="flex h-full flex-col gap-6 overflow-y-auto pt-4 pb-4" data-testid="agent-detail">
-    <div className="flex min-h-[var(--touch-height-xl)] items-center justify-between gap-3">
-      <div className="flex min-w-0 items-center gap-2">
-        {onIconChange && iconKey !== undefined ? (
-          <AgentIconPicker value={iconKey} onChange={onIconChange} defaultKey={iconDefaultKey} />
-        ) : (
-          <div className="flex aspect-square size-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
-            {/* A stored icon key still renders its real glyph read-only (e.g. when
-                the icon is edited elsewhere, like the Configuration section). */}
-            {iconKey !== undefined ? (
-              <AgentGlyph value={iconKey} className="size-5 text-muted-foreground" />
+  <div className="flex h-full flex-col" data-testid="agent-detail">
+    {/* `overscroll-none` stops the rubber-band bounce at the edges, which would
+        otherwise make the sticky header jump when scrolled to the bottom. */}
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-none">
+      {/* Sticky frosted header — pinned (incl. the X) with a modal-like blurred
+          backdrop, so body content scrolls UNDER it, not behind a hard bar. */}
+      <div className="sticky top-0 z-10 bg-background/75 pt-4 pb-3 backdrop-blur-md">
+        {/* Inner row is `touch-height-xl` and sits under the `pt-4`, matching the
+            list column's `p-4` + PageHeader so the two headers line up. */}
+        <div className="flex min-h-[var(--touch-height-xl)] items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            {onIconChange && iconKey !== undefined ? (
+              <AgentIconPicker value={iconKey} onChange={onIconChange} defaultKey={iconDefaultKey} />
             ) : (
-              <Icon className="size-5 text-muted-foreground" aria-hidden="true" />
+              <div className="flex aspect-square size-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
+                {/* A stored icon key still renders its real glyph read-only (e.g. when
+                the icon is edited elsewhere, like the Configuration section). */}
+                {iconKey !== undefined ? (
+                  <AgentGlyph value={iconKey} className="size-5 text-muted-foreground" />
+                ) : (
+                  <Icon className="size-5 text-muted-foreground" aria-hidden="true" />
+                )}
+              </div>
             )}
+            <div className="min-w-0">
+              <h1 className="text-xl font-medium truncate">{name}</h1>
+              {subtitle && <div className="text-sm text-muted-foreground">{subtitle}</div>}
+            </div>
           </div>
-        )}
-        <div className="min-w-0">
-          <h1 className="text-xl font-medium truncate">{name}</h1>
-          {subtitle && <div className="text-sm text-muted-foreground">{subtitle}</div>}
+          {/* Actions on the right: the ⋯ menu sits next to the close (X). */}
+          <div className="flex shrink-0 items-center gap-1">
+            {menu}
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="shrink-0 text-muted-foreground"
+              onClick={onBack}
+              aria-label="Close details"
+              data-testid="agent-detail-back"
+            >
+              <X className="size-4" />
+            </Button>
+          </div>
         </div>
       </div>
-      {/* Actions on the right: the ⋯ menu sits next to the close (X). */}
-      <div className="flex shrink-0 items-center gap-1">
-        {menu}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="shrink-0 text-muted-foreground"
-          onClick={onBack}
-          aria-label="Close details"
-          data-testid="agent-detail-back"
-        >
-          <X className="size-4" />
-        </Button>
-      </div>
+
+      <div className="flex flex-col gap-3 pt-1 pb-6">{body}</div>
     </div>
 
-    <div className="flex flex-col gap-3">{body}</div>
-
-    {actions && <div className="flex flex-wrap gap-3">{actions}</div>}
+    {actions && <div className="flex shrink-0 flex-wrap gap-3 pt-3">{actions}</div>}
   </div>
 )
 
@@ -106,15 +116,19 @@ export const DetailSection = ({
   titleExtra,
   children,
 }: {
-  title: string
+  /** Omit when the child renders its own header row (e.g. the Models section,
+   *  whose header carries an inline "add" action beside the label). */
+  title?: string
   titleExtra?: ReactNode
   children: ReactNode
 }) => (
   <section className="flex flex-col gap-2 rounded-xl bg-secondary p-4 dark:bg-sidebar">
-    <div className="flex items-center gap-1.5">
-      <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">{title}</h2>
-      {titleExtra}
-    </div>
+    {title && (
+      <div className="flex items-center gap-1.5">
+        <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">{title}</h2>
+        {titleExtra}
+      </div>
+    )}
     {children}
   </section>
 )

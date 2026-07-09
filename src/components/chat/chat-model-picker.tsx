@@ -4,6 +4,7 @@
 
 import { useAgentDescriptor as useAgentDescriptor_default } from '@/chats/agent-descriptor'
 import { useChatStore, useCurrentChatSession } from '@/chats/chat-store'
+import { builtInAgent } from '@/defaults/agents'
 import { ModelSelector } from '@/components/ui/model-selector'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useNavigate } from 'react-router'
@@ -57,7 +58,7 @@ export const ChatModelPicker = ({ useAgentDescriptor = useAgentDescriptor_defaul
       selectedModel={selectedModel ?? null}
       chatThread={chatThread ?? null}
       onModelChange={handleModelChange}
-      onAddModels={() => navigate('/settings/models')}
+      onAddModels={() => navigate(`/settings/agents/${builtInAgent.id}`)}
       side={isMobile ? 'top' : 'bottom'}
       align="start"
     />

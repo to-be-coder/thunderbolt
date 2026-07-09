@@ -47,7 +47,7 @@ export const PolicyPage = () => {
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : (
         <>
-          <section className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4">
+          <section className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-sm font-semibold">Allow personal agents</h2>
@@ -73,14 +73,20 @@ export const PolicyPage = () => {
                 aria-label="Allow the built-in Thunderbolt agent"
               />
             </div>
-          </section>
 
-          <section className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
-            <div>
-              <h2 className="text-sm font-semibold">User models</h2>
-              <p className="text-sm text-muted-foreground">Allow members to use their own model providers.</p>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-sm font-semibold">Personal models</h2>
+                <p className="text-sm text-muted-foreground">
+                  Allow members to use their own models with the built-in Thunderbolt agent.
+                </p>
+              </div>
+              <Switch
+                checked={draft.userModelsAllowed}
+                onCheckedChange={setUserModels}
+                aria-label="Allow user models"
+              />
             </div>
-            <Switch checked={draft.userModelsAllowed} onCheckedChange={setUserModels} aria-label="Allow user models" />
           </section>
         </>
       )}

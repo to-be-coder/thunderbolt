@@ -81,7 +81,6 @@ const loadMotionFeatures = () => import('@/lib/motion-features').then((mod) => m
 // ChatDetailPage stay in the entry bundle so the landing page is instant.
 const TasksPage = lazy(() => import('@/tasks'))
 const PreferencesSettingsPage = lazy(() => import('@/settings/preferences'))
-const ModelsPage = lazy(() => import('@/settings/models'))
 const DevicesSettingsPage = lazy(() => import('@/settings/devices'))
 const McpServersPage = lazy(() => import('@/settings/mcp-servers'))
 const SkillsPage = lazy(() => import('@/settings/skills'))
@@ -133,7 +132,6 @@ const renderMainRoutes = ({ experimentalFeatureTasks }: { experimentalFeatureTas
     <Route path="settings" element={<SettingsLayout />}>
       <Route index element={<Navigate to="agents" replace relative="route" />} />
       <Route path="preferences" element={<PreferencesSettingsPage />} />
-      <Route path="models" element={<ModelsPage />} />
       <Route path="devices" element={<DevicesSettingsPage />} />
       <Route path="mcp-servers" element={<McpServersPage />} />
       <Route path="skills" element={<SkillsPage />} />

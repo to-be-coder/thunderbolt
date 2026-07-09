@@ -16,11 +16,13 @@ import { builtInAgent } from '@/defaults/agents'
 import { useHaptics } from '@/hooks/use-haptics'
 import { usePersonalAgentIcons } from '@/hooks/use-personal-agent-icons'
 import { useThunderboltAgentIcon } from '@/hooks/use-thunderbolt-agent-icon'
+import { useOrgPolicy as useOrgPolicy_default } from '@/dal/use-org-policy'
 import { cn } from '@/lib/utils'
 import type { AgentCard } from '@shared/agent-cards'
 import type { Agent } from '@/types/acp'
-import { Building2, ChevronDown, Globe, Zap, type LucideIcon } from 'lucide-react'
+import { Building2, ChevronDown, Globe, Plus, Zap, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
+import { useNavigate } from 'react-router'
 
 /** Item payload: an org card OR one of the user's own agents. */
 type AgentSelectItemData = { kind: 'card'; card: AgentCard } | { kind: 'agent'; agent: Agent }
@@ -33,12 +35,13 @@ type ChatAgentSelectorProps = {
   useTeamAgents?: typeof useTeamAgents_default
   useAgents?: typeof useAgents_default
   useNewlyGrantedTeamAgents?: typeof useNewlyGrantedTeamAgents_default
+  useOrgPolicy?: typeof useOrgPolicy_default
 }
 
 /** A menu-item icon slot that renders any stored icon value (Lucide KEY or an
  *  uploaded/remote image) at a fixed 14px, so custom glyphs sit like the rest. */
 const ItemGlyph = ({ value }: { value: string }) => (
-  <span className="flex size-4 shrink-0 items-center justify-center overflow-hidden rounded">
+  <span className="flex size-4 shrink-0 items-center justify-center overflow-hidden rounded-md">
     <AgentGlyph value={value} className="size-3.5 text-muted-foreground" />
   </span>
 )
@@ -139,6 +142,7 @@ export const ChatAgentSelector = ({
   useTeamAgents = useTeamAgents_default,
   useAgents = useAgents_default,
   useNewlyGrantedTeamAgents = useNewlyGrantedTeamAgents_default,
+  useOrgPolicy = useOrgPolicy_default,
 }: ChatAgentSelectorProps) => {
   const { id: chatThreadId } = useCurrentChatSession()
   const setSelectedAgentRef = useChatStore((state) => state.setSelectedAgentRef)
@@ -149,7 +153,12 @@ export const ChatAgentSelector = ({
   const { icons: personalIcons } = usePersonalAgentIcons()
   const thunderboltIcon = useThunderboltAgentIcon()
   const { triggerSelection } = useHaptics()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  // Members can add their own ACP agents only when org policy allows it; when the
+  // admin disables personal agents, the "Add agent" entry disappears entirely.
+  const policy = useOrgPolicy()
+  const canAddAgent = policy.personalAgentPolicy === 'all' || policy.personalAgentPolicy === 'no_native'
 
   const groups = buildAgentSelectorGroups(teamCards, personalAgents, newlyGranted, personalIcons, thunderboltIcon)
 
@@ -226,6 +235,24 @@ export const ChatAgentSelector = ({
       maxHeight={340}
       open={open}
       onOpenChange={setOpen}
+      footer={
+        canAddAgent ? (
+          <button
+            type="button"
+            data-testid="add-agent"
+            onClick={() => {
+              setOpen(false)
+              navigate('/settings/agents')
+            }}
+            // Negative margins cancel the shared footer's px-2 py-2 so the row is a
+            // flush, 36px-tall, full-width item (hover fills edge to edge).
+            className="-m-2 flex h-[var(--touch-height-default)] w-[calc(100%_+_1rem)] cursor-pointer items-center justify-start gap-2 px-4 text-[length:var(--font-size-body)] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <Plus className="size-4" />
+            Add agent
+          </button>
+        ) : undefined
+      }
     />
   )
 }

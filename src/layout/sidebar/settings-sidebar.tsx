@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/sidebar'
 import { useAuth } from '@/contexts'
 import { useAgentsSettingsHidden } from '@/hooks/use-agents-settings-hidden'
-import { ArrowLeft, Bot, Cpu, PanelLeft, Plug, Server, SlidersHorizontal, Smartphone, Zap } from 'lucide-react'
+import { ArrowLeft, Bot, PanelLeft, Plug, Server, SlidersHorizontal, Smartphone, Zap } from 'lucide-react'
 import { useLocation } from 'react-router'
 
 type SettingsSidebarContentProps = {
@@ -114,17 +114,6 @@ export const SettingsSidebarContent = ({
               >
                 <Plug className="size-4" />
                 <span>Integrations</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={() => onSettingsNavigate('/settings/models')}
-                tooltip="Models"
-                className="cursor-pointer"
-                isActive={subPath.startsWith('/settings/models')}
-              >
-                <Cpu className="size-4" />
-                <span>Models</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>

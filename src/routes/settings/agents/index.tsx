@@ -59,8 +59,11 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
     return <Navigate to="/settings" replace />
   }
 
-  // §5: "company agents only" hides the YOURS section AND the connect button.
-  const canConnect = policy.personalAgentPolicy !== 'company_only' && allowCustomAgents && !!currentUserId
+  // §5: personal ACP agents can only be added when org policy allows them — the
+  // connect button disappears in `native_only` / `company_only` (mirrors the
+  // composer's "Add agent" entry), never a disabled state.
+  const personalAcpAllowed = policy.personalAgentPolicy === 'all' || policy.personalAgentPolicy === 'no_native'
+  const canConnect = personalAcpAllowed && allowCustomAgents && !!currentUserId
 
   const handleSubmit = async (payload: AddCustomAgentPayload) => {
     if (!currentUserId) {

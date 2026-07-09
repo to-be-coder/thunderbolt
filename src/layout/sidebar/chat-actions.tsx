@@ -4,12 +4,14 @@
 
 import { SidebarMenuButton } from '@/components/ui/sidebar'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
 import { Flame, Loader2, Search } from 'lucide-react'
 import type { ChatActionsProps } from './types'
 
 export const ChatActions = ({
   isCollapsed,
   debouncedSearchQuery,
+  showSearch,
   deleteAllChatsMutation,
   deleteAllChatsDialogRef,
   onSearchClick,
@@ -19,14 +21,21 @@ export const ChatActions = ({
     return null
   }
 
+  // "On" while the search input is open OR a query is active.
+  const searchActive = showSearch || !!debouncedSearchQuery
+
   return (
     <div className="flex items-center gap-0.5">
       <SidebarMenuButton
         onClick={(e) => onSearchClick(e)}
         aria-label="Search chats"
-        className="w-fit pr-0 pl-0 aspect-square items-center justify-center cursor-pointer"
+        className={cn(
+          'w-fit pr-0 pl-0 aspect-square items-center justify-center cursor-pointer',
+          searchActive &&
+            'bg-blue-500/15 text-blue-600 hover:bg-blue-500/25 hover:text-blue-600 dark:bg-yellow-400/15 dark:text-yellow-300 dark:hover:bg-yellow-400/25 dark:hover:text-yellow-300',
+        )}
       >
-        <Search className={`size-4 ${debouncedSearchQuery ? 'text-blue-500' : ''}`} />
+        <Search className={cn('size-4', searchActive && 'text-blue-600 dark:text-yellow-300')} />
       </SidebarMenuButton>
       {middleSlot}
       <Tooltip>

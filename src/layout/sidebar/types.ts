@@ -21,6 +21,8 @@ export type DeleteAllChatsMutationType = UseMutationResult<void, Error, void, un
 export type ChatActionsProps = {
   isCollapsed: boolean
   debouncedSearchQuery: string
+  /** The search input is open — the search button reads as "on" while it is. */
+  showSearch: boolean
   deleteAllChatsMutation: DeleteAllChatsMutationType
   deleteAllChatsDialogRef: RefObject<DeleteAllChatsDialogRef | null>
   onSearchClick: (e?: MouseEvent) => void

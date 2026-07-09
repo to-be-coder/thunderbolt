@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { MoreHorizontal, Zap } from 'lucide-react'
 import {
   AlertDialog,
@@ -20,6 +20,7 @@ import { Link } from 'react-router'
 import { builtInAgent } from '@/defaults/agents'
 import { useLibraryCounts as useLibraryCounts_default } from '@/hooks/use-library-counts'
 import { useEnabledSkills as useEnabledSkills_default } from '@/skills/use-skills'
+import { ModelsManager } from '@/settings/models'
 import { AgentDetailLayout, DetailSection, SubSection } from './agent-detail-layout'
 import { AgentSkillsLines } from './agent-skills-section'
 import { THUNDERBOLT_ICON_KEY } from './agent-icons'
@@ -29,14 +30,14 @@ type ThunderboltAgentDetailProps = {
   /** Hides the built-in agent from this member's lists (a user setting — the
    *  agent still exists in code as the chat fallback; nothing is truly deleted). */
   onRemove: () => void
-  /** Current icon KEY (member override or the built-in default). */
-  iconKey?: string
-  /** Persists a member-chosen icon KEY for the built-in agent. */
-  onIconChange?: (key: string) => void
   /** Injectable for tests — production reads live enabled-Library counts. */
   useLibraryCounts?: typeof useLibraryCounts_default
   /** Injectable for tests — production reads member-side enabled skills. */
   useEnabledSkills?: typeof useEnabledSkills_default
+  /** The Models section content. Defaults to the live models manager; tests
+   *  inject a stub so the detail view stays renderable without DB/query/policy
+   *  providers. */
+  models?: ReactNode
 }
 
 /**
@@ -49,10 +50,9 @@ type ThunderboltAgentDetailProps = {
 export const ThunderboltAgentDetail = ({
   onBack,
   onRemove,
-  iconKey,
-  onIconChange,
   useLibraryCounts = useLibraryCounts_default,
   useEnabledSkills = useEnabledSkills_default,
+  models = <ModelsManager />,
 }: ThunderboltAgentDetailProps) => {
   const counts = useLibraryCounts()
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -66,9 +66,7 @@ export const ThunderboltAgentDetail = ({
     <>
       <AgentDetailLayout
         icon={Zap}
-        iconKey={iconKey ?? builtInAgent.icon ?? THUNDERBOLT_ICON_KEY}
-        iconDefaultKey={THUNDERBOLT_ICON_KEY}
-        onIconChange={onIconChange}
+        iconKey={THUNDERBOLT_ICON_KEY}
         name={builtInAgent.name}
         menu={
           <DropdownMenu>
@@ -124,6 +122,12 @@ export const ThunderboltAgentDetail = ({
                 </SubSection>
               </div>
             </DetailSection>
+
+            {/* The models the built-in agent can run on — the full Models
+                surface (add / edit / enable), embedded so it lives where the
+                agent that uses them does. It renders its own "Models" header
+                row (label + add button), so the section carries no title. */}
+            <DetailSection>{models}</DetailSection>
           </>
         }
         onBack={onBack}

@@ -174,7 +174,7 @@ export const ChatSkillsBar = ({
               size="icon-sm"
               aria-label="Add skill"
               onClick={() => navigate('/settings/skills')}
-              className={`shrink-0 cursor-pointer rounded-full bg-card transition-opacity ${
+              className={`shrink-0 cursor-pointer rounded-full border-border bg-card transition-opacity hover:bg-accent dark:border-border dark:bg-card ${
                 openChipId ? 'opacity-40' : ''
               }`}
             >

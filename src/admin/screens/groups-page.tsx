@@ -315,7 +315,7 @@ const GroupMembership = ({ group }: { group: Group }) => {
             so a click lands on the item instead of blurring the list away first. */}
         {focused && (
           <CommandList
-            className="absolute inset-x-0 top-full z-50 mt-1 max-h-56 rounded-lg border border-border bg-popover shadow-md"
+            className="absolute inset-x-0 top-full z-50 mt-1 max-h-56 rounded-xl border border-border bg-popover shadow-md"
             onMouseDown={(event) => event.preventDefault()}
           >
             <CommandEmpty>No members found</CommandEmpty>

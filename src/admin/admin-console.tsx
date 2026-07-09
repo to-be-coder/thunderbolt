@@ -7,6 +7,7 @@ import { AdminConsoleLayout } from './admin-console-layout'
 import { GroupsPage } from './screens/groups-page'
 import { McpPage } from './screens/mcp-page'
 import { MembersPage } from './screens/members-page'
+import { ModelsPage } from './screens/models-page'
 import { PolicyPage } from './screens/policy-page'
 import { RegistryPage } from './screens/registry-page'
 import { SkillsPage } from './screens/skills-page'
@@ -25,7 +26,9 @@ const AdminConsole = () => (
       <Route path="members" element={<MembersPage />} />
       <Route path="groups" element={<GroupsPage />} />
       <Route path="skills" element={<SkillsPage />} />
-      <Route path="mcp" element={<McpPage />} /> <Route path="policy" element={<PolicyPage />} />
+      <Route path="mcp" element={<McpPage />} />
+      <Route path="models" element={<ModelsPage />} />
+      <Route path="policy" element={<PolicyPage />} />
       <Route path="*" element={<Navigate to="/admin" replace />} />
     </Routes>
   </AdminConsoleLayout>

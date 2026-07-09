@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { testAcpConnection as testAcpConnection_default } from '@/acp'
+import { builtInAgent } from '@/defaults/agents'
 import type { AgentDescriptor } from '@/chats/agent-descriptor'
 import type { ConnectionStatus } from '@/chats/chat-store'
 import { Button } from '@/components/ui/button'
@@ -81,7 +82,7 @@ export const ComposerBlock = ({
         <span className="text-muted-foreground text-[length:var(--font-size-sm)]">
           {descriptor.name} needs a model before you can chat.
         </span>
-        <Button size="sm" onClick={() => navigate('/settings/models')}>
+        <Button size="sm" onClick={() => navigate(`/settings/agents/${builtInAgent.id}`)}>
           Connect a model
         </Button>
       </div>

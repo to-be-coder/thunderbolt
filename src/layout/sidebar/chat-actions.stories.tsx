@@ -38,6 +38,7 @@ export const Default: Story = {
   args: {
     isCollapsed: false,
     debouncedSearchQuery: '',
+    showSearch: false,
     deleteAllChatsMutation: {
       mutate: () => console.log('Delete all clicked'),
       isPending: false,
@@ -60,6 +61,7 @@ export const WithActiveSearch: Story = {
   args: {
     isCollapsed: false,
     debouncedSearchQuery: 'test query',
+    showSearch: true,
     deleteAllChatsMutation: {
       mutate: () => console.log('Delete all clicked'),
       isPending: false,
@@ -82,6 +84,7 @@ export const DeletingAllChats: Story = {
   args: {
     isCollapsed: false,
     debouncedSearchQuery: '',
+    showSearch: false,
     deleteAllChatsMutation: {
       mutate: () => console.log('Delete all clicked'),
       isPending: true,
@@ -104,6 +107,7 @@ export const Collapsed: Story = {
   args: {
     isCollapsed: true,
     debouncedSearchQuery: '',
+    showSearch: false,
     deleteAllChatsMutation: {
       mutate: () => console.log('Delete all clicked'),
       isPending: false,

@@ -27,6 +27,9 @@ const renderDetail = (overrides: { onRemove?: () => void; onBack?: () => void } 
         onRemove={overrides.onRemove ?? (() => {})}
         useLibraryCounts={() => ({ skills: 4, mcpServers: 2, extensions: 1 })}
         useEnabledSkills={fakeUseEnabledSkills(4)}
+        // The real ModelsManager needs DB/query/policy providers; the detail
+        // view just slots it in, so a stub keeps these unit tests provider-free.
+        models={<div data-testid="models-stub">Models manager</div>}
       />
     </MemoryRouter>,
   )
@@ -57,11 +60,17 @@ describe('ThunderboltAgentDetail', () => {
     expect(screen.queryByTestId('manage-in-library-link')).not.toBeInTheDocument()
   })
 
-  it('is read-only — no model line, no form fields, no Start a chat', () => {
+  it('has no org-set model line and no Start a chat action', () => {
     renderDetail()
     expect(screen.queryByText(/set by your organization/i)).not.toBeInTheDocument()
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
     expect(screen.queryByTestId('agent-start-chat')).not.toBeInTheDocument()
+  })
+
+  it('renders a Models section that hosts the models manager', () => {
+    renderDetail()
+    // The "Models" label now lives inside the manager (stubbed here); the
+    // section is identified by the injected manager content.
+    expect(screen.getByTestId('models-stub')).toBeInTheDocument()
   })
 
   it('fires onRemove after confirming from the 3-dots menu', () => {

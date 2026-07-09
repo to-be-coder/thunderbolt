@@ -2,7 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Button } from '@/components/ui/button'
 import { SearchableMenu, type SearchableMenuGroup, type SearchableMenuItem } from '@/components/ui/searchable-menu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useHaptics } from '@/hooks/use-haptics'
@@ -193,10 +192,17 @@ export const ModelSelector = ({
   }
 
   const footer = onAddModels ? (
-    <Button variant="ghost" onClick={onAddModels} className="w-full justify-start gap-2 text-muted-foreground">
+    <button
+      type="button"
+      onClick={onAddModels}
+      // Negative margins cancel the shared footer's px-2 py-2 so the row is a flush,
+      // 36px-tall, full-width item (hover fills edge to edge; the popover clips the
+      // rounded bottom).
+      className="-m-2 flex h-[var(--touch-height-default)] w-[calc(100%_+_1rem)] cursor-pointer items-center justify-start gap-2 px-4 text-[length:var(--font-size-body)] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+    >
       <Plus className="size-4" />
-      Add Models
-    </Button>
+      Add models
+    </button>
   ) : undefined
 
   const { triggerSelection } = useHaptics()

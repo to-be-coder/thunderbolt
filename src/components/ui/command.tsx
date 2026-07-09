@@ -14,7 +14,7 @@ const Command = ({ className, ...props }: ComponentProps<typeof CommandPrimitive
     <CommandPrimitive
       data-slot="command"
       className={cn(
-        'bg-popover text-popover-foreground flex h-full w-full flex-col overflow-hidden rounded-lg',
+        'bg-popover text-popover-foreground flex h-full w-full flex-col overflow-hidden rounded-xl',
         className,
       )}
       {...props}
@@ -60,7 +60,7 @@ const CommandInput = ({ className, ...props }: ComponentProps<typeof CommandPrim
       <CommandPrimitive.Input
         data-slot="command-input"
         className={cn(
-          'placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50',
+          'placeholder:text-muted-foreground flex h-10 w-full rounded-lg bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50',
           className,
         )}
         {...props}

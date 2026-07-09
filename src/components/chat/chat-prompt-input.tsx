@@ -525,12 +525,12 @@ export const ChatPromptInput = forwardRef<ChatPromptInputRef, ChatPromptInputPro
             />
           )}
           {/* Sealed / no-skills agents: the notice is a card that sits BEHIND
-              the prompt input — a tad narrower (horizontal inset), peeking out
-              above it, its lower edge tucked behind the composer via the
-              prompt input's negative top margin. Dismiss → normal composer. */}
+              the prompt input — SAME width as it — peeking out above it, its lower
+              edge tucked behind the composer via the prompt input's negative top
+              margin. Dismiss → normal composer. */}
           {showComposerNotice && composerNoticeKind !== null ? (
             <div className="relative flex flex-col">
-              <div className="mx-0.5 rounded-t-2xl border border-border bg-secondary pt-1 pb-6 dark:bg-sidebar-accent">
+              <div className="rounded-t-2xl border border-border bg-secondary pt-1 pb-6 dark:bg-sidebar-accent">
                 <ComposerSkillsNotice
                   kind={composerNoticeKind}
                   onDismiss={() => setDismissedNoticeAgent(descriptor.id)}

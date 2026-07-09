@@ -222,13 +222,13 @@ export const SearchableMenu = <T,>({
         side={side}
         sideOffset={5}
         collisionPadding={isMobile ? edgeSpacing.mobile : edgeSpacing.desktop}
-        className={cn('p-0 rounded-2xl shadow-lg overflow-hidden duration-100', showBlur && 'z-50', contentClassName)}
+        className={cn('p-0 rounded-xl shadow-lg overflow-hidden duration-100', showBlur && 'z-50', contentClassName)}
         style={{ width: contentWidth }}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div className="flex flex-col gap-2 bg-background">
           {searchable && (
-            <div className="px-2 pt-2">
+            <div className="px-1 pt-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
@@ -246,7 +246,7 @@ export const SearchableMenu = <T,>({
             className="overflow-y-auto"
             style={{ maxHeight: typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight }}
           >
-            <div className={cn('flex flex-col gap-4 px-2', !searchable && 'pt-2', !footer && 'pb-2')}>
+            <div className={cn('flex flex-col gap-4 px-1', !searchable && 'pt-1', !footer && 'pb-1')}>
               {isGroupedItems(filteredItems) ? (
                 filteredItems.map((group) => (
                   <GroupSection

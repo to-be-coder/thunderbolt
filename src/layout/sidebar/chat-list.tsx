@@ -56,6 +56,7 @@ export const ChatList = ({
               <ChatActions
                 isCollapsed={isCollapsed}
                 debouncedSearchQuery={debouncedSearchQuery}
+                showSearch={showSearch}
                 deleteAllChatsMutation={deleteAllChatsMutation}
                 deleteAllChatsDialogRef={deleteAllChatsDialogRef}
                 onSearchClick={onSearchClick}

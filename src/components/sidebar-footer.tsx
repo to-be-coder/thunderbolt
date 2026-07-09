@@ -210,7 +210,7 @@ export const SidebarFooter = ({ className }: SidebarFooterProps) => {
         sideOffset={isMobile ? 8 : 5}
         align={isMobile ? 'center' : 'start'}
         collisionPadding={isMobile ? edgeSpacing.mobile : 4}
-        className={cn('p-0 rounded-2xl shadow-lg overflow-hidden', isMobile && menuOpen && 'z-50')}
+        className={cn('p-0 rounded-xl shadow-lg overflow-hidden', isMobile && menuOpen && 'z-50')}
         style={{
           width: isMobile
             ? `calc(${mobileSidebarWidthRatio * 100}vw - ${edgeSpacing.mobile * 2}px)`

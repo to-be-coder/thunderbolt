@@ -8,6 +8,15 @@ import * as SwitchPrimitive from '@radix-ui/react-switch'
 import { useHaptics } from '@/hooks/use-haptics'
 import { cn } from '@/lib/utils'
 
+/**
+ * A pill toggle. Geometry is state-independent: the track has a 1px border + 2px
+ * inner padding, and the thumb is sized (via CSS vars) to exactly fill what's
+ * left — so the dot's size and its 2px gap to the border are identical for OFF,
+ * ON, and DISABLED. Only COLOR changes between states:
+ *  - OFF      → `bg-input` track with a `border-border` outline.
+ *  - ON       → `bg-primary` (light) / olive-green + lime border (dark).
+ *  - DISABLED → dimmed, keeps the outline.
+ */
 const Switch = ({ className, onCheckedChange, ...props }: ComponentProps<typeof SwitchPrimitive.Root>) => {
   const { triggerSelection } = useHaptics()
 
@@ -22,17 +31,29 @@ const Switch = ({ className, onCheckedChange, ...props }: ComponentProps<typeof 
   return (
     <SwitchPrimitive.Root
       data-slot="switch"
+      onCheckedChange={handleCheckedChange}
       className={cn(
-        'cursor-pointer peer data-[state=checked]:bg-primary data-[state=unchecked]:bg-input focus-visible:border-ring focus-visible:ring-ring/50 dark:data-[state=unchecked]:bg-input/80 inline-flex h-[var(--switch-track-height)] w-[var(--switch-track-width)] shrink-0 items-center rounded-full border border-transparent shadow-xs transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50',
+        'peer inline-flex h-[var(--switch-track-height)] w-[var(--switch-track-width)] shrink-0 cursor-pointer items-center rounded-full border p-[2px] shadow-xs transition-colors outline-none',
+        // OFF (default): filled track + visible outline.
+        'border-border bg-input dark:bg-input/80',
+        // ON — light-blue track + blue border (thumb goes blue) in light mode;
+        // dark olive track + soft gold border (thumb goes gold) in dark mode.
+        'data-[state=checked]:border-blue-300 data-[state=checked]:bg-blue-100',
+        'dark:data-[state=checked]:border-[#524524] dark:data-[state=checked]:bg-[#423414]',
+        // Focus + disabled (disabled keeps its outline).
+        'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
+        'disabled:cursor-not-allowed disabled:border-border disabled:opacity-50',
         className,
       )}
-      onCheckedChange={handleCheckedChange}
       {...props}
     >
       <SwitchPrimitive.Thumb
         data-slot="switch-thumb"
         className={cn(
-          'bg-background dark:data-[state=unchecked]:bg-foreground dark:data-[state=checked]:bg-primary-foreground pointer-events-none block size-[var(--switch-thumb-size)] rounded-full ring-0 transition-transform data-[state=checked]:translate-x-[var(--switch-thumb-translate)] data-[state=unchecked]:translate-x-0',
+          'pointer-events-none block size-[var(--switch-thumb-size)] rounded-full bg-background shadow-sm ring-0 transition-transform',
+          'data-[state=unchecked]:translate-x-0 data-[state=checked]:translate-x-[var(--switch-thumb-translate)]',
+          'data-[state=checked]:bg-blue-500',
+          'dark:data-[state=unchecked]:bg-foreground dark:data-[state=checked]:bg-[#fbd500]',
         )}
       />
     </SwitchPrimitive.Root>

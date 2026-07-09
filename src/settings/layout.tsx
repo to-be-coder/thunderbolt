@@ -4,6 +4,7 @@
 
 import { Header } from '@/components/ui/header'
 import { SidebarInset } from '@/components/ui/sidebar'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { PageFallback } from '@/loading'
 import { Suspense } from 'react'
 import { Outlet, useLocation } from 'react-router'
@@ -16,9 +17,13 @@ const routesWithOwnHeader = ['/settings/skills', '/settings/agents']
 
 const SettingsLayout = () => {
   const location = useLocation()
-  const showHeader = !routesWithOwnHeader.some(
-    (route) => location.pathname === route || location.pathname.startsWith(`${route}/`),
-  )
+  const { isMobile } = useIsMobile()
+  // The header only carries the sidebar burger + PowerSync status. On desktop the
+  // sidebar is always visible (its own toggle + ⌘B), so the burger is redundant —
+  // drop the whole bar there. On mobile it stays so the sidebar stays reachable.
+  const showHeader =
+    isMobile &&
+    !routesWithOwnHeader.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`))
 
   return (
     <>
