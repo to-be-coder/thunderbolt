@@ -18,7 +18,7 @@ import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { PageHeader } from '@/components/ui/page-header'
+import { AdminPageHeader } from '../admin-chrome'
 import { cn } from '@/lib/utils'
 import { Check, ChevronRight, MoreHorizontal, Plus, Users, X } from 'lucide-react'
 import { useRef, useState } from 'react'
@@ -70,20 +70,20 @@ export const GroupsPage = () => {
   }
 
   return (
-    <div className="-my-6 flex h-[calc(100%_+_3rem)] w-full min-h-0">
+    <div className="relative -my-6 flex h-[calc(100%_+_3rem)] w-full min-h-0">
       <div className="min-w-0 flex-1 overflow-y-auto pr-6">
-        <div className="mx-auto flex w-full max-w-[728px] flex-col gap-6 py-6">
-          <PageHeader title="Groups">
+        <div className="mx-auto flex w-full max-w-[728px] flex-col gap-6 pt-0 pb-6 md:pt-6">
+          <AdminPageHeader title="Groups">
             <Button
               variant="outline"
               size="icon"
-              className="rounded-lg bg-card hover:bg-accent"
+              className="size-8 rounded-md bg-card hover:bg-accent md:size-[var(--touch-height-default)] md:rounded-lg"
               onClick={() => setDialogOpen(true)}
               aria-label="Create a group"
             >
               <Plus />
             </Button>
-          </PageHeader>
+          </AdminPageHeader>
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogContent>
@@ -152,7 +152,7 @@ const GroupCard = ({ group, selected, onSelect }: { group: Group; selected: bool
       aria-label={`Open ${group.name}`}
       aria-pressed={selected}
       className={cn(
-        'flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors',
+        'flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors',
         selected ? 'bg-accent' : 'hover:bg-secondary/50',
       )}
     >
@@ -202,7 +202,13 @@ const GroupDetailPanel = ({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="ghost" size="icon-sm" aria-label="Close details" onClick={onClose}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Close details"
+            onClick={onClose}
+            className="size-8 rounded-md border border-border md:size-[var(--touch-height-sm)] md:rounded-lg md:border-0"
+          >
             <X className="size-4" />
           </Button>
         </div>

@@ -150,17 +150,8 @@ describe('AgentList — policy variants (spec §5, absent never disabled)', () =
 })
 
 describe('AgentList — grant-received highlight (T2)', () => {
-  it('shows the one-time "New" badge only on newly-granted org cards', () => {
+  it('never badges newly-granted org cards on the list (removed by design)', () => {
     renderList({ useNewlyGrantedTeamAgents: () => new Set(['sales']) })
-    // The newly-granted card carries the highlight; the already-seen one doesn't.
-    const badges = screen.getAllByTestId('new-grant-badge')
-    expect(badges).toHaveLength(1)
-    expect(screen.getByTestId('agent-row-sales')).toContainElement(badges[0])
-    expect(screen.getByTestId('agent-row-finance')).not.toContainElement(badges[0])
-  })
-
-  it('shows no badge when nothing is newly granted', () => {
-    renderList()
     expect(screen.queryByTestId('new-grant-badge')).not.toBeInTheDocument()
   })
 })

@@ -33,7 +33,7 @@ export const SettingsSidebarContent = ({
   onSettingsNavigate,
   isStandalone,
 }: SettingsSidebarContentProps) => {
-  const { toggleSidebar } = useSidebar()
+  const { isMobile, isResponsiveCollapseMode, state, toggleSidebar } = useSidebar()
   const location = useLocation()
   const agentsHidden = useAgentsSettingsHidden({ isStandalone })
   // Devices is a per-account, cross-device management surface — anonymous
@@ -41,33 +41,53 @@ export const SettingsSidebarContent = ({
   const { data: session } = useAuth().useSession()
   const isLoggedIn = !!session?.user && session.user.isAnonymous !== true
   const subPath = location.pathname
+  const isExpanded = isMobile || state === 'expanded'
+  const showExpandButton = !isMobile && !isExpanded && !isResponsiveCollapseMode
+  const showCollapseButton = !isMobile && isExpanded
+  const backButton = (
+    <SidebarMenu className="flex-1">
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          onClick={onBackClick}
+          tooltip="Back to Chat"
+          className="cursor-pointer bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
+        >
+          <ArrowLeft className="size-4" />
+          <span>Back</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  )
 
   return (
     <SidebarContent className="flex flex-col h-full">
-      {/* In settings, the top slot (where the chat brand logo sits) IS the
-          Back-to-chat control; the collapse toggle stays on the right. */}
+      {/* In a wide collapsed rail, expand stays in the header and back moves
+          into the row below. Compact rails omit expand and keep back here. */}
       <div className="flex h-[var(--touch-height-xl)] shrink-0 items-center gap-1 px-2">
-        <SidebarMenu className="flex-1">
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={onBackClick}
-              tooltip="Back to Chat"
-              className="cursor-pointer bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
-            >
-              <ArrowLeft className="size-4" />
-              <span>Back</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-        <SidebarMenuButton
-          onClick={toggleSidebar}
-          tooltip="Toggle Sidebar"
-          className="size-8 w-auto shrink-0 cursor-pointer justify-center"
-        >
-          <PanelLeft className="size-[var(--icon-size-default)]" />
-          <span className="sr-only">Toggle Sidebar</span>
-        </SidebarMenuButton>
+        {showExpandButton ? (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton onClick={toggleSidebar} tooltip="Expand Sidebar" className="cursor-pointer">
+                <PanelLeft className="size-[var(--icon-size-default)]" />
+                <span className="sr-only">Expand Sidebar</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        ) : (
+          backButton
+        )}
+        {showCollapseButton && (
+          <SidebarMenuButton
+            onClick={toggleSidebar}
+            tooltip="Toggle Sidebar"
+            className="size-8 w-auto shrink-0 cursor-pointer justify-center"
+          >
+            <PanelLeft className="size-[var(--icon-size-default)]" />
+            <span className="sr-only">Toggle Sidebar</span>
+          </SidebarMenuButton>
+        )}
       </div>
+      {showExpandButton && <div className="shrink-0 px-2 pb-2">{backButton}</div>}
 
       {!agentsHidden && (
         <SidebarGroup>

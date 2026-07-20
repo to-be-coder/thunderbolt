@@ -396,7 +396,7 @@ export const ChatPromptInput = forwardRef<ChatPromptInputRef, ChatPromptInputPro
     }))
 
     const footerStartElements = (
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         {isConnecting ? (
           <div
             role="status"

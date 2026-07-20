@@ -20,7 +20,7 @@ type AdvertisedPickerProps = {
 }
 
 const base =
-  'flex items-center gap-1.5 px-2 h-[var(--touch-height-control)] rounded-lg text-[length:var(--font-size-sm)]'
+  'flex min-w-0 max-w-[8.5rem] items-center gap-1.5 px-2 h-[var(--touch-height-control)] rounded-lg text-[length:var(--font-size-sm)] md:max-w-none'
 const bordered = cn(base, 'border border-border')
 
 /**
@@ -63,7 +63,7 @@ export const AdvertisedPicker = ({ options, emptyLabel, ariaLabel, icon }: Adver
           >
             {icon}
             <span className="font-medium truncate">{options[0]}</span>
-            <ChevronDown className="size-3.5 text-muted-foreground" />
+            <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
           </button>
         </PopoverTrigger>
         <PopoverContent align="start" side={isMobile ? 'top' : 'bottom'} className="w-auto max-w-64 p-3">
@@ -99,7 +99,9 @@ export const AdvertisedPicker = ({ options, emptyLabel, ariaLabel, icon }: Adver
     >
       {icon}
       <span className="font-medium text-muted-foreground truncate">{selected}</span>
-      <ChevronDown className={cn('size-3.5 text-muted-foreground transition-transform', isOpen && 'rotate-180')} />
+      <ChevronDown
+        className={cn('size-3.5 shrink-0 text-muted-foreground transition-transform', isOpen && 'rotate-180')}
+      />
     </div>
   )
 

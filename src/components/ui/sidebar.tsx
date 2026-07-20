@@ -43,6 +43,7 @@ const maxSidebarWidth = '22rem'
 
 type SidebarContextProps = {
   state: 'expanded' | 'collapsed'
+  isResponsiveCollapseMode: boolean
   open: boolean
   setOpen: (open: boolean) => void
   openMobile: boolean
@@ -74,6 +75,7 @@ const SidebarProvider = forwardRef<
     defaultOpen?: boolean
     open?: boolean
     onOpenChange?: (open: boolean) => void
+    responsiveCollapse?: boolean
     //* new prop for default width
     defaultWidth?: string
   }
@@ -83,6 +85,7 @@ const SidebarProvider = forwardRef<
       defaultOpen = true,
       open: openProp,
       onOpenChange: setOpenProp,
+      responsiveCollapse = false,
       className,
       style,
       children,
@@ -101,9 +104,13 @@ const SidebarProvider = forwardRef<
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
     const [_open, _setOpen] = useState(defaultOpen)
-    const open = openProp ?? _open
+    const open = responsiveCollapse ? false : (openProp ?? _open)
     const setOpen = useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
+        if (responsiveCollapse) {
+          return
+        }
+
         const openState = typeof value === 'function' ? value(open) : value
         if (setOpenProp) {
           setOpenProp(openState)
@@ -114,7 +121,7 @@ const SidebarProvider = forwardRef<
         // This sets the cookie to keep the sidebar state.
         document.cookie = `${sidebarCookieName}=${openState}; path=/; max-age=${sidebarCookieMaxAge}`
       },
-      [setOpenProp, open],
+      [responsiveCollapse, setOpenProp, open],
     )
 
     const { triggerImpact } = useHaptics()
@@ -149,6 +156,7 @@ const SidebarProvider = forwardRef<
     const contextValue = useMemo<SidebarContextProps>(
       () => ({
         state,
+        isResponsiveCollapseMode: responsiveCollapse,
         open,
         setOpen,
         isMobile,
@@ -164,6 +172,7 @@ const SidebarProvider = forwardRef<
       }),
       [
         state,
+        responsiveCollapse,
         open,
         setOpen,
         isMobile,

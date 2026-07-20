@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { PageHeader } from '@/components/ui/page-header'
+import { SettingsPageHeader } from '@/components/settings/settings-page-header'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   ResponsiveModalContentComposable,
@@ -572,8 +572,8 @@ export default function McpServersPage({ deps = {} }: { deps?: McpServersPageDep
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4 w-full max-w-[760px] mx-auto">
-      <PageHeader title="MCP Servers">
+    <div className="flex flex-col gap-6 p-4 pt-0 md:pt-4 w-full max-w-[760px] mx-auto">
+      <SettingsPageHeader title="MCP Servers">
         <Dialog
           open={form.isAddDialogOpen}
           onOpenChange={(open) => {
@@ -778,7 +778,7 @@ export default function McpServersPage({ deps = {} }: { deps?: McpServersPageDep
             </div>
           </ResponsiveModalContentComposable>
         </Dialog>
-      </PageHeader>
+      </SettingsPageHeader>
 
       <div className="grid gap-4">
         {servers.map((server) => {

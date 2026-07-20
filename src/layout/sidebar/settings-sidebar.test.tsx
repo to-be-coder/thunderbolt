@@ -15,6 +15,28 @@ import { MemoryRouter } from 'react-router'
 import type { ReactNode } from 'react'
 import { SettingsSidebarContent } from './settings-sidebar'
 
+const realMatchMedia = window.matchMedia
+
+/** Keeps settings-sidebar tests on the desktop rendering path. */
+const setDesktopViewport = () => {
+  window.matchMedia = ((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as typeof window.matchMedia
+}
+
+beforeEach(setDesktopViewport)
+
+afterEach(() => {
+  window.matchMedia = realMatchMedia
+})
+
 const anonSession = {
   user: { id: 'anon-1', email: '', name: '', isAnonymous: true },
 }
@@ -23,13 +45,17 @@ const authedSession = {
   user: { id: 'user-1', email: 'a@b.com', name: 'Alice', isAnonymous: false },
 }
 
-const renderSidebar = (authClient: AuthClient, isStandalone: () => boolean) => {
+const renderSidebar = (
+  authClient: AuthClient,
+  isStandalone: () => boolean,
+  sidebarState: { defaultOpen?: boolean; responsiveCollapse?: boolean } = {},
+) => {
   const TestProvider = createTestProvider({ authClient })
   const Wrapper = ({ children }: { children: ReactNode }) => (
     <TestProvider>
       <SignInModalProvider>
         <MemoryRouter initialEntries={['/settings']}>
-          <SidebarProvider>{children}</SidebarProvider>
+          <SidebarProvider {...sidebarState}>{children}</SidebarProvider>
         </MemoryRouter>
       </SignInModalProvider>
     </TestProvider>
@@ -42,6 +68,45 @@ const renderSidebar = (authClient: AuthClient, isStandalone: () => boolean) => {
 
 const onTauri = () => true
 const offTauri = () => false
+
+describe('SettingsSidebarContent — header controls', () => {
+  beforeAll(setupTestDatabase)
+
+  afterAll(teardownTestDatabase)
+
+  afterEach(cleanup)
+
+  it('places the back control below expand when the wide sidebar is collapsed', () => {
+    renderSidebar(createMockAuthClient({ session: anonSession }), offTauri, { defaultOpen: false })
+
+    const expandButton = screen.getByText('Expand Sidebar').closest('button')!
+    const backButton = screen.getByText('Back').closest('button')!
+
+    expect(expandButton).toBeInTheDocument()
+    expect(backButton).toBeInTheDocument()
+    expect(expandButton.compareDocumentPosition(backButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+    expect(expandButton.parentElement).not.toBe(backButton.parentElement)
+    expect(screen.queryByText('Toggle Sidebar')).not.toBeInTheDocument()
+  })
+
+  it('shows only the back control in the compact collapsed rail', () => {
+    renderSidebar(createMockAuthClient({ session: anonSession }), offTauri, { responsiveCollapse: true })
+
+    expect(screen.getByText('Back')).toBeInTheDocument()
+    expect(screen.queryByText('Expand Sidebar')).not.toBeInTheDocument()
+    expect(screen.queryByText('Toggle Sidebar')).not.toBeInTheDocument()
+  })
+
+  it('shows back and collapse controls when the wide sidebar is expanded', () => {
+    renderSidebar(createMockAuthClient({ session: anonSession }), offTauri)
+
+    expect(screen.getByText('Back')).toBeInTheDocument()
+    expect(screen.getByText('Toggle Sidebar')).toBeInTheDocument()
+    expect(screen.queryByText('Expand Sidebar')).not.toBeInTheDocument()
+  })
+})
 
 describe('SettingsSidebarContent — Agents entry visibility', () => {
   beforeAll(async () => {

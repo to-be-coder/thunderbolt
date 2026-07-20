@@ -42,7 +42,7 @@ import {
 import { SyncSetupModal } from '@/components/sync-setup/sync-setup-modal'
 import { Button } from '@/components/ui/button'
 import { Combobox } from '@/components/ui/combobox'
-import { PageHeader } from '@/components/ui/page-header'
+import { SettingsPageHeader } from '@/components/settings/settings-page-header'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SectionCard } from '@/components/ui/section-card'
@@ -513,8 +513,8 @@ export default function PreferencesSettingsPage() {
   }, [unitsOptionsData?.currencies, currency.value])
 
   return (
-    <div className="flex flex-col gap-6 p-4 pb-12 w-full max-w-[760px] mx-auto">
-      <PageHeader title="Preferences" />
+    <div className="flex flex-col gap-6 p-4 pt-0 pb-12 md:pt-4 w-full max-w-[760px] mx-auto">
+      <SettingsPageHeader title="Preferences" />
 
       <SectionCard title="User Experience">
         <div className="flex flex-col gap-6">

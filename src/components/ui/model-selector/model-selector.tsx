@@ -133,10 +133,10 @@ export const ModelSelector = ({
   const renderTrigger = (selected: SearchableMenuItem<ModelItemData> | undefined, isOpen: boolean) => (
     <div
       className={cn(
-        'flex items-center cursor-pointer transition-colors',
+        'flex min-w-0 items-center cursor-pointer transition-colors',
         variant === 'bordered'
           ? cn(
-              'gap-1.5 px-2 h-[var(--touch-height-control)] rounded-lg border border-border text-[length:var(--font-size-sm)]',
+              'max-w-[8.5rem] gap-1.5 px-2 h-[var(--touch-height-control)] rounded-lg border border-border text-[length:var(--font-size-sm)] md:max-w-none',
               isOpen ? 'bg-accent' : 'hover:bg-accent/50',
             )
           : cn(
@@ -146,14 +146,16 @@ export const ModelSelector = ({
       )}
     >
       {selected?.data?.model && needsApiKey(selected.data.model) ? (
-        <AlertTriangle className="size-3.5 text-amber-500" />
+        <AlertTriangle className="size-3.5 shrink-0 text-amber-500" />
       ) : selected?.data?.model.isConfidential === 1 ? (
-        <Lock className="size-3.5 text-muted-foreground" />
+        <Lock className="size-3.5 shrink-0 text-muted-foreground" />
       ) : null}
-      <span className={cn('font-medium', variant === 'bordered' && 'text-muted-foreground')}>
+      <span className={cn('truncate font-medium', variant === 'bordered' && 'text-muted-foreground')}>
         {selected?.label ?? 'Select Model'}
       </span>
-      <ChevronDown className={cn('size-3.5 text-muted-foreground transition-transform', isOpen && 'rotate-180')} />
+      <ChevronDown
+        className={cn('size-3.5 shrink-0 text-muted-foreground transition-transform', isOpen && 'rotate-180')}
+      />
     </div>
   )
 

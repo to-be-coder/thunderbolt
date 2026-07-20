@@ -9,13 +9,13 @@ import { useHaptics } from '@/hooks/use-haptics'
 import { cn } from '@/lib/utils'
 
 /**
- * A pill toggle. Geometry is state-independent: the track has a 1px border + 2px
- * inner padding, and the thumb is sized (via CSS vars) to exactly fill what's
- * left — so the dot's size and its 2px gap to the border are identical for OFF,
- * ON, and DISABLED. Only COLOR changes between states:
- *  - OFF      → `bg-input` track with a `border-border` outline.
- *  - ON       → `bg-primary` (light) / olive-green + lime border (dark).
- *  - DISABLED → dimmed, keeps the outline.
+ * The default pill toggle (shadcn geometry). A transparent 2px border in EVERY
+ * state gives an even 2px gap all round — the thumb (one CSS-var size) fills the
+ * rest, so the dot is the SAME size and inset for OFF, ON, and DISABLED. Only
+ * COLOR changes:
+ *  - OFF      → `bg-input` track.
+ *  - ON       → the theme's `bg-primary` track.
+ *  - DISABLED → the OFF/ON track, dimmed to 50%.
  */
 const Switch = ({ className, onCheckedChange, ...props }: ComponentProps<typeof SwitchPrimitive.Root>) => {
   const { triggerSelection } = useHaptics()
@@ -33,15 +33,10 @@ const Switch = ({ className, onCheckedChange, ...props }: ComponentProps<typeof 
       data-slot="switch"
       onCheckedChange={handleCheckedChange}
       className={cn(
-        'peer inline-flex h-[var(--switch-track-height)] w-[var(--switch-track-width)] shrink-0 cursor-pointer items-center rounded-full border p-[2px] shadow-xs transition-colors outline-none',
-        // OFF (default): filled track + visible outline.
-        'border-border bg-input dark:bg-input/80',
-        // ON — bright indigo (#5865f0) accent in both modes: a light tint track with
-        // a matching soft border; the thumb goes solid indigo below.
-        'data-[state=checked]:border-[#5865f0]/40 data-[state=checked]:bg-[#5865f0]/15',
-        // Focus + disabled (disabled keeps its outline).
+        'peer inline-flex h-[var(--switch-track-height)] w-[var(--switch-track-width)] shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-xs transition-colors outline-none',
+        'bg-input dark:bg-input/80 data-[state=checked]:bg-primary',
         'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
-        'disabled:cursor-not-allowed disabled:border-border disabled:opacity-50',
+        'disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}
       {...props}
@@ -49,10 +44,9 @@ const Switch = ({ className, onCheckedChange, ...props }: ComponentProps<typeof 
       <SwitchPrimitive.Thumb
         data-slot="switch-thumb"
         className={cn(
-          'pointer-events-none block size-[var(--switch-thumb-size)] rounded-full bg-background shadow-sm ring-0 transition-transform',
+          'pointer-events-none block size-[var(--switch-thumb-size)] rounded-full bg-background ring-0 transition-transform',
           'data-[state=unchecked]:translate-x-0 data-[state=checked]:translate-x-[var(--switch-thumb-translate)]',
-          'data-[state=checked]:bg-[#5865f0]',
-          'dark:data-[state=unchecked]:bg-foreground',
+          'dark:data-[state=unchecked]:bg-foreground dark:data-[state=checked]:bg-primary-foreground',
         )}
       />
     </SwitchPrimitive.Root>

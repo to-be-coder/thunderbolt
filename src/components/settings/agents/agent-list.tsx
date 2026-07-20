@@ -70,7 +70,9 @@ export const AgentList = ({
   const personalAcpAllowed = policy.personalAgentPolicy === 'all' || policy.personalAgentPolicy === 'no_native'
   const showYoursSection = policy.personalAgentPolicy !== 'company_only'
   const showNativeRow = nativeAllowed && !nativeHidden
-  const newlyGranted = useNewlyGrantedTeamAgents()
+  // The list no longer badges newly-granted agents, but viewing it still marks
+  // them seen (and fires the grant-received event once) — a side effect only.
+  useNewlyGrantedTeamAgents()
   const { icons: personalIcons } = usePersonalAgentIcons()
   const thunderboltIcon = useThunderboltAgentIcon()
 
@@ -88,7 +90,6 @@ export const AgentList = ({
                 name={card.name}
                 // Static category — the roster opens no connection (spec §0/§1).
                 provenanceLine={companyProvenanceLine(card)}
-                isNewlyGranted={newlyGranted.has(card.id)}
                 selected={selectedId === card.id}
                 onOpen={() => onOpenAgent(card.id)}
               />

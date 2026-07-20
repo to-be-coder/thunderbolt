@@ -10,7 +10,7 @@ import { demoUser, isDemoMode } from '@/lib/demo-mode'
 import { clearAuthToken, getAuthToken, onAuthTokenChangedInOtherTab, setAuthToken } from '@/lib/auth-token'
 import { getPlatform } from '@/lib/platform'
 import { runPostAuthBootstrap } from '@/lib/post-auth-bootstrap'
-import { useTrustDomainRegistry } from '@/stores/trust-domain-registry'
+import { getActiveTrustDomain, getActiveUserId, useTrustDomainRegistry } from '@/stores/trust-domain-registry'
 import { anonymousClient, emailOTPClient } from 'better-auth/client/plugins'
 import { createAuthClient } from 'better-auth/react'
 import { consumePendingSsoAnonAlias } from '@/lib/analytics/anonymous-promotion-sso-bridge'
@@ -38,41 +38,6 @@ const createAuthClientInstance = (cloudUrl: string) => {
     sessionOptions: {
       refetchOnWindowFocus: false,
       refetchWhenOffline: false,
-    },
-  })
-}
-
-/**
- * Demo mode (`VITE_DEMO_MODE`): present the underlying anonymous session as a
- * signed-in admin. The real anonymous token still drives the backend/PowerSync;
- * we only rewrite what `useSession` reports so the UI treats the user as a
- * named, non-anonymous admin — which unhides the Agents page and the /admin
- * gate (both key off `isAnonymous`) and shows the user in the sidebar.
- */
-const wrapDemoAuthClient = (client: ReturnType<typeof createAuthClientInstance>) => {
-  // Better Auth's client is a Proxy with dynamic dispatch (signIn.*, useSession,
-  // $fetch, …). A shallow spread would drop those, so wrap it in a Proxy that
-  // forwards everything and only overrides `useSession`.
-  const demoUseSession: typeof client.useSession = ((...args: Parameters<typeof client.useSession>) => {
-    const session = client.useSession(...args)
-    if (!session.data?.user) {
-      return session
-    }
-    return {
-      ...session,
-      data: {
-        ...session.data,
-        user: { ...session.data.user, isAnonymous: false, name: demoUser.name, email: demoUser.email },
-      },
-    }
-  }) as typeof client.useSession
-
-  return new Proxy(client, {
-    get(target, prop, receiver) {
-      if (prop === 'useSession') {
-        return demoUseSession
-      }
-      return Reflect.get(target, prop, receiver)
     },
   })
 }
@@ -111,6 +76,46 @@ export type AuthClient = ReturnType<typeof createAuthClientInstance>
 export type Session = AuthClient['$Infer']['Session']
 export type User = Session['user']
 
+/** Create the stable local admin session used by the self-contained demo. */
+const createDemoAuthClient = (): AuthClient => {
+  const userId = getActiveUserId()
+  if (!userId) {
+    throw new Error('Demo auth initialized before the standalone trust domain')
+  }
+
+  const session = {
+    user: {
+      id: userId,
+      name: demoUser.name,
+      email: demoUser.email,
+      emailVerified: true,
+      isAnonymous: false,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    },
+  }
+
+  return {
+    useSession: () => ({
+      data: session,
+      isPending: false,
+      isRefetching: false,
+      error: null,
+      refetch: async () => ({ data: session, error: null }),
+    }),
+    getSession: async () => ({ data: session, error: null }),
+    signIn: {
+      emailOtp: async () => ({ data: null, error: null }),
+      anonymous: async () => ({ data: { user: session.user }, error: null }),
+    },
+    emailOtp: {
+      sendVerificationOtp: async () => ({ data: null, error: null }),
+    },
+    signOut: async () => ({ data: null, error: null }),
+    $Infer: {} as AuthClient['$Infer'],
+  } as unknown as AuthClient
+}
+
 type AuthContextType = {
   authClient: AuthClient
 }
@@ -135,12 +140,16 @@ export const AuthProvider = ({ children, cloudUrl, authClient: overrideClient }:
       return { authClient: overrideClient }
     }
 
+    if (isDemoMode()) {
+      return { authClient: createDemoAuthClient() }
+    }
+
     if (!cloudUrl) {
       return null
     }
 
     const client = createAuthClientInstance(cloudUrl)
-    return { authClient: isDemoMode() ? wrapDemoAuthClient(client) : client }
+    return { authClient: client }
   }, [cloudUrl, overrideClient])
 
   // Consume any pending SSO anon-id alias from sessionStorage (written before the SSO redirect
@@ -148,7 +157,7 @@ export const AuthProvider = ({ children, cloudUrl, authClient: overrideClient }:
   // twice.
   const ssoAliasConsumedRef = useRef(false)
   useEffect(() => {
-    if (!value?.authClient || ssoAliasConsumedRef.current) {
+    if (isDemoMode() || !value?.authClient || ssoAliasConsumedRef.current) {
       return
     }
     ssoAliasConsumedRef.current = true
@@ -227,6 +236,9 @@ const SessionToRegistryMirror = () => {
     if (!userId) {
       return
     }
+    if (getActiveTrustDomain()?.kind !== 'server') {
+      return
+    }
     useTrustDomainRegistry.getState().patchActiveServer({
       userId,
       isAnonymous: !!isAnonymous,
@@ -269,7 +281,15 @@ const SessionBootstrap = () => {
       return
     }
     lastBootstrappedForRef.current = userId
-    void runPostAuthBootstrap({ kind: 'server', userId, isAnonymous }).catch((error) => {
+    const trustDomain = getActiveTrustDomain()
+    if (!trustDomain) {
+      return
+    }
+    const context =
+      trustDomain.kind === 'standalone'
+        ? ({ kind: 'standalone', userId } as const)
+        : ({ kind: 'server', userId, isAnonymous } as const)
+    void runPostAuthBootstrap(context).catch((error) => {
       console.error('SessionBootstrap failed:', error)
       lastBootstrappedForRef.current = null
       setBootstrapError(error instanceof Error ? error : new Error(String(error)))

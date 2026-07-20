@@ -4,7 +4,7 @@
 
 import { AvailableTools } from '@/components/available-tools'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { PageHeader } from '@/components/ui/page-header'
+import { SettingsPageHeader } from '@/components/settings/settings-page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
@@ -175,8 +175,8 @@ export default function IntegrationsPage() {
   }
 
   return (
-    <div className="max-w-[760px] mx-auto p-4 pb-12 flex flex-col gap-6">
-      <PageHeader title="Integrations" />
+    <div className="max-w-[760px] mx-auto p-4 pt-0 pb-12 md:pt-4 flex flex-col gap-6">
+      <SettingsPageHeader title="Integrations" />
 
       {error && (
         <Alert variant="destructive" className="mb-4">

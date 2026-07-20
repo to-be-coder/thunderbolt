@@ -164,7 +164,7 @@ export const MobileSidebar = ({
             className="relative h-full"
             style={{
               paddingBottom: 'var(--safe-area-bottom-padding)',
-              paddingTop: 'var(--safe-area-top-padding)',
+              paddingTop: 'calc(var(--safe-area-top-padding, 0px) + var(--header-top-gap))',
             }}
           >
             <div className="flex h-full w-full flex-col">{children}</div>

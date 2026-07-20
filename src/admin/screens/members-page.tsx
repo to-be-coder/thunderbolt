@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { PageHeader } from '@/components/ui/page-header'
+import { AdminPageHeader } from '../admin-chrome'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -129,20 +129,20 @@ export const MembersPage = () => {
   }, [members, sort])
 
   return (
-    <div className="-my-6 flex h-[calc(100%_+_3rem)] w-full min-h-0">
+    <div className="relative -my-6 flex h-[calc(100%_+_3rem)] w-full min-h-0">
       <div className="min-w-0 flex-1 overflow-y-auto pr-6">
-        <div className="mx-auto flex w-full max-w-[728px] flex-col gap-6 py-6">
-          <PageHeader title="Members">
+        <div className="mx-auto flex w-full max-w-[728px] flex-col gap-6 pt-0 pb-6 md:pt-6">
+          <AdminPageHeader title="Members">
             <Button
               variant="outline"
               size="icon"
-              className="rounded-lg bg-card hover:bg-accent"
+              className="size-8 rounded-md bg-card hover:bg-accent md:size-[var(--touch-height-default)] md:rounded-lg"
               onClick={() => setDialogOpen(true)}
               aria-label="Invite a member"
             >
               <Plus />
             </Button>
-          </PageHeader>
+          </AdminPageHeader>
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogContent>
@@ -189,7 +189,7 @@ export const MembersPage = () => {
           </Dialog>
 
           <div className="overflow-hidden rounded-xl border border-border bg-card">
-            <Table className="[&_td:first-child]:pl-4 [&_th:first-child]:pl-4 [&_td:last-child]:pr-4 [&_th:last-child]:pr-4">
+            <Table className="[&_td]:h-11 [&_td]:py-0 [&_th]:h-11 md:[&_td]:h-auto md:[&_td]:py-2 md:[&_th]:h-10 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 [&_td:last-child]:pr-4 [&_th:last-child]:pr-4">
               <TableHeader>
                 <TableRow>
                   <SortableHead label="Name" sortKey="name" sort={sort} onSort={toggleSort} />
@@ -391,7 +391,13 @@ const MemberDetailPanel = ({ member, onClose }: { member: Member; onClose: () =>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="ghost" size="icon-sm" aria-label="Close details" onClick={onClose}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Close details"
+            onClick={onClose}
+            className="size-8 rounded-md border border-border md:size-[var(--touch-height-sm)] md:rounded-lg md:border-0"
+          >
             <X className="size-4" />
           </Button>
         </div>

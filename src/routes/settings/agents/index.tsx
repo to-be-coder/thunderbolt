@@ -7,7 +7,7 @@ import { Navigate, Outlet, useMatch, useNavigate } from 'react-router'
 import { v7 as uuidv7 } from 'uuid'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { PageHeader } from '@/components/ui/page-header'
+import { SettingsPageHeader } from '@/components/settings/settings-page-header'
 import { SlideInPanel } from '@/components/slide-in-panel'
 import { AgentList } from '@/components/settings/agents/agent-list'
 import { AddCustomAgentDialog, type AddCustomAgentPayload } from '@/components/settings/agents/add-custom-agent-dialog'
@@ -80,15 +80,15 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
   const detailOpen = detailMatch !== null
 
   return (
-    <div className="flex h-full w-full min-h-0">
+    <div className="relative flex h-full w-full min-h-0">
       <div className="min-w-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6 p-4">
-          <PageHeader title="Agents">
+        <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6 p-4 pt-0 md:pt-4">
+          <SettingsPageHeader title="Agents">
             {canConnect && (
               <Button
                 variant="outline"
                 size="icon"
-                className="rounded-lg bg-card hover:bg-accent"
+                className="size-8 rounded-md bg-card hover:bg-accent md:size-[var(--touch-height-default)] md:rounded-lg"
                 onClick={() => setDialogOpen(true)}
                 data-testid="connect-an-agent"
                 aria-label="Connect an agent"
@@ -96,7 +96,7 @@ export default function AgentsSettingsPage({ isStandalone }: AgentsSettingsPageP
                 <Plus className="size-4" />
               </Button>
             )}
-          </PageHeader>
+          </SettingsPageHeader>
 
           <AgentList
             teamCards={teamCards}

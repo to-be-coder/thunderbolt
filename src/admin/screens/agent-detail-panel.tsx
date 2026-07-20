@@ -195,7 +195,13 @@ export const AgentDetailPanel = ({ agent, onClose }: { agent: TeamAgentWithCapab
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="ghost" size="icon-sm" aria-label="Close details" onClick={onClose}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Close details"
+              onClick={onClose}
+              className="size-8 rounded-md border border-border md:size-[var(--touch-height-sm)] md:rounded-lg md:border-0"
+            >
               <X className="size-4" />
             </Button>
           </div>
@@ -479,7 +485,7 @@ const MemberCardPreview = ({
         This is how the agent appears to your members in the Thunderbolt app
       </p>
       <div
-        className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3"
+        className="flex flex-col gap-3 rounded-xl border border-border bg-background p-3"
         data-testid="member-preview"
       >
         <div className="flex items-center gap-2">

@@ -68,6 +68,11 @@
   --touch-height-sm: 2.5rem; /* 40px mobile */
   --touch-height-control: 2.5rem; /* 40px mobile — prompt-area selectors/buttons; held at --min-touch-height */
 
+  /* Consistent gap above every page header AND side-nav header (mobile only).
+   *  Applied at the layout level (alongside the safe-area inset) so every surface
+   *  — admin + member, pages + off-canvas nav — shares one breathing space. */
+  --header-top-gap: 1.5rem; /* 24px mobile */
+
   /* Icon sizes */
   --icon-size-default: 1.25rem; /* 20px mobile */
   --icon-size-sm: 1rem; /* 16px mobile */
@@ -106,11 +111,10 @@
   /* Switch component specific */
   --switch-track-height: 1.5rem; /* 24px mobile - slightly larger for touch */
   --switch-track-width: 2.75rem; /* 44px mobile */
-  /* Track = 1px border + 2px inner padding; thumb fills exactly what's left so the
-   *  2px gap to the border is identical on every side and in every state. Whole-px
-   *  values only, so the dot never shifts size as it slides. */
-  --switch-thumb-size: 1.125rem; /* 18px mobile (24 - 2*border - 2*pad) */
-  --switch-thumb-translate: calc(var(--switch-track-width) - var(--switch-thumb-size) - 6px); /* 20px */
+  /* Track = 2px transparent border; the thumb is the full default size and the
+   *  border gives an even 2px gap on every side, the SAME in every state. */
+  --switch-thumb-size: 1.25rem; /* 20px mobile */
+  --switch-thumb-translate: calc(var(--switch-track-width) - var(--switch-thumb-size) - 4px); /* 20px */
 }
 
 @media (min-width: 768px) {
@@ -121,6 +125,9 @@
     --touch-height-default: 2.25rem; /* 36px desktop */
     --touch-height-sm: 2rem; /* 32px desktop */
     --touch-height-control: 1.75rem; /* 28px desktop — tightened prompt-area controls (THU-587) */
+
+    /* Desktop keeps its own per-surface spacing, so no shared header gap. */
+    --header-top-gap: 0px;
 
     /* Icon sizes */
     --icon-size-default: 1rem; /* 16px desktop */
@@ -144,8 +151,8 @@
     /* Switch component specific */
     --switch-track-height: 1.25rem; /* 20px desktop - whole-px so the thumb is round */
     --switch-track-width: 2rem; /* 32px desktop */
-    --switch-thumb-size: 0.875rem; /* 14px desktop (20 - 2*border - 2*pad) */
-    --switch-thumb-translate: calc(var(--switch-track-width) - var(--switch-thumb-size) - 6px); /* 12px */
+    --switch-thumb-size: 1rem; /* 16px desktop (default size) */
+    --switch-thumb-translate: calc(var(--switch-track-width) - var(--switch-thumb-size) - 4px); /* 12px */
   }
 }
 

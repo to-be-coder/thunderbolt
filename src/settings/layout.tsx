@@ -13,7 +13,14 @@ import { Outlet, useLocation } from 'react-router'
 // The settings-level Header (sidebar toggle + PowerSync status) would otherwise
 // add ~56px of unused space at the top. Matched by prefix so nested detail routes
 // (e.g. /settings/agents/:agentId) are covered too.
-const routesWithOwnHeader = ['/settings/skills', '/settings/agents']
+const routesWithOwnHeader = [
+  '/settings/skills',
+  '/settings/agents',
+  '/settings/preferences',
+  '/settings/devices',
+  '/settings/mcp-servers',
+  '/settings/integrations',
+]
 
 const SettingsLayout = () => {
   const location = useLocation()
@@ -31,7 +38,7 @@ const SettingsLayout = () => {
         <div
           className="flex flex-col h-full"
           style={{
-            paddingTop: 'var(--safe-area-top-padding)',
+            paddingTop: 'calc(var(--safe-area-top-padding, 0px) + var(--header-top-gap))',
             paddingBottom: 'var(--kb, 0px)',
           }}
         >

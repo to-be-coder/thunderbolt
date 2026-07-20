@@ -187,7 +187,7 @@ export const ChatAgentSelector = ({
       data-testid="chat-agent-selector-trigger"
       aria-disabled={readOnly}
       className={cn(
-        'flex items-center gap-2 px-3 h-[var(--touch-height-sm)] rounded-full transition-colors text-[length:var(--font-size-body)] max-w-[50vw] md:max-w-none',
+        'flex items-center gap-2 px-3 h-[var(--touch-height-sm)] rounded-lg transition-colors text-[length:var(--font-size-body)] max-w-[50vw] md:max-w-none',
         readOnly ? 'cursor-default' : cn('cursor-pointer', isOpen ? 'bg-secondary' : 'hover:bg-secondary/50'),
       )}
     >

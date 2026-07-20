@@ -2,11 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import * as AccordionPrimitive from '@radix-ui/react-accordion'
-import { ChevronDown, ChevronLeft, Info, MoreHorizontal, Plus, Power, SquarePen, Trash2 } from 'lucide-react'
+import { ChevronLeft, Info, MoreHorizontal, Plus, Power, SquarePen, Trash2 } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -155,57 +154,55 @@ export const SkillDetail = ({
         </div>
       </header>
 
-      <Accordion
-        type="multiple"
-        defaultValue={['description', 'instructions']}
-        className="mt-2 flex min-h-0 flex-1 flex-col gap-4"
-      >
-        <AccordionItem value="description" className="rounded-xl border-b-0 bg-secondary px-4 dark:bg-sidebar">
-          <AccordionTrigger className="py-3 text-base leading-tight text-muted-foreground hover:no-underline">
-            <div className="flex items-center gap-0.5">
-              <span>Description</span>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span
-                    role="img"
-                    aria-label="What is this for?"
-                    className="ml-1 inline-flex items-center text-muted-foreground hover:text-foreground"
-                  >
-                    <Info size={14} strokeWidth={1.75} />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Helps the agent decide when to use this skill. Be specific about when it applies.
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="pb-4 pt-0">
-            <p className="whitespace-pre-wrap text-base leading-snug text-foreground">{description}</p>
-          </AccordionContent>
-        </AccordionItem>
-
-        {/* Instructions uses AccordionPrimitive directly so it can flex-1 to
-            fill remaining vertical space when open. The shared
-            AccordionContent's height-keyframe animation conflicts with flex-1
-            sizing, so this item snaps open/closed without animation. */}
-        <AccordionPrimitive.Item
-          value="instructions"
-          className="flex flex-col rounded-xl bg-secondary px-4 data-[state=open]:min-h-0 data-[state=open]:flex-1 dark:bg-sidebar"
+      {/* Continuous scroll (no accordion) — every section stays open and the body
+          scrolls as one, matching the agent details page. */}
+      <div className="mt-2 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-none pb-4">
+        <DetailSection
+          title="Description"
+          titleExtra={
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  role="img"
+                  aria-label="What is this for?"
+                  className="inline-flex items-center text-muted-foreground hover:text-foreground"
+                >
+                  <Info size={14} strokeWidth={1.75} />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                Helps the agent decide when to use this skill. Be specific about when it applies.
+              </TooltipContent>
+            </Tooltip>
+          }
         >
-          <AccordionPrimitive.Header className="flex">
-            <AccordionPrimitive.Trigger className="flex flex-1 items-center justify-between gap-4 py-3 text-base leading-tight text-muted-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 [&[data-state=open]>svg]:rotate-180">
-              Instructions
-              <ChevronDown className="text-muted-foreground pointer-events-none size-4 shrink-0 transition-transform duration-200" />
-            </AccordionPrimitive.Trigger>
-          </AccordionPrimitive.Header>
-          <AccordionPrimitive.Content className="overflow-hidden data-[state=open]:flex data-[state=open]:min-h-0 data-[state=open]:flex-1 data-[state=open]:flex-col">
-            <div className="min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap pb-4 text-base leading-snug text-foreground">
-              {instruction}
-            </div>
-          </AccordionPrimitive.Content>
-        </AccordionPrimitive.Item>
-      </Accordion>
+          <p className="whitespace-pre-wrap text-base leading-snug text-foreground">{description}</p>
+        </DetailSection>
+
+        <DetailSection title="Instructions">
+          <p className="whitespace-pre-wrap text-base leading-snug text-foreground">{instruction}</p>
+        </DetailSection>
+      </div>
     </section>
   )
 }
+
+/** A titled, always-open content card — mirrors the agent details page's
+ *  `DetailSection` so both detail views read the same. */
+const DetailSection = ({
+  title,
+  titleExtra,
+  children,
+}: {
+  title: string
+  titleExtra?: ReactNode
+  children: ReactNode
+}) => (
+  <section className="flex flex-col gap-2 rounded-xl bg-secondary p-4 dark:bg-sidebar">
+    <div className="flex items-center gap-1.5">
+      <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">{title}</h2>
+      {titleExtra}
+    </div>
+    {children}
+  </section>
+)

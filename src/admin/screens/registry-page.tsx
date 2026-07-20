@@ -5,7 +5,7 @@
 import { SlideInPanel } from '@/components/slide-in-panel'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { PageHeader } from '@/components/ui/page-header'
+import { AdminPageHeader } from '../admin-chrome'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
@@ -48,7 +48,7 @@ const AgentPolicyPopover = () => {
         <Button
           variant="outline"
           size="icon"
-          className="rounded-lg bg-card hover:bg-accent"
+          className="size-8 rounded-md bg-card hover:bg-accent md:size-[var(--touch-height-default)] md:rounded-lg"
           aria-label="Agent settings"
         >
           <Settings />
@@ -121,7 +121,7 @@ const RegistryCard = ({
       aria-label={`Open ${agent.name}`}
       aria-pressed={selected}
       className={cn(
-        'flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors',
+        'flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors',
         selected ? 'bg-accent' : 'hover:bg-secondary/50',
       )}
     >
@@ -164,7 +164,7 @@ const ThunderboltRow = ({ selected, onSelect }: { selected: boolean; onSelect: (
     aria-label="Open Thunderbolt agent"
     aria-pressed={selected}
     className={cn(
-      'flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors',
+      'flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors',
       selected ? 'bg-accent' : 'hover:bg-secondary/50',
     )}
   >
@@ -211,23 +211,23 @@ export const RegistryPage = () => {
     // `-mr-6` + widened width cancel the admin content's right p-6 so the detail
     // panel (and its full-bleed save banner) reach the true right edge; the list
     // keeps its inset.
-    <div className="-my-6 -mr-6 flex h-[calc(100%_+_3rem)] w-[calc(100%_+_1.5rem)] min-h-0">
+    <div className="relative -my-6 -mr-6 flex h-[calc(100%_+_3rem)] w-[calc(100%_+_1.5rem)] min-h-0">
       <div className="min-w-0 flex-1 overflow-y-auto pr-6">
-        <div className="mx-auto flex w-full max-w-[728px] flex-col gap-6 py-6">
-          <PageHeader title="Agents">
+        <div className="mx-auto flex w-full max-w-[728px] flex-col gap-6 pt-0 pb-6 md:pt-6">
+          <AdminPageHeader title="Agents">
             <div className="flex items-center gap-2">
               <AgentPolicyPopover />
               <Button
                 variant="outline"
                 size="icon"
-                className="rounded-lg bg-card hover:bg-accent"
+                className="size-8 rounded-md bg-card hover:bg-accent md:size-[var(--touch-height-default)] md:rounded-lg"
                 onClick={() => setRegistering(true)}
                 aria-label="Register an agent"
               >
                 <Plus />
               </Button>
             </div>
-          </PageHeader>
+          </AdminPageHeader>
 
           <Dialog open={registering} onOpenChange={setRegistering}>
             <DialogContent className="max-h-[85vh] overflow-y-auto">

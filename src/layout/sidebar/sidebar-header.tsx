@@ -14,7 +14,6 @@ import { PowerSyncStatus } from '@/components/powersync-status'
 import { AppLogo } from '@/components/app-logo'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { PanelLeft } from 'lucide-react'
-import { useState } from 'react'
 
 type SidebarHeaderProps = {
   onToggle: () => void
@@ -22,20 +21,16 @@ type SidebarHeaderProps = {
 
 export const SidebarHeader = ({ onToggle }: SidebarHeaderProps) => {
   const { isMobile } = useIsMobile()
-  const { state } = useSidebar()
-  const [showExpandButton, setShowExpandButton] = useState(false)
+  const { isResponsiveCollapseMode, state } = useSidebar()
 
   // On mobile, always treat the sidebar as expanded when it's open
   const isExpanded = isMobile || state === 'expanded'
+  const showExpandButton = !isMobile && !isExpanded && !isResponsiveCollapseMode
 
   return (
     <div className="h-[var(--touch-height-xl)] flex items-center px-2 flex-shrink-0">
-      <div
-        className="flex items-center h-8 relative flex-1 min-w-0"
-        onMouseEnter={() => !isMobile && !isExpanded && setShowExpandButton(true)}
-        onMouseLeave={() => !isMobile && !isExpanded && setShowExpandButton(false)}
-      >
-        {!isExpanded && showExpandButton ? (
+      <div className="flex items-center h-8 relative flex-1 min-w-0">
+        {showExpandButton ? (
           <SidebarGroup className="p-0 absolute left-0 right-0">
             <SidebarGroupContent>
               <SidebarMenu>

@@ -93,7 +93,7 @@ export default function Page() {
           <div
             className="flex flex-col h-full"
             style={{
-              paddingTop: 'var(--safe-area-top-padding)',
+              paddingTop: 'calc(var(--safe-area-top-padding, 0px) + var(--header-top-gap))',
             }}
           >
             <Header />

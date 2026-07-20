@@ -4,6 +4,8 @@
 
 import { setupTestDatabase, teardownTestDatabase } from '@/dal/test-utils'
 import { getInitTimingPayload, resetInitTiming } from '@/lib/init-timing'
+import { demoCloudUrl } from '@/lib/demo-mode'
+import { resetPostAuthBootstrap, useBootstrapReadiness } from '@/lib/post-auth-bootstrap'
 import { useTrustDomainRegistry } from '@/stores/trust-domain-registry'
 import { createMockHttpClient } from '@/test-utils/http-client'
 import { createTestProvider } from '@/test-utils/test-provider'
@@ -49,6 +51,8 @@ const stubWorkingIndexedDb = (): void => {
 }
 
 const testServerId = '00000000-0000-0000-0000-000000000abc'
+const env = import.meta.env as Record<string, string | undefined>
+const originalDemoMode = env.VITE_DEMO_MODE
 
 describe('useAppInitialization', () => {
   beforeAll(async () => {
@@ -58,10 +62,13 @@ describe('useAppInitialization', () => {
 
   afterAll(async () => {
     await teardownTestDatabase()
+    env.VITE_DEMO_MODE = originalDemoMode
     Object.defineProperty(globalThis, 'indexedDB', { value: realIndexedDb, configurable: true, writable: true })
   })
 
   beforeEach(() => {
+    env.VITE_DEMO_MODE = undefined
+    resetPostAuthBootstrap()
     // Seed the trust-domain registry so boot resolves without hitting /v1/config.
     // The shared mock HTTP client returns the PostHog payload for every GET — including
     // the config endpoint — so first-boot resolution would otherwise fail.
@@ -124,6 +131,27 @@ describe('useAppInitialization', () => {
     expect(result.current.isInitializing).toBe(false)
     expect(result.current.initData).toBeDefined()
     expect(result.current.initError).toBeUndefined()
+  })
+
+  it('boots demo mode against the standalone database without a backend URL', async () => {
+    env.VITE_DEMO_MODE = 'true'
+    useTrustDomainRegistry.setState({
+      servers: {},
+      activeTrustDomain: undefined,
+    })
+    const mockHttpClient = createMockHttpClient(mockPostHogConfig)
+    const { result } = renderHook(() => useAppInitialization(mockHttpClient), {
+      wrapper: createTestProvider({ mockResponse: mockPostHogConfig }),
+    })
+
+    await act(async () => {
+      await getClock().runAllAsync()
+    })
+
+    expect(result.current.initError).toBeUndefined()
+    expect(result.current.initData?.cloudUrl).toBe(demoCloudUrl)
+    expect(useTrustDomainRegistry.getState().activeTrustDomain).toEqual({ kind: 'standalone' })
+    expect(useBootstrapReadiness.getState().bootstrapped).toBe(true)
   })
 
   it('retry function reinitializes the app', async () => {

@@ -36,7 +36,13 @@ export const ThunderboltAgentDetailPanel = ({ onClose }: { onClose: () => void }
             </div>
             <span className="min-w-0 truncate text-xl font-semibold">{builtInAgent.name}</span>
           </div>
-          <Button variant="ghost" size="icon-sm" aria-label="Close details" onClick={onClose}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Close details"
+            onClick={onClose}
+            className="size-8 rounded-md border border-border md:size-[var(--touch-height-sm)] md:rounded-lg md:border-0"
+          >
             <X className="size-4" />
           </Button>
         </div>
@@ -94,7 +100,7 @@ const CompanySkillsTab = () => {
           <p className="text-sm text-muted-foreground">No company skills yet.</p>
         )}
         {items.map((skill) => (
-          <div key={skill.id} className="flex items-start gap-3 rounded-lg border border-border bg-card px-4 py-3">
+          <div key={skill.id} className="flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3">
             <div className="min-w-0 flex-1">
               <p className="truncate text-base font-medium">{skill.name}</p>
               {skill.description && <p className="text-sm text-muted-foreground">{skill.description}</p>}

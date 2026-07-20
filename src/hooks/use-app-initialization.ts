@@ -3,16 +3,23 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { fetchConfig } from '@/api/config'
+import { useConfigStore } from '@/api/config-store'
 import type { HttpClient } from '@/contexts'
 import { getSettings } from '@/dal'
 import { getAuthToken } from '@/lib/auth-token'
 import { Database, getCurrentDatabase, setDatabase } from '@/db/database'
 import type { AnyDrizzleDatabase } from '@/db/database-interface'
 import { setupDbLifecycleReloadOnRemoteClose } from '@/db/db-lifecycle-broadcast'
-import { getActiveCloudUrl, getActiveTrustDomain, useTrustDomainRegistry } from '@/stores/trust-domain-registry'
+import {
+  getActiveCloudUrl,
+  getActiveTrustDomain,
+  getActiveUserId,
+  useTrustDomainRegistry,
+} from '@/stores/trust-domain-registry'
 import { createHandleError } from '@/lib/error-utils'
 import { createAppDir, resetAppDir } from '@/lib/fs'
 import { isSsoMode } from '@/lib/auth-mode'
+import { createDemoHttpClient, demoCloudUrl, isDemoMode } from '@/lib/demo-mode'
 import { createAuthenticatedClient } from '@/lib/http'
 import { beginInitRun, getInitTimingPayload, recordInitStep } from '@/lib/init-timing'
 import { getDatabasePath, getDatabaseType, getPlatform, isIndexedDbAvailable } from '@/lib/platform'
@@ -30,6 +37,7 @@ import type { TrayIcon } from '@tauri-apps/api/tray'
 import type { Window } from '@tauri-apps/api/window'
 import type { PostHog } from 'posthog-js'
 import { getLocalSetting } from '@/stores/local-settings-store'
+import { runPostAuthBootstrap } from '@/lib/post-auth-bootstrap'
 import { useCallback, useEffect, useState } from 'react'
 
 const createAppDirectory = async (): Promise<string> => {
@@ -95,6 +103,54 @@ const initializePostHogSafely = async (httpClient: HttpClient): Promise<PostHog 
   }
 }
 
+/** Initialize the local-only database and providers used by a Vercel demo build. */
+const executeDemoInitializationSteps = async (
+  totalStartedAt: number,
+  httpClient?: HttpClient,
+): Promise<HandleResult<InitData>> => {
+  useTrustDomainRegistry.getState().activateStandalone()
+  useConfigStore.getState().updateConfig({ builtInAgentEnabled: true, allowCustomAgents: true })
+
+  const storageAvailable = await time('step0_5_storage_check', () => isIndexedDbAvailable())
+  if (!storageAvailable) {
+    return {
+      success: false,
+      error: createHandleError('STORAGE_UNAVAILABLE', 'Storage (IndexedDB) is unavailable'),
+    }
+  }
+
+  const appDirPath = await time('step1_create_app_dir', () => createAppDirectory())
+  const { db } = await time('step2_initialize_database', () => initializeDatabase(appDirPath))
+  const { experimentalFeatureTasks } = await time('step5_get_settings', () =>
+    getSettings(db, { experimental_feature_tasks: false }),
+  )
+
+  const localUserId = getActiveUserId()
+  if (!localUserId) {
+    return {
+      success: false,
+      error: createHandleError('NO_ACTIVE_USER', 'Demo mode could not create a local user'),
+    }
+  }
+  await time('step6_demo_bootstrap', () => runPostAuthBootstrap({ kind: 'standalone', userId: localUserId }))
+
+  const tray = await initializeTraySafely()
+  const initTotalMs = Math.round(performance.now() - totalStartedAt)
+  console.info(`[init] demo complete (total ${initTotalMs}ms)`)
+
+  return {
+    success: true,
+    data: {
+      db,
+      cloudUrl: demoCloudUrl,
+      experimentalFeatureTasks,
+      posthogClient: null,
+      httpClient: httpClient ?? createDemoHttpClient(),
+      ...tray,
+    },
+  }
+}
+
 const executeInitializationSteps = async (httpClient?: HttpClient): Promise<HandleResult<InitData>> => {
   beginInitRun()
   const totalStartedAt = performance.now()
@@ -103,6 +159,10 @@ const executeInitializationSteps = async (httpClient?: HttpClient): Promise<Hand
   // Multi-tab DB lifecycle listener — idempotent, mounted once per page lifetime so the
   // app reloads when another tab wipes the active server's DB (logout / promotion).
   setupDbLifecycleReloadOnRemoteClose()
+
+  if (isDemoMode()) {
+    return executeDemoInitializationSteps(totalStartedAt, httpClient)
+  }
 
   // Step 0: Resolve the active trust domain.
   //

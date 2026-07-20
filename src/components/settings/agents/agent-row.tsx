@@ -6,7 +6,6 @@ import { ChevronRight, type LucideIcon } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { AgentGlyph } from './detail/agent-icon-picker'
-import { NewGrantBadge } from './new-grant-badge'
 
 export type AgentRowProps = {
   /** Stable id used for the row test id and React key. */
@@ -20,8 +19,6 @@ export type AgentRowProps = {
   /** Secondary provenance line (agents-page-spec §1, exact copy). Static — the
    *  roster never opens a connection, so no live status is shown here (spec §0/§1). */
   provenanceLine: string
-  /** One-time "grant received" highlight — a ring + "New" badge (Stage 7 T2). */
-  isNewlyGranted?: boolean
   /** Whether this row's detail is open — brightens the row like other selected
    *  items across the app. */
   selected?: boolean
@@ -36,16 +33,7 @@ export type AgentRowProps = {
  * NO edit / toggle / delete affordance anywhere; the whole row is the tap
  * target that opens the detail.
  */
-export const AgentRow = ({
-  agentId,
-  icon: Icon,
-  iconValue,
-  name,
-  provenanceLine,
-  isNewlyGranted,
-  selected,
-  onOpen,
-}: AgentRowProps) => (
+export const AgentRow = ({ agentId, icon: Icon, iconValue, name, provenanceLine, selected, onOpen }: AgentRowProps) => (
   <Card data-testid={`agent-row-${agentId}`} className="border border-border p-0">
     <button
       type="button"
@@ -65,10 +53,7 @@ export const AgentRow = ({
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-base font-medium truncate">{name}</span>
-          {isNewlyGranted && <NewGrantBadge />}
-        </div>
+        <span className="block truncate text-base font-medium">{name}</span>
         <div
           className="flex items-center gap-1.5 text-sm truncate text-muted-foreground"
           data-testid={`agent-provenance-${agentId}`}

@@ -52,9 +52,9 @@ export const useBootstrapReadiness = create<BootstrapReadinessStore>()(() => ({ 
  * defaults (no-op via defaultHash).
  *
  * Branches:
- *  - standalone (post-v1) → throws `NOT_IMPLEMENTED` for v1. The standalone
- *    branch lands in a separate ticket; v1 production never reaches it.
- *  - real or anonymous user → runs the pipeline against the local DB.
+ *  - standalone → reconciles defaults and runs local data migrations.
+ *  - real or anonymous server user → first migrates the legacy server-scoped
+ *    database, then runs the same local preparation pipeline.
  *
  * The caller is expected to ensure the database is initialized and the trust
  * domain is set — both are guaranteed by `useAppInitialization` having completed.
@@ -81,10 +81,6 @@ const runBootstrapInternal = async (ctx: BootstrapContext): Promise<void> => {
     throw new Error('Post-auth bootstrap called with no active trust domain')
   }
 
-  if (ctx.kind === 'standalone') {
-    throw new Error('NOT_IMPLEMENTED: standalone post-auth bootstrap (post-v1)')
-  }
-
   // Pre-Workspaces v1 data migration — step 3. ATTACH the legacy
   // `thunderbolt-sync.db` onto the new `server-<id>.db` and copy rows across.
   //
@@ -95,8 +91,8 @@ const runBootstrapInternal = async (ctx: BootstrapContext): Promise<void> => {
   // `OnboardingDialog` would fire on the default
   // `user_has_completed_onboarding=false`.
   //
-  // Server-only — the standalone branch threw above.
-  if (trustDomain.kind === 'server') {
+  // Server-only — standalone databases have no legacy server namespace to attach.
+  if (ctx.kind === 'server' && trustDomain.kind === 'server') {
     try {
       const legacyDb = await findLegacyDbFilename()
       const dbMigration = await runLocalDbMigration({

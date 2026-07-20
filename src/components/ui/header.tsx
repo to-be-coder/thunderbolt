@@ -33,21 +33,29 @@ export const Header = () => {
     const showNewChatButton = isChatRoute && location.pathname !== '/chats/new'
 
     return (
-      <header className="flex h-[var(--touch-height-xl)] w-full items-center justify-between px-2 flex-shrink-0">
-        <div className="flex flex-1 items-center gap-1 min-w-0">
+      <header className="relative flex h-[var(--touch-height-xl)] w-full items-center justify-between px-2 flex-shrink-0">
+        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
-            className="size-[var(--touch-height-sm)] cursor-pointer"
+            className="size-8 shrink-0 cursor-pointer rounded-md text-muted-foreground hover:text-foreground"
             onClick={toggleSidebar}
           >
-            <Menu className="size-[var(--icon-size-default)]" />
+            <Menu />
             <span className="sr-only">Toggle Sidebar</span>
           </Button>
-          {isChatRoute && <HeaderAgentSelector />}
         </div>
 
-        <div className="flex flex-1 items-center gap-1 justify-end">
+        {/* Agent selector centered like a page title (burger left, new-chat
+            right). It stays interactive — its own max-width keeps it in the
+            middle third so it never overlaps the flanking buttons. */}
+        {isChatRoute && (
+          <div className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center">
+            <HeaderAgentSelector />
+          </div>
+        )}
+
+        <div className="flex items-center gap-1 justify-end">
           {showNewChatButton && (
             <Button
               variant="ghost"

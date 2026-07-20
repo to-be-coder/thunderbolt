@@ -5,7 +5,7 @@
 import { useDatabase } from '@/contexts'
 import { getAllDevices, getPendingDevices } from '@/dal'
 import { getDeviceId } from '@/lib/auth-token'
-import { PageHeader } from '@/components/ui/page-header'
+import { SettingsPageHeader } from '@/components/settings/settings-page-header'
 import { ApproveDeviceDialog } from '@/components/approve-device-dialog'
 import { RevokeDeviceDialog } from '@/components/revoke-device-dialog'
 import { Button } from '@/components/ui/button'
@@ -83,8 +83,8 @@ export default function DevicesSettingsPage() {
   const hasPendingDevices = pendingDevices.length > 0
 
   return (
-    <div className="flex flex-col gap-6 p-4 pb-12 w-full max-w-[760px] mx-auto">
-      <PageHeader title="Devices" />
+    <div className="flex flex-col gap-6 p-4 pt-0 pb-12 md:pt-4 w-full max-w-[760px] mx-auto">
+      <SettingsPageHeader title="Devices" />
 
       {hasPendingDevices && (
         <>

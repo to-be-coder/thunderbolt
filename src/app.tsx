@@ -34,6 +34,7 @@ import { usePageTracking } from '@/hooks/use-analytics'
 import { useDeepLinkListener } from '@/hooks/use-deep-link-listener'
 import { useKeyboardInset } from '@/hooks/use-keyboard-inset'
 import { useDemoSeed } from '@/hooks/use-demo-seed'
+import { isDemoMode } from '@/lib/demo-mode'
 import { useViewportLock } from '@/hooks/use-viewport-lock'
 import { useMcpSync } from '@/hooks/use-mcp-sync'
 import { PostHogProvider } from '@/lib/posthog'
@@ -164,7 +165,7 @@ const useBootstrapSystemAgents = () => {
   const isRealUser = !!session?.user && session.user.isAnonymous !== true
 
   useEffect(() => {
-    if (!isRealUser || !cloudUrl) {
+    if (isDemoMode() || !isRealUser || !cloudUrl) {
       return
     }
     void refreshSystemAgents(db, cloudUrl, httpClient)
